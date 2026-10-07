@@ -1,0 +1,204 @@
+[
+  {
+    "id": "swift",
+    "name": "Swift Imaging",
+    "category": "Imaging",
+    "lifecycle": "Required",
+    "executables": [
+      "Swift.exe",
+      "Swift Imaging.exe"
+    ],
+    "patterns": [
+      "Swift*/Swift*.exe"
+    ],
+    "url": "https://www.swiftoptical.com/",
+    "note": "Use the installer supplied for your microscope; locate the executable if the product name differs.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "fiji",
+    "name": "Fiji / ImageJ",
+    "category": "Imaging",
+    "lifecycle": "Required",
+    "executables": [
+      "ImageJ-win64.exe",
+      "ImageJ.exe"
+    ],
+    "patterns": [
+      "Fiji.app/ImageJ-win64.exe",
+      "Fiji/ImageJ-win64.exe",
+      "ImageJ/ImageJ.exe"
+    ],
+    "url": "https://fiji.sc/",
+    "note": "Portable installation. Extract Fiji, then select ImageJ-win64.exe.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "jmp",
+    "name": "JMP",
+    "category": "Analysis",
+    "lifecycle": "Required",
+    "executables": [
+      "jmp.exe"
+    ],
+    "patterns": [
+      "JMP/JMP*/jmp.exe",
+      "SAS/JMP/*/jmp.exe",
+      "JMP/JMP/*/jmp.exe"
+    ],
+    "url": "https://www.jmp.com/",
+    "note": "Licensed software. Use your university's installation and license instructions.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "python",
+    "name": "Python",
+    "category": "Analysis",
+    "lifecycle": "Required",
+    "executables": [
+      "python.exe",
+      "python3.exe"
+    ],
+    "patterns": [
+      "Python/Python*/python.exe",
+      "Python*/python.exe"
+    ],
+    "url": "https://www.python.org/downloads/windows/",
+    "note": "Configure the Python environment used for project analysis.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "excel",
+    "name": "Excel",
+    "category": "Reports",
+    "lifecycle": "Required",
+    "executables": [
+      "EXCEL.EXE"
+    ],
+    "patterns": [
+      "Microsoft Office/root/Office*/EXCEL.EXE",
+      "Microsoft Office/Office*/EXCEL.EXE"
+    ],
+    "url": "https://www.microsoft.com/microsoft-365/excel",
+    "note": "Use your university Microsoft 365 license.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "word",
+    "name": "Word",
+    "category": "Reports",
+    "lifecycle": "Required",
+    "executables": [
+      "WINWORD.EXE"
+    ],
+    "patterns": [
+      "Microsoft Office/root/Office*/WINWORD.EXE",
+      "Microsoft Office/Office*/WINWORD.EXE"
+    ],
+    "url": "https://www.microsoft.com/microsoft-365/word",
+    "note": "Use your university Microsoft 365 license.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "git",
+    "name": "Git",
+    "category": "Development",
+    "lifecycle": "Required",
+    "executables": [
+      "git.exe"
+    ],
+    "patterns": [
+      "Git/cmd/git.exe"
+    ],
+    "url": "https://git-scm.com/download/win",
+    "note": "Command-line tool. Launch opens a terminal in your configured project folder.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "github",
+    "name": "GitHub Desktop",
+    "category": "Development",
+    "lifecycle": "Optional",
+    "executables": [
+      "GitHubDesktop.exe"
+    ],
+    "patterns": [
+      "GitHubDesktop/GitHubDesktop.exe",
+      "GitHubDesktop/app-*/GitHubDesktop.exe"
+    ],
+    "url": "https://desktop.github.com/",
+    "note": "Optional desktop client. Repository access also works through the Project page.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "category": "Collaboration",
+    "lifecycle": "Required",
+    "executables": [
+      "Discord.exe"
+    ],
+    "patterns": [
+      "Discord/app-*/Discord.exe"
+    ],
+    "url": "https://discord.com/download",
+    "note": "Configure your team channel separately under Settings.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "teams",
+    "name": "Microsoft Teams",
+    "category": "Collaboration",
+    "lifecycle": "Required",
+    "executables": [],
+    "patterns": [],
+    "url": "https://www.microsoft.com/microsoft-teams/download-app",
+    "note": "Launch Teams through its Windows URI protocol. Test Launch verifies that Windows accepts the request; no executable location is needed.",
+    "launch_type": "uri",
+    "launch_target": "msteams://"
+  },
+  {
+    "id": "onedrive",
+    "name": "OneDrive",
+    "category": "Storage",
+    "lifecycle": "Required",
+    "executables": [
+      "OneDrive.exe"
+    ],
+    "patterns": [
+      "Microsoft/OneDrive/OneDrive.exe",
+      "Microsoft OneDrive/OneDrive.exe"
+    ],
+    "url": "https://www.microsoft.com/microsoft-365/onedrive/download",
+    "note": "Use your existing account and synced project folder.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "solidworks",
+    "name": "SolidWorks",
+    "category": "Design",
+    "lifecycle": "Optional",
+    "executables": [
+      "SLDWORKS.exe"
+    ],
+    "patterns": [
+      "SOLIDWORKS Corp/SOLIDWORKS/SLDWORKS.exe",
+      "SOLIDWORKS*/SOLIDWORKS/SLDWORKS.exe"
+    ],
+    "url": "https://www.solidworks.com/",
+    "note": "Optional where applicable. Requires a licensed installation.",
+    "launch_type": "exe"
+  },
+  {
+    "id": "github_web",
+    "name": "GitHub",
+    "category": "Development",
+    "lifecycle": "Required",
+    "launch_type": "url",
+    "launch_target": "https://github.com/",
+    "executables": [],
+    "patterns": [],
+    "url": "https://github.com/",
+    "note": "Open GitHub in your browser. Use Project to open the configured team repository."
+  }
+]

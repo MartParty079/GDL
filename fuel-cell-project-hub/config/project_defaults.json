@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "Fuel Cell Project Hub",
+  "goal": "",
+  "supporting_goals": "",
+  "plan": "",
+  "agenda": "",
+  "decisions": "",
+  "repository": "",
+  "project_folder": "",
+  "release_repository": "",
+  "links": {
+    "Shared storage": "",
+    "Teams": "",
+    "Discord": "",
+    "Meeting agenda": "",
+    "Reports": ""
+  },
+  "software_lifecycle": {}
+}
