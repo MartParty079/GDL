@@ -46,7 +46,7 @@ class DesignUXTests(unittest.TestCase):
 
     def test_settings_are_grouped_and_storage_index_preserved(self):
         names = [self.window.settings_tabs.tabText(i) for i in range(self.window.settings_tabs.count())]
-        self.assertEqual(names, ["General", "Storage", "Software", "Project resources", "Updates", "History", "Analysis Tools", 'Microsoft Account', 'Cloud & Old Test Data', 'Project folders'])
+        self.assertEqual(names, ["General", "Storage", "Software", "Project resources", "Updates", "History", "Analysis Tools"])
         self.assertIn("goal", self.window.fields)
 
     def test_unconnected_files_have_actionable_empty_state(self):

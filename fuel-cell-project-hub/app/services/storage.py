@@ -50,6 +50,12 @@ class Store:
         cached_project = read_json(self.local_dir / "project_snapshot.json", {})
         if cached_project and self.local.get("project_snapshot_enabled"):
             self.project = cached_project
+        # One-time retirement of abandoned cloud configuration. Other personal
+        # application settings remain intact; no credentials are read or used.
+        for key in ('microsoft_auth', 'storage_mode', 'legacy_cache_root', 'previous_legacy_caches'):
+            self.local.pop(key, None)
+        for key in ('current_cloud_connection', 'legacy_projects'):
+            self.project.pop(key, None)
         self.migration_pending = False
         self.provider = None
         self.storage_error = ""
@@ -133,6 +139,8 @@ class Store:
             value[key] = merged
         value.setdefault("storage", {"project_name": marker["project_name"], "online_url": ""})
         value["storage"]["project_name"] = marker["project_name"]
+        for key in ('current_cloud_connection', 'legacy_projects'):
+            value.pop(key, None)
         self.project = value
         previous = self.local.get("local_project_root", "")
         self.local["local_project_root"] = str(provider.root)

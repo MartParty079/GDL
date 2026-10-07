@@ -40,7 +40,7 @@ GitHub stores app source, portable managed GDL source, config templates, tests,
 docs, assets, packaging .spec source and release metadata. OneDrive/SharePoint
 stores images, videos, sensor data, processed datasets, reports and old test data.
 Local profiles, caches, tokens and machine paths remain in Local AppData.
-Client and tenant IDs are public identifiers; this app has no client secret.
+The native app has no Microsoft authentication or Graph dependency.
 
 The preserved original GDL baseline stays ignored on this development computer
 because its historical defaults contain named user paths. The portable managed

@@ -1,3 +1,9 @@
+# Current build: native indexing
+
+Microsoft authentication and Graph are retired. The current architecture and
+validation are in [native indexing](native_indexing.md). Entries below are a
+historical development record; old package paths and account screens are obsolete.
+
 # Initial build status
 
 Created October 6, 2026 from the provided document pack.

@@ -236,10 +236,6 @@ class ResponsiveCards(QWidget):
 def friendly_error(error, context="complete this action"):
     message = str(error)
     lowered = message.lower()
-    if 'admin approval' in lowered:
-        return 'Admin approval required for this cloud feature. Local OneDrive and cached indexes remain usable.'
-    if 'aadsts' in lowered or 'consent_required' in lowered or 'access_token' in lowered or 'error_description' in lowered:
-        return 'Microsoft access is unavailable. Retry basic sign-in or continue with Local OneDrive.'
     if "permission" in lowered or "access is denied" in lowered or "winerror 5" in lowered:
         return "Access was denied. Check the folder permissions or close the app using this file, then retry."
     if "unavailable" in lowered or "not found" in lowered or "missing" in lowered or "no such file" in lowered:
@@ -275,7 +271,7 @@ class ErrorBanner(AppCard):
         self.heading.setText(title)
         self.message.set_message(friendly_error(error), "error")
         raw = str(error)
-        self.details.setText(friendly_error(error) if any(value in raw.lower() for value in ('aadsts', 'consent_required', 'access_token', 'error_description')) else raw)
+        self.details.setText(raw)
         self.details.hide()
         self.details_button.setText("Show details")
         self.show()

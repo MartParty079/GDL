@@ -54,19 +54,6 @@ def validate_shared_settings(value):
         from app.services.file_classifier import CATEGORIES
         if category not in CATEGORIES:
             raise ValueError('Unsupported classification category.')
-    cloud = value.get('current_cloud_connection')
-    legacy = value.get('legacy_projects', [])
-    if not isinstance(legacy, list):
-        raise ValueError('Historical project definitions must be a list.')
-    for connection in ([cloud] if cloud else []) + legacy:
-        if not isinstance(connection, dict) or connection.get('provider') != 'MicrosoftGraph' or not all(isinstance(connection.get(k), str) and connection[k] for k in ('drive_id', 'root_item_id', 'web_url')):
-            raise ValueError('Cloud connections require stable Graph IDs and an online URL.')
-        from urllib.parse import urlparse
-        parsed = urlparse(connection['web_url'])
-        if parsed.scheme != 'https' or not parsed.netloc or parsed.username:
-            raise ValueError('Cloud links must use HTTPS.')
-        if connection in legacy and (connection.get('data_origin') != 'legacy' or not connection.get('legacy_project_id', '').startswith('LEG-') or connection.get('read_only_reference') is not True):
-            raise ValueError('Historical sources must remain read-only legacy references.')
     analysis = value.get("gdl_analysis", {})
     if not isinstance(analysis, dict) or not isinstance(analysis.get("paths", {}), dict):
         raise ValueError("Shared GDL settings must contain a folder path object.")

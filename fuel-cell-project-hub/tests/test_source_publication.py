@@ -21,7 +21,7 @@ class PublicationTests(unittest.TestCase):
         self.assertFalse(audit_blob('fuel-cell-project-hub/docs/example.md', b'Documentation example: C:/Users/ExampleUser/data'))
 
     def test_public_identifiers_and_packaging_source_are_allowed(self):
-        self.assertFalse(audit_blob('fuel-cell-project-hub/config/microsoft_auth.json', b'{"client_id":"public-id","tenant_id":"public-tenant"}'))
+        self.assertFalse(audit_blob('fuel-cell-project-hub/config/indexing_rules.json', b'{"keywords":{"astm":"Standards"}}'))
         self.assertFalse(audit_blob('fuel-cell-project-hub/tools/app.spec', b'project_directory / "assets/app_icon.ico"'))
 
     def test_resource_resolution_in_source_and_frozen_layouts(self):

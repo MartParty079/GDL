@@ -9,7 +9,7 @@ EXTENSIONS = {
     'Sensor Data': '.csv .tsv .dat', 'Spreadsheet': '.xlsx .xlsm .xls .ods',
     'Document': '.docx .doc .pdf .md .rtf .pptx .txt',
     'Code': '.py .m .jsl .ipynb .js .ts .ps1 .r .ijm',
-    'CAD': '.sldprt .sldasm .slddrw .step .stp .iges .igs .stl',
+    'CAD': '.sldprt .sldasm .slddrw .step .stp .iges .igs .stl .dxf .dwg',
     'Configuration': '.json .yaml .yml .toml .ini .xml'}
 DEFAULT_RULES = {'01_Procedures': 'Procedure', '07_Reports': 'Report', '08_Reference': 'Reference'}
 

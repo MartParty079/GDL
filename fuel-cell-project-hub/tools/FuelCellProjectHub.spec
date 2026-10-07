@@ -1,21 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
 
 from pathlib import Path
 project_directory = Path(SPECPATH).parent
-datas = [(str(project_directory / 'config' / name), 'config') for name in ('project_defaults.json', 'software_manifest.json', 'microsoft_auth.json', 'file_classification.json', 'research_defaults.json')]
-datas.append((str(project_directory / 'analysis/gdl/engine'), 'analysis/gdl/engine'))
+datas = [(str(project_directory / 'config' / name), 'config') for name in ('project_defaults.json', 'software_manifest.json', 'file_classification.json', 'research_defaults.json', 'indexing_rules.json')]
+engine = project_directory / 'analysis/gdl/engine'
+for source_file in engine.rglob('*'):
+    if source_file.is_file() and '__pycache__' not in source_file.parts and source_file.suffix != '.pyc':
+        datas.append((str(source_file), 'analysis/gdl/engine/' + source_file.relative_to(engine).parent.as_posix()))
 datas.append((str(project_directory / 'analysis/gdl/manifest.json'), 'analysis/gdl'))
 datas.append((str(project_directory / 'analysis/gdl/hub_runtime.py'), 'analysis/gdl'))
 datas.append((str(project_directory / 'assets'), 'assets'))
 binaries = []
 hiddenimports = ['unittest.mock']
-tmp_ret = collect_all('msal')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('msal_extensions')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-
-
 a = Analysis(
     [str(project_directory / 'tools/desktop_entry.py')],
     pathex=[str(project_directory)],
@@ -25,7 +21,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['msal', 'msal_extensions', 'azure.identity'],
     noarchive=False,
     optimize=0,
 )

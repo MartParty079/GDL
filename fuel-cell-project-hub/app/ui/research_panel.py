@@ -3,9 +3,9 @@ import copy
 import threading
 import uuid
 from pathlib import Path
-from PySide6.QtCore import QThread, Signal, Qt
+from PySide6.QtCore import QThread, Signal, Qt, QTimer
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLineEdit, QComboBox, QFileDialog, QTabWidget, QTextEdit, QScrollArea)
+    QLineEdit, QComboBox, QFileDialog, QTabWidget, QTextEdit, QScrollArea, QCheckBox, QSpinBox, QInputDialog)
 from app.services.research_catalog import PATH_LABELS, RESEARCH_CATEGORIES
 from app.services.project_storage import IndexCancelled
 from app.services.software import open_resource
@@ -28,7 +28,7 @@ class CatalogWorker(QThread):
                                 progress=self.progress.emit, **self.options))
         except IndexCancelled:
             self.catalog.log('index_cancelled', action='previous index preserved')
-            self.failed.emit('Index cancelled. The previous catalog was preserved.')
+            self.failed.emit('Index cancelled. Completed batches are saved; unfinished sources will be reconciled on the next refresh.')
         except Exception:
             self.catalog.log('index_failed', action='existing index preserved')
             self.failed.emit('Index unavailable. Your existing catalog and source files were preserved. Check storage access and retry.')
@@ -67,6 +67,12 @@ class ResearchPanel(QWidget):
         self.legacy.setPlainText('\n'.join(s['root_path'] for s in settings.locations.value['legacy']))
         form.addRow('Legacy Roots · read-only Old Test Data', self.legacy)
         form.addRow(Button('Add legacy folder', self.add_legacy))
+        self.additional = QTextEdit()
+        self.additional.setMaximumHeight(80)
+        self.additional.setPlainText('\n'.join(s['root_path'] for s in settings.locations.value.get('additional', [])))
+        self.additional.setPlaceholderText('One additional source folder per line; use Add source to choose its type')
+        form.addRow('Additional sources', self.additional)
+        form.addRow(Button('Add current / reference / archive source', self.add_source))
         tabs.addTab(project, 'Project')
         storage = QWidget()
         storage_form = QFormLayout(storage)
@@ -80,14 +86,44 @@ class ResearchPanel(QWidget):
         indexing = QWidget()
         index_layout = QVBoxLayout(indexing)
         for title, options in [('Index Current Project', {'tier': 'active'}), ('Index Legacy Data', {'tier': 'legacy'}),
-            ('Index Everything', {}), ('Quick Refresh', {'quick': True}), ('Rebuild Index', {'rebuild': True}),
+            ('Full Scan', {}), ('Quick Refresh', {'quick': True}), ('Rebuild Entire Index', {'rebuild': True}),
+            ('Rebuild Search Index', {'mode': 'search'}),
             ('Index Selected Folder', {'choose': True})]:
             control = Button(title, lambda checked=False, values=options: self.start_index(**values))
             self.controls.append(control)
             index_layout.addWidget(control)
         index_layout.addWidget(Button('Cancel indexing', self.cancel_index))
-        index_layout.addWidget(label('Quick refresh compares metadata. Full indexing hashes resident files up to 1 MB, at most 32 MB per run. Rebuild backs up the catalog and retains manual metadata.', 'muted'))
-        tabs.addTab(indexing, 'Indexing')
+        index_layout.addWidget(label('Quick refresh reprocesses changed resident documents. Online-only files receive metadata. Rebuilds back up the index and retain manual metadata.', 'muted'))
+        options = settings.store.local.get('native_indexing', {})
+        self.auto_refresh = QCheckBox('Automatic reconciliation')
+        self.auto_refresh.setChecked(options.get('automatic', False))
+        self.watching = QCheckBox('Watch current folders for changes')
+        self.watching.setChecked(options.get('watching', False))
+        index_layout.addWidget(self.auto_refresh)
+        index_layout.addWidget(self.watching)
+        self.interval = QSpinBox()
+        self.interval.setRange(1, 1440)
+        self.interval.setValue(options.get('minutes', 10))
+        index_layout.addWidget(label('Reconciliation interval (minutes)'))
+        index_layout.addWidget(self.interval)
+        from app.indexing.extractor import DEFAULT_LIMITS
+        limits = {**DEFAULT_LIMITS, **options.get('limits', {})}
+        self.extraction = QCheckBox('Extract locally available document content')
+        self.extraction.setChecked(limits['enabled'])
+        index_layout.addWidget(self.extraction)
+        self.limit_fields = {}
+        limits_form = QFormLayout()
+        for key, caption in (('max_file_bytes', 'Maximum content file size (MB)'), ('max_text_chars', 'Maximum extracted text (characters)'), ('max_cells', 'Maximum spreadsheet cells'), ('max_pages', 'Maximum PDF pages / slides')):
+            control = QSpinBox()
+            control.setRange(1, 10000000)
+            control.setValue(limits[key] // (1024 * 1024) if key == 'max_file_bytes' else limits[key])
+            self.limit_fields[key] = control
+            limits_form.addRow(caption, control)
+        index_layout.addLayout(limits_form)
+        index_scroll = QScrollArea()
+        index_scroll.setWidgetResizable(True)
+        index_scroll.setWidget(indexing)
+        tabs.addTab(index_scroll, 'Indexing')
         categories = QWidget()
         categories_layout = QVBoxLayout(categories)
         categories_layout.addWidget(label('Categories describe research without moving its files. Edit classification, tags, title and notes from Project Files. Manual metadata takes priority.', 'muted'))
@@ -98,6 +134,17 @@ class ResearchPanel(QWidget):
         categories_layout.addWidget(category_list)
         categories_layout.addStretch()
         tabs.addTab(categories, 'Categories')
+        advanced = QWidget()
+        advanced_layout = QVBoxLayout(advanced)
+        for caption, callback in (('Backup Index', self.backup), ('Restore Index', self.restore), ('Index Run History', self.history), ('Edit Classification Rules', self.edit_rules)):
+            advanced_layout.addWidget(Button(caption, callback))
+        from app.ui.folder_mappings import FolderMappingsPanel
+        mappings = QScrollArea()
+        mappings.setWidgetResizable(True)
+        mappings.setWidget(FolderMappingsPanel(settings, self))
+        advanced_layout.addWidget(mappings)
+        advanced_layout.addStretch()
+        tabs.addTab(advanced, 'Advanced')
         if shared_panel:
             scroll = QScrollArea()
             scroll.setWidgetResizable(True)
@@ -115,6 +162,12 @@ class ResearchPanel(QWidget):
         layout.addWidget(self.error)
         layout.addStretch()
         self.refresh_status()
+        from app.indexing.watcher import IndexWatcher
+        self.watcher = IndexWatcher(self)
+        self.watcher.refresh_requested.connect(self.automatic_refresh)
+        self.configure_watcher()
+        if options.get('automatic', False):
+            QTimer.singleShot(1500, self.automatic_refresh)
 
     def add_path(self, form, name, field):
         row = QHBoxLayout()
@@ -142,6 +195,17 @@ class ResearchPanel(QWidget):
         if value:
             self.legacy.append(value)
 
+    def add_source(self):
+        path = QFileDialog.getExistingDirectory(self, 'Add a research source')
+        if not path:
+            return
+        kind, okay = QInputDialog.getItem(self, 'Source type', 'Dataset source type', ['active', 'reference', 'archive'], 0, False)
+        if okay:
+            if not hasattr(self, 'pending_sources'):
+                self.pending_sources = {}
+            self.pending_sources[path] = kind
+            self.additional.append(path)
+
     def select_project(self):
         identity = self.project_selector.currentData()
         project = next((s for s in self.settings.locations.value.get('projects', []) if s['id'] == identity), None)
@@ -160,8 +224,17 @@ class ResearchPanel(QWidget):
         for path in dict.fromkeys(p.strip() for p in self.legacy.toPlainText().splitlines() if p.strip()):
             source = copy.deepcopy(old.get(path) or value['active'])
             if path not in old:
-                source.update(id=str(uuid.uuid4()), name=Path(path).name, root_path=path)
+                source.update(id=str(uuid.uuid4()), name=Path(path).name, source_label=Path(path).name, root_path=path)
             value['legacy'].append(source)
+        old_additional = {s['root_path']: s for s in value.get('additional', [])}
+        value['additional'] = []
+        for path in dict.fromkeys(p.strip() for p in self.additional.toPlainText().splitlines() if p.strip()):
+            source = copy.deepcopy(old_additional.get(path) or value['active'])
+            if path not in old_additional:
+                source.update(id=str(uuid.uuid4()), name=Path(path).name, source_label=Path(path).name, root_path=path)
+            kind = getattr(self, 'pending_sources', {}).get(path, source.get('source_type', 'active'))
+            source.update(source_type=kind, project_type=kind, dataset_status='current' if kind == 'active' else kind, read_only=kind != 'active')
+            value['additional'].append(source)
         value.update({k: f.text().strip() for k, f in self.paths.items()})
         return value
 
@@ -170,6 +243,15 @@ class ResearchPanel(QWidget):
             return False
         try:
             self.settings.save_locations(self.values())
+            from app.indexing.extractor import DEFAULT_LIMITS
+            limits = dict(DEFAULT_LIMITS)
+            limits['enabled'] = self.extraction.isChecked()
+            for key, control in self.limit_fields.items():
+                limits[key] = control.value() * (1024 * 1024) if key == 'max_file_bytes' else control.value()
+            self.settings.store.local['native_indexing'] = {'automatic': self.auto_refresh.isChecked(),
+                'watching': self.watching.isChecked(), 'minutes': self.interval.value(), 'limits': limits}
+            self.settings.store.save_local()
+            self.configure_watcher()
             self.project_selector.blockSignals(True)
             self.project_selector.clear()
             self.project_selector.addItem('Configured active project', '')
@@ -200,6 +282,7 @@ class ResearchPanel(QWidget):
         self.name.setText(value['active']['name'])
         self.active.setText(value['active']['root_path'])
         self.legacy.setPlainText('\n'.join(s['root_path'] for s in value['legacy']))
+        self.additional.clear()
         for key, field in self.paths.items():
             field.setText(value[key])
         self.status.set_message('Default fields restored. Save locations to apply; source files and previous catalogs are preserved.')
@@ -214,8 +297,8 @@ class ResearchPanel(QWidget):
             message += '\n' + (getattr(self.settings, 'catalog_error', '') or 'Save locations to enable the research catalog.')
         self.status.set_message(message)
 
-    def start_index(self, tier=None, choose=False, **options):
-        if self.indexing or not self.save():
+    def start_index(self, tier=None, choose=False, apply_settings=True, **options):
+        if self.indexing or (apply_settings and not self.save()):
             return
         if not self.settings.catalog:
             self.status.set_message(self.settings.catalog_error, 'warning')
@@ -240,7 +323,7 @@ class ResearchPanel(QWidget):
         self.worker = CatalogWorker(self.settings.catalog, options, self)
         self.worker.completed.connect(self.completed)
         self.worker.failed.connect(lambda message: self.status.set_message(message, 'warning'))
-        self.worker.progress.connect(lambda count: self.status.set_message(f'Indexing… {count:,} files scanned'))
+        self.worker.progress.connect(lambda count: self.status.set_message(f'{self.settings.catalog.phase}… {count:,} files scanned'))
         self.worker.finished.connect(self.finished)
         self.status.set_message('Indexing research sources…')
         self.worker.start()
@@ -262,3 +345,77 @@ class ResearchPanel(QWidget):
     def cancel_index(self):
         if self.worker:
             self.worker.cancelled.set()
+
+    def configure_watcher(self):
+        if not hasattr(self, 'watcher'):
+            return
+        settings = self.settings.store.local.get('native_indexing', {})
+        roots = [s['root_path'] for s in self.settings.locations.sources() if s['source_type'] == 'active']
+        self.watcher.configure(roots, settings.get('watching', False), settings.get('automatic', False), settings.get('minutes', 10))
+
+    def automatic_refresh(self):
+        if not self.indexing and self.settings.catalog:
+            self.start_index(tier='active', quick=True, apply_settings=False)
+
+    def backup(self):
+        if self.indexing or not self.settings.catalog:
+            return
+        try:
+            self.settings.catalog.backup('manual-backup')
+            self.status.set_message('Index backup saved to the configured Backups folder.', 'success')
+        except (OSError, ValueError) as exc:
+            self.error.show_error('Backup unavailable', exc)
+
+    def restore(self):
+        if self.indexing or not self.settings.catalog:
+            return
+        path, _ = QFileDialog.getOpenFileName(self, 'Restore a research index backup', self.settings.locations.value['backups'], 'SQLite (*.sqlite3)')
+        if not path:
+            return
+        from PySide6.QtWidgets import QMessageBox
+        if QMessageBox.question(self, 'Restore Index?', 'Back up the current index and restore this backup? Research files will remain unchanged.') != QMessageBox.Yes:
+            return
+        try:
+            self.settings.catalog.restore(path)
+            self.changed.emit()
+            self.refresh_status()
+        except Exception:
+            self.error.show_error('Restore unavailable', 'The existing index was preserved. Choose a valid index backup.')
+
+    def history(self):
+        if not self.settings.catalog:
+            return
+        import json
+        from PySide6.QtWidgets import QDialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Index Run History')
+        dialog.resize(720, 480)
+        layout = QVBoxLayout(dialog)
+        output = QTextEdit()
+        output.setReadOnly(True)
+        output.setPlainText(json.dumps({'runs': self.settings.catalog.history(), 'recent_errors': self.settings.catalog.errors()}, indent=2))
+        layout.addWidget(output)
+        layout.addWidget(Button('Close', dialog.accept))
+        dialog.exec()
+
+    def edit_rules(self):
+        import json
+        from app.services.storage import read_json
+        from PySide6.QtWidgets import QDialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Classification keyword rules')
+        layout = QVBoxLayout(dialog)
+        output = QTextEdit()
+        template = read_json(self.settings.store.config_dir / 'indexing_rules.json', {}).get('keywords', {})
+        output.setPlainText(json.dumps(self.settings.store.local.get('native_category_rules', template), indent=2))
+        layout.addWidget(output)
+        layout.addWidget(Button('Save rules', dialog.accept))
+        if dialog.exec():
+            try:
+                rules = json.loads(output.toPlainText())
+                if not isinstance(rules, dict) or any(not isinstance(k, str) or not k.strip() or v not in RESEARCH_CATEGORIES for k, v in rules.items()):
+                    raise ValueError('Use keyword strings mapped to supported research categories.')
+                self.settings.store.local['native_category_rules'] = rules
+                self.settings.store.save_local()
+            except (ValueError, TypeError) as exc:
+                self.error.show_error('Invalid category rules', exc)

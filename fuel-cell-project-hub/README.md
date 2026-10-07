@@ -1,56 +1,51 @@
 # Fuel Cell Project Hub
 
-An initial Windows desktop app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
+A native Windows research management app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
 
-## Research projects and legacy data
+## Native research indexing
 
-Use **Settings > Storage** to configure research through the Project, Storage,
-Indexing and Categories tabs. **Save locations** references existing folders;
-it does not create markers, standard folders, or copy datasets. Browse, type,
-validate, open or reset the fields without editing application code. Add several
-legacy roots by entering one folder per line. Changing the current project
-preserves the previous project's identity and catalog; the project selector can
-return to it. Disconnected sources retain their last known references.
+The app works offline without Microsoft login, Graph, Entra configuration or
+permissions. OneDrive handles synchronization; Windows provides the folders;
+the Hub owns its local catalog, content search and research metadata.
 
-Current defaults are **GDL Research** in `GDL research - General` and **Michelson
-GDL Stuffs** in `Michelson, Andrew's files - GDL Stuffs`. Michelson is historical
-**Legacy Data / Old Test Data**, kept separate from current research and treated
-as read-only. Research paths derive from OneDriveCommercial / OneDrive and are
-saved only in your personal Local AppData profile.
+Use **Settings > Storage > Project** to configure **GDL Research** (current)
+and **Previous GDL Research**, source **Michelson GDL Stuffs** (read-only
+Legacy / Old Test Data). Add or remove legacy roots using one path per line.
+**Add current / reference / archive source** supports additional sources.
+Changing projects preserves prior identities and catalog records. Disconnected
+sources retain their last known references. Saving locations creates no source
+markers and does not move or reorganize research files.
 
-**Index Current Project**, **Index Legacy Data**, **Index Everything**, **Quick
-Refresh**, **Rebuild Index**, and **Index Selected Folder** run in the background
-with cancellation. Rebuild backs up the database and preserves manual metadata.
-The dashboard shows current/legacy counts, last indexing time and source status.
-Project Files supports combined or separate sources, category, extension,
-document type, modified dates, tags and duplicate filters, with 200 results per
-page. **Edit Metadata** adds manual categories, tags, title and notes without
-changing files. **Import into Current Project** explicitly copies a selected
-local legacy file, keeps its original, and never overwrites an existing file.
+**Storage** edits application-owned database, generated output, cache and backup
+folders. Environment variables in typed paths are expanded. Personal values
+stay in Local AppData or `FUEL_HUB_DATA_DIR`; source defaults are portable.
 
-| Configurable location | Default |
-|---|---|
-| Active Project Root | OneDrive / `GDL research - General` |
-| Legacy Roots | OneDrive / `Michelson, Andrew's files - GDL Stuffs` |
-| Shared Storage | Active default research folder; no automatic writes |
-| Index / Database | Local AppData / FuelCellProjectHub / catalog |
-| Generated Output | Local AppData / FuelCellProjectHub / generated |
-| Temp / Cache | Local AppData / FuelCellProjectHub / cache |
-| Backups | Local AppData / FuelCellProjectHub / backups |
+**Indexing** provides **Quick Refresh**, **Full Scan**, **Rebuild Search Index**,
+**Rebuild Entire Index**, **Index Current Project**, **Index Legacy Data** and
+**Index Selected Folder**, with background execution and cancellation. Set
+content size/text/page/cell limits, disable extraction, or enable watching and
+periodic reconciliation. Startup never starts a full rebuild. **Advanced**
+provides backup/restore, index history, keyword classification rules and portable
+folder mappings. Rebuilds and migrations back up first and preserve manual edits.
 
-The SQLite catalog is the unified searchable index. Older JSON indexes remain
-as backed-up migration inputs and provider transport snapshots. Scans collect
-metadata recursively without reading online-only content. Full scans hash only
-resident files up to 1 MB, within a 32 MB budget per run. Larger/unavailable files
-can have provisional duplicate warnings. Unsupported content types still have
-searchable metadata. The app does not measure OneDrive sync completion.
+**Project > Files & Data** defaults to current research. Choose Old Test Data
+or All Sources, search filenames and resident document text, and filter by
+category, extension, document type, dates, project/source, availability, folder,
+tags and duplicates. SQLite FTS5 ranks results and retrieves only 200 rows per
+page. **Edit Metadata**, **Toggle favorite**, and **Find related** change the
+catalog only. **Import into Current Project** explicitly copies a selected
+resident legacy file, preserving its original and avoiding overwrites.
 
-Application code is in `app/services` and `app/ui`; portable defaults in `config`;
-managed GDL source in `analysis/gdl/engine`; assets, tests, documentation and
-packaging tools each have their own directory. Runtime configuration, history,
-logs, databases and caches stay outside installed source. See the
-[cleanup manifest](cleanup_manifest.md) and
-[research architecture, validation and remaining limitations](docs/research_storage.md).
+Text, PDF, DOCX, XLSX and PPTX receive bounded local extraction; image headers
+provide dimensions and format. Online-only files receive metadata without
+opening their content. Proprietary formats remain metadata-only; image-only
+PDFs are marked OCR required. Hashing uses SHA-256 for resident files up to
+1 MB within a 32 MB run budget. Duplicate warnings are review aids and never
+cause deletion. OneDrive cloud files absent from Windows cannot be indexed.
+
+See [native architecture, migration, validation and limits](docs/native_indexing.md),
+[storage configuration](docs/storage_configuration.md), and the
+[cleanup manifest](cleanup_manifest.md).
 
 ## Open the app
 
@@ -84,15 +79,9 @@ Files inside `99_Archive` are indexed and hidden by default; choose **Include Ar
 
 The UI reports local folder availability, not OneDrive's cloud sync completion. If the root or marker becomes unavailable, use **Locate Again** or **Open OneDrive**; the rest of the hub remains usable. Index warnings are available under Storage. Code-executing file formats require **Open Containing Folder** so you can explicitly choose an editor or tool.
 
-`ProjectStorageProvider` defines the provider contract; local OneDrive and read-only Microsoft Graph providers implement it. Content search, ingest, automatic archiving and data copying are not included. See [storage schema and architecture](docs/STORAGE_SCHEMA.md).
-
-## Microsoft account and historical data
-
-Local storage paths are now directly editable under **Settings Ã¢â€ â€™ Storage**. **Microsoft Account** provides browser sign-in with the supplied Entra registration and encrypted Windows token caching. **Cloud & Old Test Data** browses university OneDrive/SharePoint folders, indexes metadata and controls LocalOnly/CloudOnly/Hybrid mode. **Project folders** edits portable folder mappings, including GDL default input/output/reports paths.
-
-**Files & Data** starts with **Current project**. Select **Old Test Data** to search permanent historical references and notes, or **All sources** to compare them. Classification overrides change metadata only. No bulk downloads or cloud file changes occur.
-
-See [Microsoft login](docs/microsoft_login.md), [legacy import](docs/legacy_data_import.md), and [editable storage configuration](docs/storage_configuration.md).
+`ProjectStorageProvider` retains the explicit local shared-library contract.
+Native research storage uses the single SQLite catalog described above. See
+[shared-library schema](docs/STORAGE_SCHEMA.md) for the optional marker workflow.
 
 ## GDL analysis and engine updates
 
@@ -179,37 +168,6 @@ This starts V0.1; it is not a completed packaged release.
 1. Confirm detection on the actual installed Swift, JMP, Office, and SolidWorks versions. Portable executable software may require manual path selection; Teams instead requires a registered URI handler.
 2. Add approved quick-install flows, version detection, and a reliable packaged `.exe` with PyInstaller.
 3. Implement selective app/script updates with signed/verified release assets, backup, and rollback. Current checks support public GitHub releases only.
-4. Add request handling and coordinated shared editing in later versions. Sample/procedure/experiment management remains future work; this version indexes their file relationships only. Automatic agenda synchronization, Microsoft login, Graph, and AI remain outside this build.
+4. Add request handling and coordinated shared editing in later versions. Sample/procedure/experiment management remains future work; this version indexes their file relationships only. Automatic agenda synchronization and AI remain outside this build.
 
 Installer buttons currently open official vendor pages; they do not install anything. Retiring a tool preserves its metadata and configured path and disables launching it.
-
-## Reduced-permission Microsoft login
-
-Initial Microsoft sign-in requests **User.Read only**. Open **Settings â†’ Microsoft Account â†’ Sign in** to authenticate and view identity and permission status. Optional **My OneDrive** requests Files.Read only when chosen; **Connect SharePoint / search sites** requests Sites.Read.All only when chosen. Admin approval never blocks local indexing or cached metadata. See [Microsoft setup](docs/microsoft_login.md).
-
-The current validated Windows build is `dist/windows-branded-complete/FuelCellProjectHub/FuelCellProjectHub.exe`. Keep its entire directory together. The older `dist/FuelCellProjectHub` package is obsolete. Build with `tools/build_windows.ps1`; this creates an onedir package containing the app, defaults and managed GDL engine, without personal profile settings or token caches.
-
-## Development workflow and app branding
-
-GitHub = application/managed analysis source. OneDrive/SharePoint = project data.
-Work directly on main with the standing [Codex workflow](docs/CODEX_WORKFLOW.md).
-
-```powershell
-git pull --ff-only origin main
-# Implement, run applicable tests, review and explicitly stage changes.
-git commit -m "Describe the behavior"
-git push origin main
-```
-
-Never force-push or discard uncommitted work. Local profiles, datasets, runtime,
-private original GDL baseline and build directories are ignored. Packaging .spec
-source remains tracked. Source pushes do not publish a release or automatically
-update installed apps.
-
-The shared resource resolver loads assets/app_icon.ico in source and packaged
-runs. The PNG master and multiresolution Windows ICO are bundled, used by the
-application and main window, and embedded in the Windows executable. The Windows
-process declares FuelCellProjectHub.Desktop as its taskbar identity. No About
-dialog or installer exists yet; future shortcuts should use the same ICO.
-
-To retain previous builds, use `tools/build_windows.ps1 -OutputDirectory dist/windows-branded-complete` with a fresh output directory. Output must stay under dist. Install PyInstaller in the development virtual environment to build; it is not a runtime dependency.

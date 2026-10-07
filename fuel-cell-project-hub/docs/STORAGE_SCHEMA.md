@@ -8,7 +8,7 @@ The library owns all data files. The hub owns lightweight metadata, relationship
 
 ## Provider contract
 
-`ProjectStorageProvider` defines listing, item lookup, opening files/folders, existence, refresh/rebuild, availability, folder validation/creation, shared project read/save/history, and summary operations. The UI calls the contract; filesystem traversal and boundary checks live in `LocalOneDriveProvider`. The setup factory currently creates a local provider. A future Microsoft Graph provider can implement the same contract without changing the file browser.
+`ProjectStorageProvider` defines listing, item lookup, opening files/folders, existence, refresh/rebuild, availability, folder validation/creation, shared project read/save/history, and summary operations. The UI calls the contract; filesystem traversal and boundary checks live in `LocalOneDriveProvider`. The setup factory currently creates a local provider. Native research indexing instead uses the SQLite service described in native_indexing.md.
 
 ## Project marker (schema version 1)
 

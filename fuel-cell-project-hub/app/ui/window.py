@@ -21,10 +21,7 @@ from app.ui.theme import apply_theme, Theme
 from app.services.gdl_analysis import GDLAnalysisService
 from app.services.path_registry import detect_dependency
 from app.ui.gdl_panels import GDLPanel, GDLSettingsPanel
-from app.services.microsoft_auth import MicrosoftAuth
-from app.services.microsoft_graph import MicrosoftGraphClient
 from app.services.storage_settings import StorageSettings
-from app.ui.microsoft_panels import MicrosoftAccountPanel, CloudStoragePanel, FolderMappingsPanel
 from app.ui.branding import application_icon
 
 
@@ -48,9 +45,7 @@ class HubWindow(QMainWindow):
         super().__init__()
         self.setWindowIcon(application_icon())
         self.store = store
-        self.microsoft_auth = MicrosoftAuth(store)
-        self.microsoft_graph = MicrosoftGraphClient(self.microsoft_auth)
-        self.storage_settings = StorageSettings(store, self.microsoft_graph)
+        self.storage_settings = StorageSettings(store)
         store.storage_settings = self.storage_settings
         self.storage_panel = StoragePanel(store, self)
         from app.ui.research_panel import ResearchPanel
@@ -105,11 +100,6 @@ class HubWindow(QMainWindow):
         self.gdl_service = GDLAnalysisService(store)
         self.gdl_settings = GDLSettingsPanel(self.gdl_service, self)
         self.gdl_panel = GDLPanel(self.gdl_service, self)
-        self.microsoft_panel = MicrosoftAccountPanel(self.microsoft_auth, self.microsoft_graph, self)
-        self.cloud_panel = CloudStoragePanel(self.storage_settings, self)
-        self.folder_panel = FolderMappingsPanel(self.storage_settings, self)
-        for panel in (self.microsoft_panel, self.cloud_panel, self.folder_panel):
-            panel.changed.connect(self.storage_changed)
         self.render_dashboard()
         self.render_software()
         self.render_project()
@@ -515,9 +505,6 @@ class HubWindow(QMainWindow):
             self.store.provider.open_item(target)
 
     def storage_changed(self):
-        if hasattr(self, 'microsoft_panel'):
-            self.microsoft_panel.update_permissions()
-            self.cloud_panel.reload()
         self.files_panel.reload()
         self.render_dashboard()
         self.render_activity()
@@ -640,15 +627,7 @@ class HubWindow(QMainWindow):
         self.settings_snapshot = copy.deepcopy(self.store.project)
         self.fields, self.lifecycle_fields = {}, {}
         sections = {}
-        for name in ("General", "Storage", "Software", "Project resources", "Updates", "History", "Analysis Tools", 'Microsoft Account', 'Cloud & Old Test Data', 'Project folders'):
-            panel = {'Microsoft Account': self.microsoft_panel, 'Cloud & Old Test Data': self.cloud_panel, 'Project folders': self.folder_panel}.get(name)
-            if panel:
-                scroll = QScrollArea()
-                scroll.setWidgetResizable(True)
-                scroll.setFrameShape(QFrame.NoFrame)
-                scroll.setWidget(panel)
-                tabs.addTab(scroll, name)
-                continue
+        for name in ("General", "Storage", "Software", "Project resources", "Updates", "History", "Analysis Tools"):
             if name == "Storage":
                 scroll = QScrollArea()
                 scroll.setWidgetResizable(True)
@@ -844,10 +823,11 @@ class HubWindow(QMainWindow):
         notify(self, "GitHub check unavailable. You can retry under Settings → Updates.", "warning")
 
     def closeEvent(self, event):
-        if self.workers or self.storage_panel.indexing or self.research_panel.indexing or any(panel.tasks for panel in (self.microsoft_panel, self.cloud_panel, self.folder_panel)):
+        if self.workers or self.storage_panel.indexing or self.research_panel.indexing:
             self.storage_panel.cancel_index()
             self.research_panel.cancel_index()
             self.banner.setText("Finishing a background check. Please close the app again in a moment.")
             event.ignore()
         else:
+            self.research_panel.watcher.stop()
             event.accept()

@@ -103,7 +103,7 @@ class CatalogTests(unittest.TestCase):
 
     def test_online_only_never_reads_content(self):
         self.seed()
-        with patch('app.services.research_catalog.placeholder', return_value=True), patch.object(Path, 'open', side_effect=AssertionError('hydration attempted')):
+        with patch('app.indexing.index_manager.placeholder', return_value=True), patch('app.indexing.index_manager.extract', side_effect=AssertionError('hydration attempted')):
             # Logging opens are intentionally separate; scan contents must not open.
             with patch.object(self.catalog, 'log'):
                 self.catalog.refresh()
@@ -189,12 +189,16 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(len(search_items([row])), 1)
 
     def test_existing_michelson_style_cache_is_migrated_as_legacy(self):
-        self.store.local['local_project_root'] = str(self.legacy)
-        write_json(self.store.local_dir / 'index/file_index.json', {'records': [
-            {'id': 'OLD-STABLE-ID', 'relative_path': 'image.png', 'name': 'image.png',
-             'category': 'Image', 'size': 9, 'modified': '2025-01-01', 'archived': False}]})
         (self.legacy / 'image.png').write_bytes(b'identical')
-        self.catalog.import_snapshots()
+        self.catalog.refresh()
+        row = self.catalog.rows()[0]
+        old = dict(row, id='OLD-STABLE-ID')
+        with self.catalog.connect() as db:
+            db.execute('DELETE FROM files')
+            db.execute('INSERT INTO files VALUES (?,?,?)', (old['id'], old['source_id'], json.dumps(old)))
+            db.execute('DELETE FROM file_metadata')
+            db.execute('PRAGMA user_version=2')
+        self.catalog = ResearchCatalog(self.store, self.locations)
         row = self.catalog.rows()[0]
         self.assertEqual(row['data_origin'], 'legacy')
         self.assertTrue(row['read_only'])

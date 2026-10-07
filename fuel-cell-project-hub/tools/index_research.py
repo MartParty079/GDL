@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.services.storage import Store, write_json
 from app.services.research_catalog import ProjectLocations, ResearchCatalog
-from app.services.project_storage import EXCLUDED, redirects, search_items
+from app.services.project_storage import EXCLUDED, redirects
 
 
 def inventory(root):
@@ -52,6 +52,7 @@ def main():
     parser.add_argument('--legacy-root')
     parser.add_argument('--verify-sources', action='store_true')
     parser.add_argument('--quick', action='store_true')
+    parser.add_argument('--tier', choices=('current', 'legacy', 'all'), default='all')
     args = parser.parse_args()
     store = Store()
     locations = ProjectLocations(store)
@@ -76,13 +77,21 @@ def main():
     catalog = ResearchCatalog(store, locations)
     catalog.import_snapshots()
     before = {s['id']: inventory(Path(s['root_path'])) for s in locations.sources()} if args.verify_sources else {}
-    summary = catalog.refresh(quick=args.quick, progress=lambda count: print(f'Scanned {count:,}', flush=True) if count % 10000 == 0 else None)
-    rows = catalog.rows()
-    validation = {'sources': locations.status(), 'index_run': summary,
-        'current_filter': len(search_items(rows, origin='current', archive='all')),
-        'legacy_filter': len(search_items(rows, origin='legacy', archive='all')),
-        'combined_filter': len(search_items(rows, archive='all')),
-        'legacy_read_only_old_test_data': all(r.get('read_only') and r.get('dataset_status') == 'old_test_data' for r in rows if r.get('provider') == 'ResearchLocal' and r['data_origin'] == 'legacy')}
+    source_ids = [s['id'] for s in locations.sources() if args.tier == 'all' or s['source_type'] == ('active' if args.tier == 'current' else 'legacy')]
+    summary = catalog.refresh(source_ids=source_ids, quick=args.quick, progress=lambda count: print(f'Scanned {count:,}', flush=True) if count % 10000 == 0 else None)
+    validation = {'sources': locations.status(), 'index_run': summary, 'catalog': catalog.summary(),
+        'current_filter': catalog.query(origin='current', archive='all', limit=1)[1],
+        'legacy_filter': catalog.query(origin='legacy', archive='all', limit=1)[1],
+        'combined_filter': catalog.query(archive='all', limit=1)[1],
+        'searches': {term: {'current': catalog.query(query=term, origin='current', limit=1)[1],
+                          'legacy': catalog.query(query=term, origin='legacy', limit=1)[1]}
+            for term in ('GDL', 'microscopy', 'pore diameter', 'equivalent pore diameter', 'porosity',
+                'roundness', 'solidity', 'fiber diameter', 'water intrusion', 'compression', 'pressure film',
+                'ASTM', 'ImageJ', 'laser', 'Python', 'syringe')}}
+    with catalog.connect() as db:
+        validation['legacy_read_only_old_test_data'] = db.execute("""SELECT count(*) FROM files
+            WHERE source IN (SELECT id FROM sources WHERE type='legacy') AND
+            (json_extract(payload,'$.read_only')<>1 OR json_extract(payload,'$.dataset_status')<>'old_test_data')""").fetchone()[0] == 0
     if args.verify_sources:
         validation['source_metadata_changes'] = {}
         for source in locations.sources():

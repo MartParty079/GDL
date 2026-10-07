@@ -19,14 +19,14 @@ with patch('app.ui.window.QTimer.singleShot'):
 assert window.storage_settings.catalog is not None
 files = window.files_panel
 expected = window.storage_settings.catalog.summary()
-assert len(files.rows) == expected['current'], 'Current filter disagrees with the catalog'
+assert files.total_matches == window.storage_settings.catalog.query(origin='current', limit=1)[1], 'Current filter disagrees with the catalog'
 window.show_research_files('legacy')
-assert len(files.rows) == expected['legacy'], 'Legacy filter disagrees with the catalog'
-assert files.table.rowCount() == min(200, expected['legacy'])
+assert files.total_matches == window.storage_settings.catalog.query(origin='legacy', limit=1)[1], 'Legacy filter disagrees with the catalog'
+assert files.table.rowCount() == min(200, files.total_matches)
 assert all(r.get('dataset_status') == 'old_test_data' for r in files.rows)
 print('Duplicate classifications:', dict(Counter(r['duplicate_status'] or 'No warning' for r in files.items)), flush=True)
 window.show_research_files('')
-assert len(files.rows) == expected['current'] + expected['legacy']
+assert files.total_matches == window.storage_settings.catalog.query(limit=1)[1]
 for page in ('Dashboard', 'Project', 'Settings', 'Software', 'Activity', 'Bugs'):
     window.show_page(page)
     app.processEvents()

@@ -9,8 +9,6 @@ if not getattr(sys, 'frozen', False):
 
 def self_check(report):
     import json
-    import msal
-    from msal_extensions import FilePersistenceWithDataProtection
     from unittest.mock import patch
     from PySide6.QtCore import QCoreApplication, QEvent
     from PySide6.QtWidgets import QApplication
@@ -26,7 +24,7 @@ def self_check(report):
             window = HubWindow(Store(ROOT, Path(temporary) / 'profile'))
         window.show()
         app.processEvents()
-        result = {'startup': True, 'msal_version': msal.__version__, 'settings_tabs': [window.settings_tabs.tabText(i) for i in range(window.settings_tabs.count())],
+        result = {'startup': True, 'settings_tabs': [window.settings_tabs.tabText(i) for i in range(window.settings_tabs.count())],
                   'application_icon_loaded': not app.windowIcon().isNull(), 'window_icon_loaded': not window.windowIcon().isNull(),
                   'icon_asset_present': resource_path('assets/app_icon.ico').is_file(),
                   'local_path_editable': not window.storage_panel.root.isReadOnly(), 'default_origin': window.files_panel.origin.currentData(),
@@ -34,7 +32,7 @@ def self_check(report):
         current, legacy = Path(temporary) / 'current', Path(temporary) / 'legacy'
         current.mkdir()
         legacy.mkdir()
-        (current / 'current.txt').write_text('current')
+        (current / 'current.txt').write_text('current porosity')
         (legacy / 'historical.txt').write_text('legacy')
         panel = window.research_panel
         panel.active.setText(str(current))
@@ -42,15 +40,29 @@ def self_check(report):
         panel.paths['shared_storage'].setText(str(current))
         if not panel.save():
             raise ValueError('Packaged research configuration failed.')
+        from docx import Document
+        from openpyxl import Workbook
+        from pptx import Presentation
+        from pypdf import PdfWriter
+        from PIL import Image
+        document = Document(); document.add_paragraph('fiber diameter'); document.save(current / 'fixture.docx')
+        workbook = Workbook(); workbook.active.append(['water intrusion']); workbook.save(current / 'fixture.xlsx'); workbook.close()
+        presentation = Presentation(); slide = presentation.slides.add_slide(presentation.slide_layouts[0]); slide.shapes.title.text = 'compression'; presentation.save(current / 'fixture.pptx')
+        pdf = PdfWriter(); pdf.add_blank_page(width=100, height=100); pdf.write(current / 'fixture.pdf')
+        Image.new('RGB', (10, 20)).save(current / 'fixture.png')
         indexed = window.storage_settings.catalog.refresh()
+        catalog = window.storage_settings.catalog
+        assert indexed['errors'] == 0
+        assert catalog.query(query='fiber diameter')[1] == 1
+        assert catalog.query(query='water intrusion')[1] == 1
+        assert catalog.query(query='compression')[1] == 1
+        assert not hasattr(window, 'auth')
+        result.update(native_content_search=True, local_parsers_present=True, microsoft_auth_removed=True)
         window.files_panel.reload()
         result.update(research_catalog_available=True, research_current_files=indexed['current'],
                       research_legacy_files=indexed['legacy'], research_index_errors=indexed['errors'],
                       research_template_present=resource_path('config/research_defaults.json').is_file(),
                       research_sources_unchanged=not (current / '.projecthub').exists() and not (legacy / '.projecthub').exists())
-        cache = FilePersistenceWithDataProtection(str(Path(temporary) / 'test-cache.bin'))
-        cache.save('noncredential-test')
-        result['dpapi_round_trip'] = cache.load() == 'noncredential-test'
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)

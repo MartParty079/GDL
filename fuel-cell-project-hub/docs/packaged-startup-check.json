@@ -1,6 +1,5 @@
 {
   "startup": true,
-  "msal_version": "1.39.0",
   "settings_tabs": [
     "General",
     "Storage",
@@ -8,10 +7,7 @@
     "Project resources",
     "Updates",
     "History",
-    "Analysis Tools",
-    "Microsoft Account",
-    "Cloud & Old Test Data",
-    "Project folders"
+    "Analysis Tools"
   ],
   "application_icon_loaded": true,
   "window_icon_loaded": true,
@@ -20,5 +16,13 @@
   "default_origin": "current",
   "engine_manifest_present": true,
   "fiji_launched": false,
-  "dpapi_round_trip": true
+  "native_content_search": true,
+  "local_parsers_present": true,
+  "microsoft_auth_removed": true,
+  "research_catalog_available": true,
+  "research_current_files": 6,
+  "research_legacy_files": 1,
+  "research_index_errors": 0,
+  "research_template_present": true,
+  "research_sources_unchanged": true
 }
