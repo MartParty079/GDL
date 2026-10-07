@@ -1,0 +1,18 @@
+YOURE A BETA v202 - INTEGRATION TESTS
+=====================================
+
+PASS - 14 Python/Jython source files compile with zero syntax errors.
+PASS - BEAST Word-only mode: graph generation OFF + worker-local create_word_report OFF + Combined Word report => image outputs ON.
+PASS - BEAST Individual-by-image report with graphs OFF => image outputs ON.
+PASS - BEAST true data-only mode (graphs OFF + no Word reports) => image outputs OFF.
+PASS - BEAST graphs-only mode => image outputs ON.
+PASS - Normal mode retains existing image-output behavior.
+PASS - Fiji IJ.openImage is the primary rainbow heat-map decoder.
+PASS - ImageIO remains a secondary fallback decoder.
+PASS - Heat-map PNG write is verified for existence and nonzero size.
+PASS - Heat-map long-path safety helper shortens only as required and retains _rainbow_heat_map.png suffix.
+PASS - Heat-map shorter fallback folder support is wired into per-run records.
+PASS - Worker content-progress file is configured for initial launches and runtime restarts.
+PASS - Content-progress file is cleared between attempts to avoid stale false-positive progress.
+PASS - WORKER_CONTENT_STALL_RESTART branch exists and restarts unfinished records.
+PASS - Old heartbeat-current/continue-indefinitely slow-worker branch is removed.

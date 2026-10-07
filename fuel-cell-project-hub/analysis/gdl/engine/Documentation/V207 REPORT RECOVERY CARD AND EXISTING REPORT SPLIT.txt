@@ -1,0 +1,39 @@
+YOURE A BETA v207 - REPORT RECOVERY CARD AND EXISTING REPORT SPLIT
+
+NEW REPORT RECOVERY + SUMMARIES CARD
+- Reports-only / failed-run recovery controls moved out of the normal Report card.
+- Excel main-summary export and destination controls moved to this card.
+- Manual selection at end remains available here.
+- Batch sweep summary mirroring moved here and remains independent of Word report grouping.
+
+REPORTS-ONLY SOURCES
+1. Existing failed/incomplete output folder
+   - Recovers completed runs from Report_Recovery snapshots, BEAST worker results, checkpoint/manifests, and completed run folders.
+2. Existing generated Word report
+   - User selects a prior YOURE A BETA DOCX.
+   - The script finds the matching GDL output root from the DOCX location.
+   - If the DOCX was copied elsewhere, the user is prompted once for the matching original GDL output folder.
+   - Existing report is never modified.
+
+REPORTS-ONLY OUTPUT MODES
+- Use normal Report card selection
+- Combined Word report
+- Individual by image
+- Completely separate individual reports
+- Individual by image + combined
+- Completely separate individual reports + combined
+
+EXISTING REPORT SPLIT OUTPUT
+- Rebuilt/split reports are written under Word_Report/Split_From_<selected report name>.
+- Completely individual reports are nested under Completely_Individual_Reports.
+- Report grouping remains independent from Excel summary ON/OFF and batch summary mirroring ON/OFF.
+
+ALWAYS-REPORT INVARIANT
+- Report recovery starts once an output root exists.
+- Cancel/failure preserves completed work and finishes the reporting/export phase.
+- If no analysis run completed, a minimal status DOCX is still attempted.
+
+VALIDATION
+- Python syntax compile passed for all source modules and launcher/default files.
+- Existing-report output-root location tested for Word_Report root, Split_From_* subfolder, and Completely_Individual_Reports subfolder.
+- 30 reports-only output-mode combinations passed independent of summary settings.

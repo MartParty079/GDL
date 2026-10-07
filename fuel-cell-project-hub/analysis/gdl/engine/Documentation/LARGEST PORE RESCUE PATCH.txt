@@ -1,0 +1,26 @@
+LARGEST-PORE RESCUE PATCH
+
+The master Large Pore Repair card remains OFF by default.
+
+New rescue defaults:
+- inspect only largest 3 parent pores
+- radius 8 through 18 px
+- maximum repair area 500 px
+- maximum repair fraction 0.02
+- maximum repair span 50 px
+- minimum smaller child fraction 0.25
+- maximum larger child fraction 0.75
+- maximum rescue repairs per image 1
+
+The normal conservative pass remains unchanged.
+
+Supplied highlighted pore verification at displayed 2048 x 1536 scale:
+- parent area: 13185 px
+- radius: 10 px
+- repair area: 127 px
+- repair span: 23 px
+- child pores: 7830 px and 5228 px
+- repair fraction: 0.963%
+
+The full processing image is 2592 x 1944, so its necessary geometric limits
+are larger than the previous 10 px radius / 150 px area / 25 px span limits.

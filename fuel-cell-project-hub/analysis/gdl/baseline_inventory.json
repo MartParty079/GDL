@@ -1,0 +1,387 @@
+[
+  {
+    "path": "Defaults and Other Stuff/EDIT STARTUP PATHS.bat",
+    "sha256": "55f1dc2d62050f51f6de63b96c7e75433beea9ed63c3f861e0da0a3184e04010",
+    "bytes": 56
+  },
+  {
+    "path": "Defaults and Other Stuff/EDIT USER DEFAULTS.bat",
+    "sha256": "2a73be2674feeb0e7f4cf31374d4063bd69eb87556de3ab132d3b002eddabbd2",
+    "bytes": 59
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Log-AndrewLaptop-2.txt",
+    "sha256": "801185a4cef2ff9a706addd70a2373939974f2c49af55072d346687e50116367",
+    "bytes": 6988
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Log-AndrewLaptop.txt",
+    "sha256": "ec9764adf3c820475d23a92ed12b64fdf3962453765c7afc1d2dcac2f6c739bb",
+    "bytes": 3203
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Log-MatthewLaptop-2.txt",
+    "sha256": "48c4aa323cf9a8e81bfc526e93cbed6b9ec30a4da16b18d0e06c4c415fe396bc",
+    "bytes": 9537
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Log-MatthewLaptop-3.txt",
+    "sha256": "e5dbe33db74ea1acb99cdc044434ecd0e30c9eb5f08a2b24c309fb5ad54a8191",
+    "bytes": 10828
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Log-MatthewLaptop.txt",
+    "sha256": "f187dfea53295482f88c1ee6b80791e3ed7ad45767a7bad832733f7c179237e4",
+    "bytes": 5785
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Log.txt",
+    "sha256": "145f6b79df0177076c3651fdbbb0144458adaf5922f5000a655c25c53b7e4916",
+    "bytes": 14948
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Status 1786647188353-32676-1.json",
+    "sha256": "58cadaf528de6c87dfad383d7cf8b4449b4024795fcf1de73bc64f0d35d53507",
+    "bytes": 166
+  },
+  {
+    "path": "Defaults and Other Stuff/Fiji Watchdog Status 1786648823516-26440-1.json",
+    "sha256": "f0f9ec8812b1e0c747866be27018fda5c7d06a3e5854c394ff05a51c4105406a",
+    "bytes": 166
+  },
+  {
+    "path": "Defaults and Other Stuff/GDL_Analysis_Launcher_v209.py",
+    "sha256": "4c3ee16cf99b7380e39665836b94b961c2c29dc22e17fb2f75411d762215ac1d",
+    "bytes": 17216
+  },
+  {
+    "path": "Defaults and Other Stuff/GDL_User_Defaults.py",
+    "sha256": "19a88ca0106a476d8e71587356b85dd9dbbdd2eb30dc6627af29853b7c23b93b",
+    "bytes": 34230
+  },
+  {
+    "path": "Defaults and Other Stuff/startup_paths.ini",
+    "sha256": "b6afb2e2d41c8d2d63d4421494ed0d504c4f17c9f1fe29c64dca7fb5f2f499f9",
+    "bytes": 249
+  },
+  {
+    "path": "Documentation/CHANGELOG AND NOTES.txt",
+    "sha256": "2c7d0d6e8a47fa2cc36e98d73b8ec87138e192f4c896b699312a9eb1b3710327",
+    "bytes": 18832
+  },
+  {
+    "path": "Documentation/LARGE PORE REPAIR INTEGRATION TESTS.txt",
+    "sha256": "8dff21581c2126129ed9287b344380e62936ce3e2a5d69f2bedfcb52fbdd07a3",
+    "bytes": 1482
+  },
+  {
+    "path": "Documentation/LARGEST PORE RESCUE PATCH.txt",
+    "sha256": "d9bf5d37256ac87dd6bb6bc8222e1a910caa813b2a07b2149d5de0a63d1031b6",
+    "bytes": 789
+  },
+  {
+    "path": "Documentation/LINES OF CODE.txt",
+    "sha256": "bd476d42b60be9eba84c75bfe0c88708ca5795da310d547f5f10cc68cd211c88",
+    "bytes": 699
+  },
+  {
+    "path": "Documentation/READ ME.txt",
+    "sha256": "f6dfcb989c29ca7ebb52832a3ff387a9982fb009e115880c96da0bcf208984ca",
+    "bytes": 6509
+  },
+  {
+    "path": "Documentation/V182 AGGRESSIVE LARGEST PORE VERIFICATION.txt",
+    "sha256": "10e8a8ccf349460e3d38aa6950c53d2e5df960077a44c76b6f1706bbdd4aa1c3",
+    "bytes": 675
+  },
+  {
+    "path": "Documentation/V182 GREEN TARGET VERIFICATION.txt",
+    "sha256": "2cd78bdd4ca73ff992f75453125377d6be3c54cd1ae8f5e9b2afb70becf11678",
+    "bytes": 936
+  },
+  {
+    "path": "Documentation/V184 BLUE ANTI NECK REMOVAL.txt",
+    "sha256": "ae9aaeccf7acc41c7de7bb2d1d9ae47bd7b62cead2aa9742819ba360863f2b0f",
+    "bytes": 500
+  },
+  {
+    "path": "Documentation/V185 FIBER FIXER.txt",
+    "sha256": "68220bfb52021e2f964a95c40561861409eb52d38e2fd3f9df8fbbaa8dc52ca4",
+    "bytes": 398
+  },
+  {
+    "path": "Documentation/V186 FIBER FIXER PREVIEW AND SWEEP.txt",
+    "sha256": "eb71320274e1474c9ccdb123ae9dad3f932efa7bd38eda51708e3036ec9c9bd5",
+    "bytes": 285
+  },
+  {
+    "path": "Documentation/V187 FIBER FIXER AND ORGANIZATION.txt",
+    "sha256": "bb0b64e4efda9c273778bbe4ce512560fc37b619472fafdaa6baa018ba2400c5",
+    "bytes": 637
+  },
+  {
+    "path": "Documentation/V188 SCALE METHOD AND BEAST REPORT MODES.txt",
+    "sha256": "3494be7b8ed0288ef1f79a32799e2adf95f86f78c474ca64fb87e19ea0a01e1f",
+    "bytes": 748
+  },
+  {
+    "path": "Documentation/V189 THRESHOLD SELECTION REPORTS.txt",
+    "sha256": "2af5e93485a3eb62d504a2e4e994b272e0b50ce449aaba2d22df84560ca02186",
+    "bytes": 977
+  },
+  {
+    "path": "Documentation/V190 REPORT SELECTION CARD.txt",
+    "sha256": "f5954689e5bd44726afc8d03390a775c13a1e91be710349e7586ddb53bc31d15",
+    "bytes": 564
+  },
+  {
+    "path": "Documentation/V191 JMP CRASH GUARD.txt",
+    "sha256": "9f6c4dd68ce8f8db96f6b3691e8911bf618cfa09aa8b145d0544b508e921438c",
+    "bytes": 700
+  },
+  {
+    "path": "Documentation/V192 10 JMP RESILIENT POOL.txt",
+    "sha256": "419195ee65ef29fb879f202c7af0e36a404b36605ecec43292bf6bd747f8eca9",
+    "bytes": 466
+  },
+  {
+    "path": "Documentation/V193 SWIFT IMAGING METADATA AND CAPTURE AUTOMATION.txt",
+    "sha256": "432879fb546c0041180cc22463c3652ebe78feb46e931758e2d140622f89925c",
+    "bytes": 1057
+  },
+  {
+    "path": "Documentation/V194 INTEGRATION TESTS.txt",
+    "sha256": "267bee4ebe249f0b3a283c39f0194d1ed5ee9ee0275d847bcadaf3a339f7a40b",
+    "bytes": 1334
+  },
+  {
+    "path": "Documentation/V194 SWIFT MAGN SCALE BRIDGE.txt",
+    "sha256": "7239277c0c27becfca54938436238c5b1d592231178c13e6c70295103efa2f79",
+    "bytes": 1979
+  },
+  {
+    "path": "Documentation/V195 BEAST FREEZE FIX.txt",
+    "sha256": "76a85b78cb22424251c1cd0efee75fab650ae34f2fe568817420ef3b912045ec",
+    "bytes": 1081
+  },
+  {
+    "path": "Documentation/V195 INTEGRATION TESTS.txt",
+    "sha256": "1763b80b837aabd86086d5ed9ccdb0c543a6ba96e0b2c336e2b04e677a52c7a6",
+    "bytes": 598
+  },
+  {
+    "path": "Documentation/V196 INTEGRATION TESTS.txt",
+    "sha256": "c8a81c0fc8ad339ea3f3eeb054bb7800ae7d969ed7e3f0a91ac4b06a481bf716",
+    "bytes": 1472
+  },
+  {
+    "path": "Documentation/V196 QUICK RUN AND SWIFT UNIT FIX.txt",
+    "sha256": "cab21c85931a9c53c7c265e825e64e8fe51a181f029c0c0dda00d0d7037566fe",
+    "bytes": 1295
+  },
+  {
+    "path": "Documentation/V197 INTEGRATION TESTS.txt",
+    "sha256": "83b74a9873d93da4722e77f7a31c0235ae9872623e2523cc67bb4ceac69b4e92",
+    "bytes": 1140
+  },
+  {
+    "path": "Documentation/V197 MULTI SWIFT MAGNIFICATION PROFILES.txt",
+    "sha256": "a6db52ba9d8f4638931813bfef302f199e0edf33f217d31833a407374e461d99",
+    "bytes": 1238
+  },
+  {
+    "path": "Documentation/V198 STRAND HEAT MAP REPORT OPTION.txt",
+    "sha256": "4b4413e738c38879574f82d5037c7bbb13390f55611c2f6b1680dc79775302ec",
+    "bytes": 334
+  },
+  {
+    "path": "Documentation/V199 REPORT MODE SUMMARY DECOUPLING.txt",
+    "sha256": "9623f50b38ccdf2adb02d1c8ceedef93731b9ad415f154467b1609adb16eb668",
+    "bytes": 1581
+  },
+  {
+    "path": "Documentation/V200 INTEGRATION TESTS.txt",
+    "sha256": "d91bd824c097221fe618fc6ced2f65df195fb52de43a4dd2673d8ae50c468e47",
+    "bytes": 1206
+  },
+  {
+    "path": "Documentation/V200 LOSSY IMAGE STORAGE OPTIONS.txt",
+    "sha256": "d7c63100d9e643829e220db6034eb6be7e0f47ded05eab5d15eba2f124ebf12d",
+    "bytes": 1564
+  },
+  {
+    "path": "Documentation/V201 HEAT MAP REPORT PERMUTATION TESTS.txt",
+    "sha256": "ae5f5365cc75ce4c91b05519bdc326003b7e0595950478298479bd3edb459f99",
+    "bytes": 1571
+  },
+  {
+    "path": "Documentation/V201 PRESEG OG HEAT MAP REPORT FIX.txt",
+    "sha256": "759320a1a6d5429b8d5e7a9f7c47ee289fbdc0a2a1954cae2bbf812d9936fa58",
+    "bytes": 1999
+  },
+  {
+    "path": "Documentation/V202 HEAT MAP AND STRICT WORKER WATCHDOG FIX.txt",
+    "sha256": "5dbdd9d30e70b4e8ebc6b60b46c2c4586a7847764124e91696f0bd31301ba069",
+    "bytes": 2630
+  },
+  {
+    "path": "Documentation/V202 INTEGRATION TESTS.txt",
+    "sha256": "18ac30729565613a5e498dcd99871ffc1aae0316455ad428b6349736b5aa6556",
+    "bytes": 1283
+  },
+  {
+    "path": "Documentation/V204 DYNAMIC DISPOSABLE AGENTS.txt",
+    "sha256": "d7b2cb8abb5c841cfc0ffe2a912b8e40e2b9c3c160ad57316fc12db00321f06a",
+    "bytes": 1295
+  },
+  {
+    "path": "Documentation/V204 FALSE STALL WATCHDOG FIX.txt",
+    "sha256": "07d8ed0a2d3ac52f3633f6e8707b32f569dfe80df8326d36c8275a67358dfd4c",
+    "bytes": 2240
+  },
+  {
+    "path": "Documentation/V204 INTEGRATION TESTS.txt",
+    "sha256": "a1c3dae6381073df030824d2d051b4db8cbce5141491203f26666a3e99cc912b",
+    "bytes": 1763
+  },
+  {
+    "path": "Documentation/V205 COMPLETELY INDIVIDUAL REPORT REWORK.txt",
+    "sha256": "543c40608fa8c64208032e44864fb34afbe39dbdd17458c0be9d435878f31321",
+    "bytes": 1007
+  },
+  {
+    "path": "Documentation/V206 INTEGRATION TESTS.txt",
+    "sha256": "627f7d94b092ab2299ceb5535ac4adba1522c02c854a0a2b5c330199f9e1770d",
+    "bytes": 522
+  },
+  {
+    "path": "Documentation/V206 REPORT RECOVERY AND MANUAL SUMMARY.txt",
+    "sha256": "ac2a4f7de318bf613d6029748216a020b28c95364f288dc1f690338d70ccf6e1",
+    "bytes": 1251
+  },
+  {
+    "path": "Documentation/V207 REPORT RECOVERY CARD AND EXISTING REPORT SPLIT.txt",
+    "sha256": "86326c13429a5cdc3b7f8f2a949d6e0ea2d82046751b50919de6f3058f173c72",
+    "bytes": 1986
+  },
+  {
+    "path": "Documentation/V208 BEAST INDIVIDUAL REPORT AND SUMMARY REWORK.txt",
+    "sha256": "6a2ee23c2154de03725722ce99077eae416d9b1c7f2252073bfb3d7e83780489",
+    "bytes": 1256
+  },
+  {
+    "path": "Documentation/V208 INTEGRATION TESTS.txt",
+    "sha256": "e9aa16ed5041eb4f8e596cc2872217b306a916ec55491155d1424acac7660f04",
+    "bytes": 2117
+  },
+  {
+    "path": "Documentation/V209 DUPLICATE REPORT AND LIVE BATCH REPORT FIX.txt",
+    "sha256": "a1287796b5d169c1bdee725c0945b8b3d52ba74eb008e5a48ab63b1d3d5381d2",
+    "bytes": 2330
+  },
+  {
+    "path": "GDL_code/01_Core_Imports_Helpers.py",
+    "sha256": "877ca0a4db0088ba6d8e7f8a73438995b1ee2bea43ad38a2f41bf3276e877103",
+    "bytes": 141415
+  },
+  {
+    "path": "GDL_code/02_User_Interface_Pages.py",
+    "sha256": "5689b6abd705b8a82b4ad132e1901de3f442c5c71963df7f741cff5052dcfac5",
+    "bytes": 149140
+  },
+  {
+    "path": "GDL_code/03_User_Interface_Settings.py",
+    "sha256": "05985544bfd5457eb01344a104c30fbaeab5ea0bc5f93bf2f139178deaa82400",
+    "bytes": 179456
+  },
+  {
+    "path": "GDL_code/04_Image_Processing_Sweeps.py",
+    "sha256": "eecad0d718028f58f263bc982e894660ce3730a0f3ec95be7c8195c1da157f5c",
+    "bytes": 105612
+  },
+  {
+    "path": "GDL_code/05_Reports_Manual_Tools_Pore_Maps.py",
+    "sha256": "c4f297725cb1110319bb3e794490207d161ef985ea8dae50340e29cdd1ba67a8",
+    "bytes": 111216
+  },
+  {
+    "path": "GDL_code/06A_Large_Pore_Repair.py",
+    "sha256": "59a2b5be0e1839b813316d7ad210703550acdf0434856b64038051e9ecf3609c",
+    "bytes": 58369
+  },
+  {
+    "path": "GDL_code/06B_Fiber_Fixer.py",
+    "sha256": "b24c19be623b9850b722a7d3a59a33271d2422bc522ac16384d6fa17c4f05628",
+    "bytes": 12359
+  },
+  {
+    "path": "GDL_code/06_Threshold_Analysis_JMP.py",
+    "sha256": "f67216cf4ace9f78703d31c2927aec8df583064f39cb0688db6283e03e7eb08b",
+    "bytes": 141589
+  },
+  {
+    "path": "GDL_code/07_Run_Engine_Exports.py",
+    "sha256": "173391ec706e7449825db714515f9b876a128978e98c4bbffb13d33cc27273f0",
+    "bytes": 124405
+  },
+  {
+    "path": "GDL_code/08_Workbook_JMP_Launch_Helpers.py",
+    "sha256": "9c41adad10f31a44231fa93fbb5daa149f9b460c69abed713c021d327be5a81a",
+    "bytes": 204017
+  },
+  {
+    "path": "GDL_code/09_BEAST_Workers_Main.py",
+    "sha256": "bf4a26b9d87d9428c18f4158cc54ec2c2cadb54dd2333646cdeed46e3a9aeda5",
+    "bytes": 132115
+  },
+  {
+    "path": "GDL_code/resources/john_gdl_startup.jpg",
+    "sha256": "9a2175f70cabf3d4514a84f09bd5882f55141675cb13beb2bf83b31c4b771b2b",
+    "bytes": 7489
+  },
+  {
+    "path": "GDL_code/resources/manual_trace_celebration_small.jpg",
+    "sha256": "c4c433dc17e8fe96d35868401265b5200ee93b61531ee499db1f485431ac2ed7",
+    "bytes": 44282
+  },
+  {
+    "path": "LAUNCH SCRIPT.bat",
+    "sha256": "062538e2e2365ca3c261f37e605e7ae027d6ad05c634f76620ed4d1f51375797",
+    "bytes": 974
+  },
+  {
+    "path": "Quick Runs/quick run1-(GOOOOOOOOL).json",
+    "sha256": "5a08f2eadb7ec1dc7efd1e0457b4be69f744c7a987e0aba2ecfdd83536624db7",
+    "bytes": 24933
+  },
+  {
+    "path": "Quick Runs/quick run2-(Like Gol, but sweeping EC on off).json",
+    "sha256": "fa8f9dac081052d1d429d47a7cce48042e6c0d714683d3964138a9ea35bb51da",
+    "bytes": 24092
+  },
+  {
+    "path": "Quick Runs/quick run3-(Quick Run 3).json",
+    "sha256": "c696a2be2a84d490730e1930a3ba68b02c02189afd08317a2e657eeae66861d8",
+    "bytes": 25424
+  },
+  {
+    "path": "Quick Runs/quick run4-(touch downs).json",
+    "sha256": "fc490f914d90565c765a2231732b8285fe256f64eab27dcd59305c4aa2e296f9",
+    "bytes": 25367
+  },
+  {
+    "path": "Quick Runs/quick run5-(Quick Run 5).json",
+    "sha256": "a769d5df2b1405440d11ca6fcde26b3c6b5b793e7dfd515f116e4e79d9f71860",
+    "bytes": 25241
+  },
+  {
+    "path": "RUN IN FIJI.py",
+    "sha256": "d5cff4497274dbe5ebd6e78dab388e211b530d5644a97214caf17873180b3f0d",
+    "bytes": 8359
+  },
+  {
+    "path": "Swift Magnification Tables/Imaging.magn",
+    "sha256": "cbc847c67fab67cfb42ba0d17458f06eb90af2caaf4bc2a49e48b5b0390e18ca",
+    "bytes": 106516
+  }
+]

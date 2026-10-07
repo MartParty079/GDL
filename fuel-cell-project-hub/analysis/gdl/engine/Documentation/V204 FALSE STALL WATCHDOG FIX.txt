@@ -1,0 +1,48 @@
+YOURE A BETA v204 - FALSE STALL WATCHDOG FIX
+================================================
+
+Observed v202 failure
+---------------------
+A real 10-run BEAST sweep completed 7 runs, then workers 1 and 3 were restarted
+at exactly 600 seconds of stale content-progress time even though their JVM
+heartbeats were still current. The completed checkpoint showed that the
+contrast=Off runs were naturally much slower (~640-659 seconds for the first
+two completed Off runs) than Equalize runs (~155-335 seconds).
+
+Root cause
+----------
+v202 only emitted content progress at coarse stage boundaries. Large Pore
+Repair can spend many minutes inside parent/radius/candidate/recursive
+green-target loops. During that legitimate computation the heartbeat kept
+moving, but the content marker did not. The strict watchdog therefore
+misclassified active repair searches as hangs.
+
+v204 behavior
+-------------
+* Heartbeat still proves only JVM/thread liveness.
+* A new throttled busy-progress helper writes real work coordinates, not
+  heartbeat touches.
+* Large Pore Repair now reports:
+  - ROI/crop/candidate scan rows
+  - parent pore index
+  - search profile and radius
+  - candidate evaluation index
+  - recursive green-target parent/depth/queue progress
+  - green-target radius/candidate evaluation
+  - accepted repair counts
+* Fiber Fixer long pixel loops now report row progress too.
+* Busy markers are throttled (typically 10-15 s) to avoid excessive OneDrive
+  writes.
+* If a single Fiji/Java primitive truly freezes, no new work coordinate is
+  produced; the existing no-progress watchdog still expires and restarts the
+  worker.
+* The single-run hard timeout remains an independent upper bound.
+* Existing v202 heat-map fixes are preserved.
+
+This is intentionally NOT a simple timeout increase. The watchdog is stricter
+about true inactivity while no longer punishing valid long-running work.
+* Controller now validates the content-progress PAYLOAD, not only file mtime.
+  Re-touching the same marker (for example by OneDrive/filesystem behavior) does
+  not reset the inactivity timer.
+* Stall/restart logs include the last observed work marker so the exact stage,
+  parent/radius/candidate coordinate is visible in the next diagnostic bundle.

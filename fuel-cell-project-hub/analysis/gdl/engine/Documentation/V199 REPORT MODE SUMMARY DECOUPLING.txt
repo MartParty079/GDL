@@ -1,0 +1,25 @@
+YOURE A BETA v199 - REPORT MODE / SUMMARY DECOUPLING
+
+Problem fixed
+-------------
+The final batch-summaries checkbox could leave Word-report creation dependent on stale or cross-coupled report state. This was most visible when trying combined, per-original-image, completely separate, or the +combined report modes with the final summaries checkbox unchecked.
+
+Changes
+-------
+1. The six-mode Word report dropdown is now the sole authority for normal Word-report grouping.
+2. A new word_report_mode_output_plan() resolves combined / by-image / separate outputs without consulting any Excel-summary setting.
+3. Immediately before final report generation, create_word_report is recomputed from that plan.
+4. export_main_summary_xls and batch_sweep_export_all_summaries_to_all_reports no longer enable or disable Word reports.
+5. The final batch-summaries checkbox label now explicitly says it does not control Word reports.
+6. The Fiji log prints the resolved final report plan so failed combinations are easier to diagnose.
+
+Expected report counts for four processed runs from two original images
+---------------------------------------------------------------------
+No Word reports                                      0
+Combined Word report                                 1
+Individual by image                                  2
+Completely separate individual reports               4
+Individual by image + combined                       3
+Completely separate individual reports + combined    5
+
+These counts are unchanged whether the final batch-summaries checkbox is ON or OFF.

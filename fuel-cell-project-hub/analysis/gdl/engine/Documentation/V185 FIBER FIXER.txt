@@ -1,0 +1,11 @@
+V193 FIBER FIXER
+
+New feature:
+- Fiber Fixer card (OFF by default)
+- Uses a lower-threshold helper copy of the image
+- Skeletonizes the recovered fiber network
+- Burns a thin black wireframe into the final segmented mask
+- Saves a wireframe mask and optionally the lower-threshold helper mask
+
+Run order:
+threshold -> ordered binary cleanup -> Fiber Fixer -> Large Pore Repair -> Analyze Particles

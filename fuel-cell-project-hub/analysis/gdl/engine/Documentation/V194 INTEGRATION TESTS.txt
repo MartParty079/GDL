@@ -1,0 +1,23 @@
+YOURE A BETA GDL ANALYSIS v195 - INTEGRATION TESTS
+====================================================
+
+PASS - Swift table profile count - decoded=1
+PASS - Swift profile name - 4X
+PASS - Swift Resolution value - 1390466.1089001775
+PASS - Swift um/pixel conversion - 0.7191832965932367
+PASS - Swift mm/pixel conversion - 0.0007191832965932366
+PASS - Bundled table byte-for-byte match - 4a99d1079646d81a5d1cb98df2ab0046ae982adfead9a08f5ee5accf08cd6cc9
+PASS - Default/UI/parser wiring: swift_magn_scale_enabled
+PASS - Default/UI/parser wiring: swift_magn_filename
+PASS - Default/UI/parser wiring: swift_magn_profile_name
+PASS - Default/UI/parser wiring: swift_magn_search_parent_levels
+PASS - Default/UI/parser wiring: swift_magn_use_bundle_fallback
+PASS - Default/UI/parser wiring: swift_magn_override_existing_scale
+PASS - Scale priority helper defined
+PASS - Scale helper call count - including definition=5
+PASS - Run results include Swift audit fields
+PASS - Word summary includes Swift profile and pixel size
+PASS - Manifest includes Swift audit fields
+PASS - Python/Jython syntax validation - 14 files; failures=0
+
+Runtime note: these checks validate the uploaded Imaging.magn parser, conversion, code wiring, and Python syntax. The final calibration workflow still needs one run inside Fiji/ImageJ on the user's Windows system.

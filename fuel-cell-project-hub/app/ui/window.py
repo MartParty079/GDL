@@ -5,15 +5,27 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal, QTimer
-from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QTabWidget, QScrollArea, QFrame, QGridLayout, QFileDialog, QMessageBox,
-    QLineEdit, QTextEdit, QFormLayout, QComboBox, QDialog, QDialogButtonBox)
+    QLineEdit, QTextEdit, QFormLayout, QComboBox, QDialog, QDialogButtonBox, QLayout)
 
 from app import __version__
 from app.services.storage import write_json
 from app.services.software import detect, valid_executable, launch, open_resource, LaunchType, launch_type
 from app.services.updates import latest_release
+from app.ui.storage_panels import StoragePanel, FilesPanel
+from app.ui.components import (label, button, card, Button, StatusPill, InlineMessage, EmptyState,
+    SectionHeader, SkeletonCard, ErrorBanner, ToastManager, ResponsiveCards, icon, local_datetime,
+    friendly_error, notify)
+from app.ui.theme import apply_theme, Theme
+from app.services.gdl_analysis import GDLAnalysisService
+from app.services.path_registry import detect_dependency
+from app.ui.gdl_panels import GDLPanel, GDLSettingsPanel
+from app.services.microsoft_auth import MicrosoftAuth
+from app.services.microsoft_graph import MicrosoftGraphClient
+from app.services.storage_settings import StorageSettings
+from app.ui.microsoft_panels import MicrosoftAccountPanel, CloudStoragePanel, FolderMappingsPanel
+from app.ui.branding import application_icon
 
 
 class Worker(QThread):
@@ -31,57 +43,43 @@ class Worker(QThread):
             self.failed.emit(str(exc))
 
 
-def button(text, action, primary=False):
-    widget = QPushButton(text)
-    widget.setProperty("primary", primary)
-    widget.clicked.connect(action)
-    widget.setCursor(Qt.PointingHandCursor)
-    return widget
-
-
-def label(text, kind="body"):
-    widget = QLabel(text)
-    widget.setWordWrap(kind not in ("heading", "title", "eyebrow"))
-    widget.setTextFormat(Qt.PlainText)
-    widget.setProperty("kind", kind)
-    widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
-    return widget
-
-
-def card(title, body):
-    frame = QFrame()
-    frame.setObjectName("card")
-    layout = QVBoxLayout(frame)
-    layout.setContentsMargins(22, 20, 22, 22)
-    layout.addWidget(label(title, "cardTitle"))
-    layout.addWidget(label(body))
-    return frame
-
-
 class HubWindow(QMainWindow):
     def __init__(self, store):
         super().__init__()
+        self.setWindowIcon(application_icon())
         self.store = store
+        self.microsoft_auth = MicrosoftAuth(store)
+        self.microsoft_graph = MicrosoftGraphClient(self.microsoft_auth)
+        self.storage_settings = StorageSettings(store, self.microsoft_graph)
+        store.storage_settings = self.storage_settings
+        self.storage_panel = StoragePanel(store, self)
+        self.files_panel = FilesPanel(store, self)
+        self.storage_panel.changed.connect(self.storage_changed)
+        self.storage_panel.busy_changed.connect(self.storage_busy_changed)
+        self.files_panel.connect_requested.connect(lambda: self.open_settings(1))
         self.results = {}
         self.workers = []
         self.scanning = False
         self.update_checking = False
+        self.workspace_section = "Resources"
         self.setWindowTitle("Fuel Cell Project Hub")
-        self.resize(1180, 850)
-        self.setMinimumSize(800, 600)
+        self.resize(1280, 850)
+        self.setMinimumSize(1024, 700)
         shell = QWidget()
         outer = QVBoxLayout(shell)
         outer.setContentsMargins(26, 22, 26, 20)
         top = QHBoxLayout()
         identity = QVBoxLayout()
-        identity.addWidget(label("FUEL CELL  /  CAPSTONE", "eyebrow"))
+        identity.addWidget(label("Fuel cell capstone", "eyebrow"))
         identity.addWidget(label("Project Hub", "title"))
         top.addLayout(identity)
         top.addStretch()
-        top.addWidget(label("LOCAL WORKSPACE\n" + __version__, "muted"))
+        top.addWidget(label("Local workspace · " + __version__, "muted"))
         outer.addLayout(top)
-        self.banner = label("Scanning configured tools…", "notice")
+        self.banner = InlineMessage("Checking your system…", "info")
         outer.addWidget(self.banner)
+        self.global_error = ErrorBanner()
+        outer.addWidget(self.global_error)
         self.tabs = QTabWidget()
         self.pages = {}
         self.layouts = {}
@@ -91,6 +89,7 @@ class HubWindow(QMainWindow):
             scroll.setFrameShape(QFrame.NoFrame)
             page = QWidget()
             layout = QVBoxLayout(page)
+            layout.setSizeConstraint(QLayout.SetMinimumSize)
             layout.setContentsMargins(4, 20, 4, 12)
             scroll.setWidget(page)
             self.tabs.addTab(scroll, name)
@@ -98,6 +97,15 @@ class HubWindow(QMainWindow):
         outer.addWidget(self.tabs)
         self.setCentralWidget(shell)
         self.apply_theme()
+        self.toasts = ToastManager(self)
+        self.gdl_service = GDLAnalysisService(store)
+        self.gdl_settings = GDLSettingsPanel(self.gdl_service, self)
+        self.gdl_panel = GDLPanel(self.gdl_service, self)
+        self.microsoft_panel = MicrosoftAccountPanel(self.microsoft_auth, self.microsoft_graph, self)
+        self.cloud_panel = CloudStoragePanel(self.storage_settings, self)
+        self.folder_panel = FolderMappingsPanel(self.storage_settings, self)
+        for panel in (self.microsoft_panel, self.cloud_panel, self.folder_panel):
+            panel.changed.connect(self.storage_changed)
         self.render_dashboard()
         self.render_software()
         self.render_project()
@@ -108,39 +116,14 @@ class HubWindow(QMainWindow):
         QTimer.singleShot(200, self.check_updates_on_startup)
 
     def apply_theme(self):
-        # Offscreen Qt on Windows has no system font database. Explicitly load
-        # existing Windows fonts for rendering; native UI can use them too.
-        font_dir = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
-        for filename in ("segoeui.ttf", "seguisb.ttf", "segoeuib.ttf"):
-            if (font_dir / filename).is_file():
-                QFontDatabase.addApplicationFont(str(font_dir / filename))
-        self.setStyleSheet('''
-            QWidget { background: #f2f4f3; color: #182e2a; font-family: "Segoe UI"; font-size: 14px; }
-            QLabel { background: transparent; line-height: 1.4; }
-            QLabel[kind="title"] { font-size: 30px; font-weight: 700; }
-            QLabel[kind="eyebrow"] { color: #456e62; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
-            QLabel[kind="heading"] { font-size: 24px; font-weight: 650; }
-            QLabel[kind="cardTitle"] { font-size: 17px; font-weight: 650; }
-            QLabel[kind="muted"] { color: #61736e; font-size: 13px; }
-            QLabel[kind="notice"] { background: #e3ece6; padding: 14px; border-radius: 8px; color: #275243; }
-            QFrame#card { background: white; border: 1px solid #dbe2de; border-radius: 10px; }
-            QPushButton { background: white; border: 1px solid #c6d4cc; padding: 10px 15px; border-radius: 6px; font-weight: 600; }
-            QPushButton:hover { background: #e5eee8; border-color: #45856a; }
-            QPushButton:focus { border: 2px solid #278568; }
-            QPushButton[primary="true"] { background: #245f4c; color: white; border-color: #245f4c; }
-            QPushButton:disabled { color: #88968f; background: #edf0ee; }
-            QTabWidget::pane { border: none; }
-            QTabBar::tab { background: transparent; padding: 13px 19px; color: #5b6a64; border-bottom: 3px solid transparent; }
-            QTabBar::tab:selected { color: #245f4c; border-bottom: 3px solid #245f4c; font-weight: 700; }
-            QLineEdit, QTextEdit, QComboBox { background: white; border: 1px solid #cbd8d0; padding: 8px; border-radius: 5px; }
-            QScrollArea { border: none; }
-        ''')
+        apply_theme(self)
 
     def reset(self, name):
         layout = self.layouts[name]
         while layout.count():
             item = layout.takeAt(0)
             if item.widget():
+                item.widget().hide()
                 item.widget().deleteLater()
         return layout
 
@@ -151,13 +134,13 @@ class HubWindow(QMainWindow):
         try:
             return action()
         except Exception as exc:
-            QMessageBox.warning(self, "Action could not be completed", str(exc))
+            self.global_error.show_error("Action could not be completed", exc)
 
     def work(self, action, done, failed=None):
         worker = Worker(action, self)
         self.workers.append(worker)
         worker.done.connect(done)
-        worker.failed.connect(failed or (lambda message: QMessageBox.warning(self, "Action failed", message)))
+        worker.failed.connect(failed or (lambda message: self.global_error.show_error("Action failed", message)))
         worker.finished.connect(lambda: self.workers.remove(worker))
         worker.finished.connect(worker.deleteLater)
         worker.start()
@@ -173,15 +156,25 @@ class HubWindow(QMainWindow):
         if self.scanning:
             return
         self.scanning = True
-        self.banner.setText("Scanning configured paths, Windows application registration, and common install folders…")
+        self.banner.set_message("Checking your system… You can continue working while tools are detected.", "info")
         self.render_software()
         paths = copy.deepcopy(self.store.local["paths"])
-        self.work(lambda: {i["id"]: detect(i, paths.get(i["id"])) for i in self.store.manifest}, self.scan_done, self.scan_failed)
+        def scan_tools():
+            results = {i["id"]: detect(i, paths.get(i["id"])) for i in self.store.manifest}
+            for item_id, key in (("fiji", "fiji_executable"), ("jmp", "jmp_executable")):
+                if not paths.get(item_id):
+                    found = detect_dependency(self.store, key, self.gdl_service.registry.config["extra_search_roots"])
+                    if found:
+                        results[item_id] = {"path": found, "status": "Ready", "source": "Detected"}
+            return results
+        self.work(scan_tools, self.scan_done, self.scan_failed)
 
     def scan_failed(self, message):
         self.scanning = False
-        self.banner.setText("Software scan failed: " + message)
+        self.banner.set_message("Software detection could not finish. Try scanning again.", "warning")
+        self.global_error.show_error("Software detection unavailable", message)
         self.render_software()
+        self.gdl_panel.validate()
 
     def scan_done(self, results):
         self.scanning = False
@@ -195,52 +188,128 @@ class HubWindow(QMainWindow):
                 results[item["id"]] = previous
         self.results = results
         missing = self.missing()
-        self.banner.setText(f"{len(missing)} required tools need configuration. Open Software to finish setup."
-                            if missing else "All required tools are ready. Your project workspace is configured.")
+        self.banner.set_message(f"{len(missing)} required tools need setup. Open Software to configure them."
+                            if missing else "All required tools are ready.", "warning" if missing else "success")
         self.render_dashboard()
         self.render_software()
         if not self.store.local.get("setup_complete"):
             self.show_page("Software")
+        self.gdl_panel.validate()
 
     def render_dashboard(self):
-        layout = self.reset("Dashboard")
-        row = QWidget()
-        actions = QHBoxLayout(row)
-        actions.setContentsMargins(0, 0, 0, 0)
-        actions.addWidget(label("Start your project work", "heading"))
-        actions.addStretch()
-        actions.addWidget(button("Open Project Repo", lambda: self.guard(lambda: open_resource(self.store.project["repository"])), True))
-        layout.addWidget(row)
-        grid_widget = QWidget()
-        grid = QGridLayout(grid_widget)
-        grid.setContentsMargins(0, 10, 0, 10)
-        grid.setSpacing(16)
+        container = self.reset("Dashboard")
+        workspace = QWidget()
+        row = QHBoxLayout(workspace)
+        row.setSizeConstraint(QLayout.SetMinimumSize)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(24)
+        row.addWidget(self.workspace_sidebar("Overview"))
+        body = QWidget()
+        layout = QVBoxLayout(body)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(16)
+        row.addWidget(body, 1)
+        container.addWidget(workspace)
         p = self.store.project
-        grid.addWidget(card("Primary goal", p["goal"] or "Add the team's primary goal in Settings."), 0, 0)
-        grid.addWidget(card("Near-term work", p["plan"] or "Add the current plan in Settings."), 0, 1)
-        grid.addWidget(card("Supporting goals", p["supporting_goals"] or "No supporting goals configured."), 1, 0)
-        agenda = card("Meeting agenda", p["agenda"] or "Add agenda notes or link the shared meeting document.")
-        agenda.layout().addWidget(button("Open shared agenda", lambda: self.guard(lambda: open_resource(p["links"]["Meeting agenda"]))))
-        grid.addWidget(agenda, 1, 1)
-        grid.addWidget(card("Major decisions / changes", p["decisions"] or "No major decisions recorded yet."), 2, 0)
-        ready = sum(r["status"] == "Ready" for r in self.results.values())
-        tools = card("Software readiness", f"{ready} tools available · {len(self.missing())} required tools need attention" if self.results else "Scanning tools…")
-        tools.layout().addWidget(button("Set up my system", lambda: self.show_page("Software")))
-        grid.addWidget(tools, 2, 1)
-        grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(1, 1)
-        layout.addWidget(grid_widget)
-        shortcuts = card("Project shortcuts", "Open the team's existing resources.")
-        for name, target in p["links"].items():
-            if name != "Meeting agenda":
-                shortcuts.layout().addWidget(button(name + (" · configure" if not target else ""), lambda checked=False, t=target: self.guard(lambda: open_resource(t))))
-        layout.addWidget(shortcuts)
+        layout.addWidget(SectionHeader("Overview", p.get("storage", {}).get("project_name", "Fuel cell capstone"),
+            button("Open project repo", lambda: self.guard(lambda: open_resource(p["repository"])), True)))
+        goal = card("Primary goal", p["goal"] or "Set the goal that guides the team's current work.", "goal")
+        if p["supporting_goals"]:
+            goal.layout().addWidget(label(p["supporting_goals"], "muted"))
+        if not p["goal"]:
+            goal.layout().addWidget(button("Set project goals", lambda: self.open_settings(0)))
+        plan = card("Current plan", p["plan"] or "Add the next steps for your current work.", "plan")
+        if not p["plan"]:
+            plan.layout().addWidget(button("Add next steps", lambda: self.open_settings(0)))
+        provider = self.store.provider
+        storage_status = "Indexing" if self.storage_panel.indexing else provider.status() if provider else "Needs setup"
+        storage = card("Storage & index", "OneDrive / SharePoint", "storage")
+        storage.layout().addWidget(StatusPill(storage_status, "success" if storage_status == "Connected" else "info" if storage_status == "Indexing" else "warning"))
+        if provider and storage_status != "Unavailable":
+            try:
+                from app.ui.storage_panels import size_text
+                summary = provider.summary()
+                storage.layout().addWidget(label(f"{summary['files']:,} files · {size_text(summary['size'])}"))
+                storage.layout().addWidget(label("Last indexed " + local_datetime(summary["last_index_time"]), "muted"))
+            except (ValueError, OSError):
+                storage.layout().addWidget(label("The index is unavailable. Reconnect storage to retry.", "muted"))
+        else:
+            storage.layout().addWidget(label("Connect your synced project library to browse files.", "muted"))
+        storage.layout().addWidget(button("View storage" if provider else "Connect storage", lambda: self.open_settings(1)))
+        if self.scanning and not self.results:
+            tools = SkeletonCard("Checking your system…")
+        else:
+            required = [i for i in self.store.manifest if self.lifecycle(i) == "Required"]
+            missing = len(self.missing())
+            tools = card("Software", f"{len(required) - missing} of {len(required)} required tools ready", "software")
+            tools.layout().addWidget(StatusPill(f"{missing} need setup" if missing else "Ready", "warning" if missing else "success"))
+            tools.layout().addWidget(button("Set up missing software" if missing else "Open software", lambda: self.show_page("Software")))
+        shortcuts = card("Project shortcuts", "Your team's existing tools and resources.", "links")
+        configured = [(name, target) for name, target in p["links"].items() if name != "Meeting agenda" and target]
+        for name, target in configured:
+            shortcuts.layout().addWidget(button("Open " + name.lower(), lambda checked=False, n=name: self.guard(lambda: self.open_project_link(n))))
+        if not configured:
+            shortcuts.layout().addWidget(button("Configure resources", lambda: self.open_settings(3)))
+        agenda = card("Upcoming meeting", p["agenda"] or "Link the shared agenda or add meeting notes.", "calendar")
+        agenda.layout().addWidget(button("Open shared agenda", lambda: self.guard(lambda: self.open_project_link("Meeting agenda"))))
+        changes = card("Recent changes", p["decisions"] or "No major decisions recorded yet.", "activity")
+        changes.layout().addWidget(button("View activity", lambda: self.show_page("Activity")))
+        layout.addWidget(ResponsiveCards([goal, plan, storage, tools, shortcuts, agenda, changes]))
         layout.addStretch()
+
+    def workspace_sidebar(self, active):
+        sidebar = QWidget()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(176)
+        layout = QVBoxLayout(sidebar)
+        layout.setContentsMargins(12, 16, 12, 16)
+        layout.setSpacing(8)
+        layout.addWidget(label("Workspace", "muted"))
+        for name, image in (("Overview", "overview"), ("Files & Data", "files"), ("Reports", "reports"), ("Analysis", "software"), ("Resources", "links")):
+            control = Button(name, lambda checked=False, n=name: self.open_workspace(n), variant="sidebar")
+            control.setIcon(icon(image, Theme.ACCENT_HOVER if active == name else Theme.TEXT_SECONDARY))
+            control.setProperty("iconName", image)
+            control.setCheckable(True)
+            control.setProperty("workspacePage", name)
+            control.setChecked(active == name)
+            layout.addWidget(control)
+        layout.addSpacing(24)
+        layout.addWidget(label("Quick access", "muted"))
+        storage = Button("Shared storage", lambda: self.open_settings(1), variant="sidebar")
+        storage.setIcon(icon("storage"))
+        layout.addWidget(storage)
+        layout.addStretch()
+        return sidebar
+
+    def open_workspace(self, name):
+        previous = self.workspace_section
+        self.workspace_section = name
+        if name == "Overview":
+            self.show_page("Dashboard")
+            return
+        self.show_page("Project")
+        self.project_tabs.setCurrentIndex(0 if name == "Resources" else 2 if name == "Analysis" else 1)
+        if name == "Reports":
+            self.files_panel.clear_filters()
+            category = self.files_panel.filters["category"]
+            if category.findData("Report") < 0:
+                category.addItem("Report", "Report")
+            category.setCurrentIndex(category.findData("Report"))
+        elif name == "Files & Data" and previous == "Reports":
+            self.files_panel.clear_filters()
+        self.render_project()
+
+    def open_settings(self, index):
+        self.show_page("Settings")
+        self.settings_tabs.setCurrentIndex(index)
+
+    def open_analysis_settings(self):
+        self.open_settings(next(i for i in range(self.settings_tabs.count()) if self.settings_tabs.tabText(i) == 'Analysis Tools'))
+        self.gdl_settings.validate_paths()
 
     def render_software(self):
         layout = self.reset("Software")
-        layout.addWidget(label("Set up your system", "heading"))
-        layout.addWidget(label("Detection never installs or launches software. Use installation guides for missing tools, then re-scan or locate the application.", "muted"))
+        layout.addWidget(SectionHeader("Welcome to Fuel Cell Project Hub" if not self.store.local.get("setup_complete") else "Software", "Configure your tools once, then launch them here."))
         controls = QWidget()
         row = QHBoxLayout(controls)
         row.setContentsMargins(0, 0, 0, 0)
@@ -250,16 +319,34 @@ class HubWindow(QMainWindow):
         row.addWidget(button("Continue anyway" if self.missing() else "Finish setup", self.finish_setup))
         row.addStretch()
         layout.addWidget(controls)
-        for item in self.store.manifest:
+        gdl = card("GDL Analysis", "YOURE A BETA · Engine v" + str(self.gdl_service.registry.manifest().get("version", "Unknown")), "software")
+        gdl.layout().addWidget(button("Open analysis", lambda: self.open_workspace("Analysis"), True))
+        gdl.layout().addWidget(button("Analysis settings", self.open_analysis_settings))
+        layout.addWidget(gdl)
+        if self.scanning and not self.results:
+            layout.addWidget(SkeletonCard("Checking your system…"))
+            layout.addWidget(SkeletonCard("Finding required applications…"))
+            layout.addStretch()
+            return
+        group = ""
+        items = sorted(self.store.manifest, key=lambda i: (2 if self.lifecycle(i) != "Required" else 1 if self.results.get(i["id"], {}).get("status") == "Ready" else 0, i["name"]))
+        for item in items:
             result = self.results.get(item["id"], {"status": "Not scanned", "path": "", "source": ""})
             kind = item.get("launch_type", "exe")
             status = "Available" if kind in ("uri", "url") and result["status"] == "Ready" else result["status"]
-            frame = card(item["name"] + "  ·  " + self.lifecycle(item) + "  ·  " + status, item["note"])
+            section = "Optional & retired" if self.lifecycle(item) != "Required" else "Ready" if result["status"] == "Ready" else "Needs setup"
+            if group != section:
+                layout.addWidget(label(section, "section"))
+                group = section
+            frame = card(item["name"], item["note"], "software")
+            frame.layout().insertWidget(1, StatusPill(status, "success" if status in ("Available", "Ready") else "error" if status == "Launch failed" else "warning"))
+            frame.layout().addWidget(label(item["category"] + " · " + self.lifecycle(item), "muted"))
             frame.setProperty("softwareId", item["id"])
             frame.layout().addWidget(label(result["path"] or result["source"], "muted"))
             if kind in ("uri", "url"):
                 frame.layout().addWidget(label("Launch Method: " + ("Windows URI Protocol" if kind == "uri" else "Web") + " · " + item.get("launch_target", ""), "muted"))
             actions = QWidget()
+            actions.setObjectName("cardActions")
             row = QHBoxLayout(actions)
             row.setContentsMargins(0, 6, 0, 0)
             launch_text = "Test Launch" if kind == "uri" else "Open" if kind == "url" else "Open terminal" if item["id"] == "git" else "Launch"
@@ -283,10 +370,10 @@ class HubWindow(QMainWindow):
     def launch_item(self, item):
         try:
             kind = launch_type(item)
-            launch(item, self.results.get(item["id"], {}), self.store.project["project_folder"])
+            launch(item, self.results.get(item["id"], {}), self.store.project_folder())
         except Exception as exc:
             if item.get("launch_type") != "uri":
-                QMessageBox.warning(self, "Action could not be completed", str(exc))
+                self.global_error.show_error(item["name"] + " could not be launched", exc)
                 return
             self.results[item["id"]] = {"path": "", "target": item.get("launch_target", ""),
                 "source": "Install or repair " + item["name"] + ", then retry.", "status": "Launch failed"}
@@ -308,11 +395,12 @@ class HubWindow(QMainWindow):
             self.results[item["id"]] = {"path": "", "target": item["launch_target"],
                 "source": "Windows URI Protocol · Windows accepted the launch request", "status": "Ready"}
             self.refresh_launch_status()
+        notify(self, item["name"] + " launch requested", "success")
 
     def refresh_launch_status(self):
         missing = self.missing()
-        self.banner.setText(f"{len(missing)} required tools need configuration. Open Software to finish setup."
-                            if missing else "All required tools are ready. Your project workspace is configured.")
+        self.banner.set_message(f"{len(missing)} required tools need setup. Open Software to configure them."
+                            if missing else "All required tools are ready.", "warning" if missing else "success")
         self.render_dashboard()
         self.render_software()
 
@@ -323,7 +411,7 @@ class HubWindow(QMainWindow):
         if not path:
             return
         if not valid_executable(path):
-            QMessageBox.warning(self, "Invalid application", "Choose an existing .exe file. Windows Store aliases are not executable installations.")
+            self.global_error.show_error("Choose a desktop executable", "Choose an existing .exe file. Windows Store aliases are not executable installations.")
             return
         self.store.local["paths"][item["id"]] = str(Path(path).resolve())
         self.guard(self.store.save_local)
@@ -340,22 +428,86 @@ class HubWindow(QMainWindow):
         self.show_page("Dashboard")
 
     def render_project(self):
-        layout = self.reset("Project")
-        layout.addWidget(label("Project resources", "heading"))
-        resources = {"GitHub repository": self.store.project["repository"], "Project folder": self.store.project["project_folder"], **self.store.project["links"]}
+        selected = self.project_tabs.currentIndex() if hasattr(self, "project_tabs") else 0
+        container = self.reset("Project")
+        tabs = QTabWidget()
+        self.project_tabs = tabs
+        tabs.tabBar().hide()
+        resources_page = QWidget()
+        layout = QVBoxLayout(resources_page)
+        resources_scroll = QScrollArea()
+        resources_scroll.setWidgetResizable(True)
+        resources_scroll.setFrameShape(QFrame.NoFrame)
+        resources_scroll.setWidget(resources_page)
+        tabs.addTab(resources_scroll, "Resources")
+        tabs.addTab(self.files_panel, "Files & Data")
+        analysis_scroll = QScrollArea()
+        analysis_scroll.setWidgetResizable(True)
+        analysis_scroll.setFrameShape(QFrame.NoFrame)
+        analysis_scroll.setWidget(self.gdl_panel)
+        tabs.addTab(analysis_scroll, "Analysis")
+        workspace = QWidget()
+        row = QHBoxLayout(workspace)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(24)
+        self.project_sidebar = self.workspace_sidebar("Resources" if selected == 0 else "Analysis" if selected == 2 else "Reports" if self.workspace_section == "Reports" else "Files & Data")
+        row.addWidget(self.project_sidebar)
+        row.addWidget(tabs, 1)
+        container.addWidget(workspace)
+        tabs.setCurrentIndex(selected)
+        tabs.currentChanged.connect(self.update_project_sidebar)
+        layout.addWidget(SectionHeader("Project resources", "Open the team's existing files and tools.", button("Edit resources", lambda: self.open_settings(3))))
+        resources = {"GitHub repository": self.store.project["repository"], "Project folder": self.store.project_folder(), **self.store.project["links"]}
         for name, target in resources.items():
-            frame = card(name, target or "Not configured. Add the destination in Settings.")
-            frame.layout().addWidget(button("Open " + name, lambda checked=False, t=target: self.guard(lambda: open_resource(t))))
+            frame = card(name, target or "Add a link or relative path in Project resources settings.", "links")
+            frame.layout().addWidget(button("Open " + name, lambda checked=False, n=name, t=target: self.guard(lambda: self.open_project_link(n) if n in self.store.project["links"] else self.store.provider.open_folder() if n == "Project folder" and self.store.provider else open_resource(t))))
             layout.addWidget(frame)
         layout.addWidget(label("Code and releases stay in GitHub. Project files and large data stay in your existing shared storage.", "muted"))
         layout.addStretch()
 
+    def update_project_sidebar(self, selected):
+        active = "Resources" if selected == 0 else "Analysis" if selected == 2 else "Reports" if self.workspace_section == "Reports" else "Files & Data"
+        for control in self.project_sidebar.findChildren(QPushButton):
+            name = control.property("workspacePage")
+            if name:
+                control.setChecked(name == active)
+                control.setIcon(icon(control.property("iconName"), Theme.ACCENT_HOVER if name == active else Theme.TEXT_SECONDARY))
+
+    def open_project_link(self, name):
+        target = self.store.project["links"].get(name) or self.store.local.get("local_resource_paths", {}).get(name, "")
+        if not target or target.startswith(("http://", "https://")):
+            return open_resource(target)
+        if name in self.store.local.get("local_resource_paths", {}) and not self.store.project["links"].get(name):
+            return open_resource(target)
+        if not self.store.provider:
+            raise ValueError("Connect project storage under Settings → Storage to open this relative path.")
+        try:
+            self.store.provider.open_folder(target)
+        except ValueError:
+            self.store.provider.open_item(target)
+
+    def storage_changed(self):
+        if hasattr(self, 'microsoft_panel'):
+            self.microsoft_panel.update_permissions()
+            self.cloud_panel.reload()
+        self.files_panel.reload()
+        self.render_dashboard()
+        self.render_activity()
+        # Keep the persistent storage panel alive during its worker thread.
+        self.render_project()
+        if self.store.project != getattr(self, "settings_snapshot", None):
+            self.render_settings()
+            self.storage_panel.reload_fields()
+
+    def storage_busy_changed(self, busy):
+        self.files_panel.set_loading(busy)
+        self.render_dashboard()
+
     def render_activity(self):
         layout = self.reset("Activity")
-        layout.addWidget(label("Local activity", "heading"))
-        layout.addWidget(label("Settings changes and bug reports recorded on this computer. Team requests and shared feeds are planned for a later version.", "muted"))
+        layout.addWidget(SectionHeader("Activity", "Local settings, storage, and bug updates. Discussions stay in Teams or Discord."))
         filter_box = QComboBox()
-        filter_box.addItems(["All areas", "Settings", "Bugs"])
+        filter_box.addItems(["All areas", "Settings", "Bugs", "Storage"])
         entries = QWidget()
         entries_layout = QVBoxLayout(entries)
         entries_layout.setContentsMargins(0, 0, 0, 0)
@@ -364,9 +516,9 @@ class HubWindow(QMainWindow):
                 entries_layout.takeAt(0).widget().deleteLater()
             events = [e for e in reversed(self.store.events) if area == "All areas" or e["area"] == area]
             if not events:
-                entries_layout.addWidget(card("No activity yet", "Changes will appear here as you use the hub."))
+                entries_layout.addWidget(EmptyState("No activity yet", "Settings, index changes, and bug reports will appear here.", "Open project overview", lambda: self.show_page("Dashboard"), "activity"))
             for event in events:
-                frame = card(event["area"] + " · " + event["message"], event["timestamp"] + " · " + event["person"])
+                frame = card(event["area"] + " · " + event["message"], local_datetime(event["timestamp"]) + " · " + event["person"], "activity")
                 entries_layout.addWidget(frame)
         filter_box.currentTextChanged.connect(display)
         layout.addWidget(filter_box)
@@ -380,10 +532,12 @@ class HubWindow(QMainWindow):
         layout.addWidget(label("Reports stay on this computer. Export a report for the project lead to review before posting it to GitHub.", "muted"))
         layout.addWidget(button("Report a bug", self.report_bug, True))
         if not self.store.bugs:
-            layout.addWidget(card("No bug reports", "Use Report a bug when something needs attention."))
+            layout.addWidget(EmptyState("No bug reports", "Report a problem when something needs attention.", "Report a bug", self.report_bug, "bug"))
         for bug in reversed(self.store.bugs):
             frame = card(bug["id"] + " · " + bug["title"], bug["detail"])
-            frame.layout().addWidget(label(bug["timestamp"] + " · " + bug["person"] + " · " + bug["version"], "muted"))
+            if bug.get("expected"):
+                frame.layout().addWidget(label("Expected: " + bug["expected"], "muted"))
+            frame.layout().addWidget(label(local_datetime(bug["timestamp"]) + " · " + bug["person"] + " · " + bug["version"], "muted"))
             status = QComboBox()
             status.addItems(["Open", "Investigating", "Fixed", "Closed"])
             status.setCurrentText(bug["status"])
@@ -402,28 +556,39 @@ class HubWindow(QMainWindow):
     def report_bug(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Report a bug")
-        dialog.resize(580, 420)
+        dialog.resize(620, 650)
         layout = QVBoxLayout(dialog)
         layout.addWidget(label("Describe the problem", "heading"))
         title = QLineEdit()
         title.setPlaceholderText("Short title")
         detail = QTextEdit()
-        detail.setPlaceholderText("What happened? What did you expect? How can it be reproduced?")
-        layout.addWidget(title)
-        layout.addWidget(detail)
+        detail.setPlaceholderText("Describe what happened")
+        expected = QTextEdit()
+        expected.setPlaceholderText("Describe the expected behavior")
+        steps = QTextEdit()
+        steps.setPlaceholderText("Optional steps to reproduce")
+        form = QFormLayout()
+        for caption, field in (("Title", title), ("What happened", detail), ("Expected behavior", expected), ("Steps to reproduce", steps)):
+            if isinstance(field, QTextEdit):
+                field.setFixedHeight(90)
+            form.addRow(caption, field)
+        layout.addLayout(form)
         layout.addWidget(label("Automatically included: app version, profile, UTC timestamp, Windows version, current page, and tool readiness. Executable paths and project links are excluded.", "muted"))
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.rejected.connect(dialog.reject)
+        error = InlineMessage()
+        error.hide()
+        layout.addWidget(error)
         def save():
             if not title.text().strip() or not detail.toPlainText().strip():
-                QMessageBox.warning(dialog, "Details needed", "Add a title and description.")
+                error.set_message("Add a title and describe what happened.", "warning")
                 return
             try:
                 self.store.add_bug(title.text().strip(), detail.toPlainText().strip(),
                     {"platform": platform.platform(), "page": self.tabs.tabText(self.tabs.currentIndex()),
-                     "software": {k: v["status"] for k, v in self.results.items()}}, __version__)
+                     "software": {k: v["status"] for k, v in self.results.items()}}, __version__, expected.toPlainText().strip(), steps.toPlainText().strip())
             except Exception as exc:
-                QMessageBox.warning(dialog, "Report could not be saved", str(exc))
+                error.set_message("Report could not be saved. " + friendly_error(exc), "error")
                 return
             dialog.accept()
         buttons.accepted.connect(save)
@@ -431,6 +596,7 @@ class HubWindow(QMainWindow):
         if dialog.exec():
             self.render_bugs()
             self.render_activity()
+            notify(self, "Bug report saved", "success")
 
     def export_bug(self, bug):
         path, _ = QFileDialog.getSaveFileName(self, "Export bug report", bug["id"] + ".json", "JSON (*.json)")
@@ -438,50 +604,141 @@ class HubWindow(QMainWindow):
             self.guard(lambda: write_json(Path(path), bug))
 
     def render_settings(self):
-        layout = self.reset("Settings")
-        layout.addWidget(label("Project settings", "heading"))
-        layout.addWidget(label("Project settings are stored beside the app. Applying a change creates a restorable revision. Application paths stay in your local profile.", "muted"))
-        form_widget = QWidget()
-        form = QFormLayout(form_widget)
+        selected = self.settings_tabs.currentIndex() if hasattr(self, "settings_tabs") else 0
+        container = self.reset("Settings")
+        container.addWidget(SectionHeader("Settings"))
+        tabs = QTabWidget()
+        self.settings_tabs = tabs
+        self.settings_snapshot = copy.deepcopy(self.store.project)
+        self.fields, self.lifecycle_fields = {}, {}
+        sections = {}
+        for name in ("General", "Storage", "Software", "Project resources", "Updates", "History", "Analysis Tools", 'Microsoft Account', 'Cloud & Old Test Data', 'Project folders'):
+            panel = {'Microsoft Account': self.microsoft_panel, 'Cloud & Old Test Data': self.cloud_panel, 'Project folders': self.folder_panel}.get(name)
+            if panel:
+                scroll = QScrollArea()
+                scroll.setWidgetResizable(True)
+                scroll.setFrameShape(QFrame.NoFrame)
+                scroll.setWidget(panel)
+                tabs.addTab(scroll, name)
+                continue
+            if name == "Storage":
+                tabs.addTab(self.storage_panel, name)
+                continue
+            if name == "Analysis Tools":
+                scroll = QScrollArea()
+                scroll.setWidgetResizable(True)
+                scroll.setFrameShape(QFrame.NoFrame)
+                scroll.setWidget(self.gdl_settings)
+                tabs.addTab(scroll, name)
+                continue
+            page = QWidget()
+            layout = QVBoxLayout(page)
+            layout.setContentsMargins(8, 20, 8, 20)
+            layout.setSpacing(16)
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QFrame.NoFrame)
+            scroll.setWidget(page)
+            tabs.addTab(scroll, name)
+            sections[name] = layout
+        container.addWidget(tabs)
+        tabs.setCurrentIndex(selected)
+
+        general = sections["General"]
+        overview = card("Project overview", "Keep the dashboard focused on the team's current work.", "overview")
+        form = QFormLayout()
+        form.setSpacing(16)
         form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self.fields = {}
-        titles = {"goal": "Primary goal", "supporting_goals": "Supporting goals", "plan": "Near-term work", "agenda": "Agenda notes", "decisions": "Major decisions / changes", "repository": "GitHub repository URL", "project_folder": "Project folder", "release_repository": "Release repository (owner/repo)"}
-        for key, title in titles.items():
-            if key in ("goal", "supporting_goals", "plan", "agenda", "decisions"):
-                field = QTextEdit()
-                field.setPlainText(self.store.project[key])
-                field.setFixedHeight(90)
-            else:
-                field = QLineEdit(self.store.project[key])
+        for key, title in (("goal", "Primary goal"), ("plan", "Current plan"), ("supporting_goals", "Supporting goals"), ("agenda", "Meeting notes"), ("decisions", "Recent decisions")):
+            field = QTextEdit()
+            field.setPlainText(self.store.project[key])
+            field.setFixedHeight(76)
             self.fields[key] = field
             form.addRow(title, field)
+        overview.layout().addLayout(form)
+        general.addWidget(overview)
+
+        resources = sections["Project resources"]
+        frame = card("Project resources", "Use a web address or a path relative to your synced project folder.", "links")
+        form = QFormLayout()
+        form.setSpacing(16)
+        repository = QLineEdit(self.store.project["repository"])
+        repository.setClearButtonEnabled(True)
+        self.fields["repository"] = repository
+        form.addRow("GitHub repository", repository)
         for key, value in self.store.project["links"].items():
             field = QLineEdit(value)
+            field.setClearButtonEnabled(True)
             self.fields["link:" + key] = field
             form.addRow(key, field)
-        self.lifecycle_fields = {}
+        frame.layout().addLayout(form)
+        resources.addWidget(frame)
+
+        software = sections["Software"]
+        frame = card("Software requirements", "Choose which tools the project needs. Retired tools keep their configuration.", "software")
+        form = QFormLayout()
+        form.setSpacing(12)
         for item in self.store.manifest:
             field = QComboBox()
             field.addItems(["Required", "Optional", "Retired"])
             field.setCurrentText(self.lifecycle(item))
             self.lifecycle_fields[item["id"]] = field
             form.addRow(item["name"], field)
-        layout.addWidget(form_widget)
-        layout.addWidget(button("Apply project changes", lambda: self.guard(self.apply_settings), True))
-        layout.addWidget(label("Settings history", "heading"))
-        revisions = self.store.history()
+        frame.layout().addLayout(form)
+        software.addWidget(frame)
+
+        updates = sections["Updates"]
+        frame = card("App updates", "Check approved GitHub releases. Downloads and rollback are part of a later release.", "history")
+        repository = QLineEdit(self.store.project["release_repository"])
+        repository.setPlaceholderText("owner/repository")
+        self.fields["release_repository"] = repository
+        form = QFormLayout()
+        form.addRow("Release repository", repository)
+        frame.layout().addLayout(form)
+        from app.ui.components import ToggleSwitch
+        self.update_toggle = ToggleSwitch("Check for updates at startup")
+        self.update_toggle.setChecked(self.store.local.get("check_updates_at_startup", True))
+        self.update_toggle.toggled.connect(self.save_update_preference)
+        frame.layout().addWidget(self.update_toggle)
+        self.update_status = InlineMessage(getattr(self, "release_status_text", "Configure a release repository to check for updates."))
+        self.update_skeleton = SkeletonCard("Checking GitHub releases...")
+        self.update_skeleton.setVisible(self.update_checking)
+        frame.layout().addWidget(self.update_status)
+        frame.layout().addWidget(self.update_skeleton)
+        self.update_button = button("Check GitHub releases", self.check_updates)
+        self.update_button.set_loading(self.update_checking, "Checking...")
+        frame.layout().addWidget(self.update_button)
+        self.release_button = button("View release", lambda: self.guard(lambda: open_resource(self.latest_release_url)))
+        self.release_button.setVisible(bool(getattr(self, "latest_release_url", "")))
+        frame.layout().addWidget(self.release_button)
+        updates.addWidget(frame)
+
+        history = sections["History"]
+        history.addWidget(SectionHeader("Settings history", "Restore a revision without discarding the current settings."))
+        try:
+            revisions = self.store.history()
+        except (OSError, ValueError) as exc:
+            revisions = []
+            error = ErrorBanner()
+            error.show_error("History unavailable", exc)
+            history.addWidget(error)
         if not revisions:
-            layout.addWidget(label("No saved revisions yet.", "muted"))
+            history.addWidget(EmptyState("No saved revisions", "A revision is created when project settings change.", "Edit project settings", lambda: self.open_settings(0), "history"))
         for revision in revisions:
-            frame = card(revision["reason"], revision["timestamp"] + " · " + revision["person"])
+            frame = card(revision["reason"], local_datetime(revision["timestamp"]) + " · " + revision["person"], "history")
             frame.layout().addWidget(button("Restore previous settings", lambda checked=False, r=revision: self.guard(lambda: self.restore_settings(r))))
-            layout.addWidget(frame)
-        update_frame = card("App updates", "Release checks notify only. Selective installation and executable rollback are not available in this development version.")
-        self.update_status = label("Configure the release repository above to enable checks.", "muted")
-        update_frame.layout().addWidget(self.update_status)
-        update_frame.layout().addWidget(button("Check GitHub releases", self.check_updates))
-        layout.addWidget(update_frame)
-        layout.addStretch()
+            history.addWidget(frame)
+        for name, layout in sections.items():
+            if name != "History":
+                layout.addWidget(button("Apply project changes", lambda: self.guard(self.apply_settings), True), alignment=Qt.AlignLeft)
+            layout.addStretch()
+
+    def save_update_preference(self, enabled):
+        def save():
+            self.store.local["check_updates_at_startup"] = enabled
+            self.store.save_local()
+            notify(self, "Update preference saved", "success")
+        self.guard(save)
 
     def apply_settings(self):
         value = copy.deepcopy(self.store.project)
@@ -493,28 +750,32 @@ class HubWindow(QMainWindow):
                 value[key] = text
         value["software_lifecycle"] = {key: field.currentText() for key, field in self.lifecycle_fields.items()}
         if value == self.store.project:
-            QMessageBox.information(self, "No changes", "The saved settings already match these values.")
+            notify(self, "Settings are already up to date")
             return
-        answer = QMessageBox.question(self, "Apply project settings?", "Apply these project-wide settings? A revision will preserve the current settings for restoration.")
+        answer = QMessageBox.question(self, "Apply project settings?", "Apply these settings to the entire team? A revision will preserve the current settings.")
         if answer != QMessageBox.Yes:
             return
         self.store.save_project(value)
         self.refresh_project()
+        notify(self, "Project settings saved", "success")
 
     def restore_settings(self, revision):
         if QMessageBox.question(self, "Restore settings?", "Restore the settings from before this revision? The current settings will also be preserved.") == QMessageBox.Yes:
             self.store.save_project(revision["previous"], "Restored settings before " + revision["id"])
             self.refresh_project()
+            notify(self, "Previous settings restored", "success")
 
     def refresh_project(self):
         self.render_dashboard()
         self.render_project()
         self.render_settings()
+        self.storage_panel.reload_fields()
+        self.files_panel.reload()
         self.render_activity()
         self.scan_done(self.results)
 
     def check_updates_on_startup(self):
-        if self.store.project.get("release_repository"):
+        if self.store.project.get("release_repository") and self.store.local.get("check_updates_at_startup", True):
             self.check_updates()
 
     def check_updates(self):
@@ -525,28 +786,35 @@ class HubWindow(QMainWindow):
             self.update_status.setText("Add and apply a release repository first.")
             return
         self.update_checking = True
-        self.update_status.setText("Checking approved GitHub releases…")
+        self.update_status.set_message("Checking approved GitHub releases…")
+        self.update_button.set_loading(True, "Checking…")
+        self.update_skeleton.show()
         self.work(lambda: latest_release(repository), self.update_done, self.update_failed)
 
     def update_done(self, release):
         self.update_checking = False
-        self.update_status.setText("Latest release: " + release["tag"] + " · current: " + __version__)
+        self.update_button.set_loading(False)
+        self.update_skeleton.hide()
+        self.latest_release_url = release["url"]
+        self.release_button.show()
+        self.release_status_text = "Latest release: " + release["tag"] + " · current: " + __version__
+        self.update_status.set_message(self.release_status_text, "success")
         if release["tag"].lstrip("v") != __version__:
-            box = QMessageBox(self)
-            box.setWindowTitle("GitHub release available")
-            box.setText("Latest published release: " + release["name"] + "\nCurrent app: " + __version__ + "\nNo files have been downloaded or installed.")
-            review = box.addButton("View release", QMessageBox.ActionRole)
-            box.addButton(QMessageBox.Close)
-            box.exec()
-            if box.clickedButton() == review:
-                self.guard(lambda: open_resource(release["url"]))
+            notify(self, "Update available. Review it under Settings → Updates.")
+        else:
+            notify(self, "The app is up to date", "success")
 
     def update_failed(self, message):
         self.update_checking = False
-        self.update_status.setText("Release check unavailable: " + message)
+        self.update_button.set_loading(False)
+        self.update_skeleton.hide()
+        self.release_status_text = "GitHub is unavailable. Check your connection and retry. Local project work is still available."
+        self.update_status.set_message(self.release_status_text, "warning")
+        notify(self, "GitHub check unavailable. You can retry under Settings → Updates.", "warning")
 
     def closeEvent(self, event):
-        if self.workers:
+        if self.workers or self.storage_panel.indexing or any(panel.tasks for panel in (self.microsoft_panel, self.cloud_panel, self.folder_panel)):
+            self.storage_panel.cancel_index()
             self.banner.setText("Finishing a background check. Please close the app again in a moment.")
             event.ignore()
         else:

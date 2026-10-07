@@ -1,0 +1,21 @@
+V193 AGGRESSIVE LARGEST-PORE VERIFICATION
+
+Test image:
+Steve_l_inal_R1_large_pore_repairs_red.png
+
+The currently largest remaining white pore was detected and force-tested.
+
+Largest parent area: 14196 px
+Selected radius: 10 px
+Selected repair area: 134 px
+Selected repair fraction: 0.944%
+Selected repair span: 25 px
+Resulting child pores: 8731 px and 5331 px
+Smaller-child fraction: 37.55%
+
+Selection rule:
+The forced-largest profile ranks exact-two-child proposals by closeness to a
+balanced split before considering repair size. This prevents a tiny sliver
+split from outranking the intended two-lobe separation.
+
+The master Large Pore Repair card remains OFF by default.

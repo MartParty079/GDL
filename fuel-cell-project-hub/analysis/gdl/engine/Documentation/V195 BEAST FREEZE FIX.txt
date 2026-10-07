@@ -1,0 +1,17 @@
+YOURE A BETA GDL ANALYSIS v195
+BEAST WORKER FINALIZATION / PARTIAL EXPORT FIX
+
+PROBLEM IDENTIFIED
+- Worker result rows could all be published while the external Fiji application remained alive.
+- The controller waited for a redundant final complete=True snapshot and appeared frozen.
+- On cancellation, partial records without hist_dir could break the XLSX/Word export path.
+
+FIX
+1. A worker is finalized after every assigned run record has been received and an 8-second grace period expires.
+2. If all terminal markers exist but snapshots remain incomplete for 30 seconds, only unpublished jobs are requeued.
+3. External worker processes are closed after inferred completion; other Fiji and JMP workers continue.
+4. Partial/canceled run records no longer raise KeyError: hist_dir during export.
+5. Existing 4-Fiji / 10-JMP parallel limits are unchanged.
+
+DIAGNOSTIC NOTE
+High-threshold Large Pore Repair runs can still take longer than lower thresholds. Current heartbeats mean the worker is alive; v195 now distinguishes that legitimate slow processing from finalization stalls.

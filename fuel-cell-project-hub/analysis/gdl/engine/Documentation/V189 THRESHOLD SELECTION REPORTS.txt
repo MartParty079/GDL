@@ -1,0 +1,19 @@
+V193 THRESHOLD-SELECTION REPORTS
+
+New Reports-page section:
+- Creates a full combined DOCX for the complete batch.
+- Creates a Selected_Threshold_Reports folder.
+- Creates one selected individual DOCX for every image/crop and threshold min/max group.
+- Selects the candidate run with the lowest weighted target distance.
+- Supports five summary-table targets with importance weights 1 through 5.
+- Writes Threshold_Selection_Manifest.xls with the selected median radius, score, actual values, targets, and importance weights.
+
+Example:
+4 images x 5 thresholds x 3 median radii = 20 selected reports.
+Each report uses the median-radius run closest to the enabled targets.
+
+Scoring:
+weighted normalized distance = sum(weight * abs(actual-target)/max(abs(target),1)) / sum(weight)
+Lowest score wins. Ties prefer the lower median radius, then earlier run order.
+
+V193 note: Selection controls moved to the Report Selection card, and criteria are no longer printed in Word reports.

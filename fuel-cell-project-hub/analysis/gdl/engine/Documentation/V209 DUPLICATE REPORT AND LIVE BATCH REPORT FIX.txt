@@ -1,0 +1,41 @@
+YOURE A BETA v209 - Duplicate Report + Live Batch Report Fix
+============================================================
+
+1. Idempotent report emission
+- Every Word report is keyed by the semantic set of completed run-order records it contains.
+- Once that run set has produced a verified DOCX, later report features reuse it instead of writing another identical DOCX.
+- Threshold Selection no longer duplicates the normal full combined report.
+- Threshold Selection no longer duplicates a completely-individual run report that already exists.
+- Report_Emission_Manifest.csv records the unique report emissions.
+
+2. Batch live image report folders
+New option on Report Recovery + Summaries:
+  Batch mode: finish one image completely, live-fill its report folder, then move to the next image
+
+When enabled:
+- Batch processing uses a strict image barrier.
+- BEAST can still use multiple Fiji agents for sweep runs within the CURRENT image.
+- The next original image is not released until all runs for the current image are terminal, JMP work for those runs is settled, and the live per-run Word reports are written.
+- Output example:
+  Word_Report/Batch_Live_By_Image/001_ImageName/Run_0001_....docx
+- IMAGE_COMPLETE.txt is written into each completed image folder.
+- The progress window and Fiji log display: Image X of N complete.
+
+3. Final batch organization
+After all image barriers finish:
+- Enabled combined Word output is written under:
+  Word_Report/Batch_Final/Combined_Report
+- Enabled per-report summaries are collected under:
+  Word_Report/Batch_Final/Summaries
+- Existing configured All Reports summary mirroring is still honored when selected.
+
+4. BEAST reliability
+- Disposable agents remain one exact run per Fiji process.
+- In strict live-batch mode, exhausted worker retries fall back to the controller immediately for the current image before the next image is released.
+- A one-run image group can use one disposable Fiji worker, so the image barrier does not break when only one sweep exists.
+
+5. Validation
+- All Python/Jython modules compile.
+- Synthetic report test: 6 per-run reports created live + 1 final combined = 7 DOCXs total; Threshold Selection ON did not create duplicates.
+- Summary ON/OFF did not change Word report count.
+- Batch-final summary test verified one local summary per report group.

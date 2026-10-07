@@ -1,0 +1,22 @@
+YOURE A BETA v204 - DYNAMIC DISPOSABLE FIJI AGENTS
+
+WHY v203 COULD LOOK FAILED
+- v203 statically divided sweep runs into worker chunks.
+- In the supplied 10-run log, workers 1 and 3 received the slow contrast=Off jobs.
+- Workers 2 and 4 completed the faster Equalize jobs and could not take work from the slow workers.
+- Result: available Fiji capacity sat idle while three slow runs remained unfinished.
+
+V204 SCHEDULER
+- One shared exact-run queue.
+- Each external Fiji process handles exactly ONE run.
+- When it publishes that run, the controller terminates/retire the process and immediately launches the next pending run in that slot.
+- No static chunks. No worker owns future jobs.
+- A crash, missing heartbeat, startup failure, claim failure, confirmed content stall, or hard timeout requeues ONLY the current run.
+- Retry-exhausted runs can fall back to the controller.
+- JMP starts after Fiji agents settle to reduce Fiji/JMP resource contention.
+
+WATCHDOG
+- Heartbeat timeout remains fast for dead JVMs.
+- Algorithmic no-progress timeout has a v204 safety floor of 900 seconds plus a 45-second confirmation window.
+- Single-run hard timeout has a v204 floor of 1800 seconds.
+- Older Quick Runs with overly aggressive v202/v203 watchdog values cannot lower those runtime safety floors.

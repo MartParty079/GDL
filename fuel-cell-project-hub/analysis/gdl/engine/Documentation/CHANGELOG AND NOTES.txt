@@ -1,0 +1,320 @@
+YOURE A BETA v207
+- Added dedicated Report Recovery + Summaries GUI card.
+- Reports Only can now start from an existing failed output folder OR an already generated YOURE A BETA Word report.
+- Existing-report mode can regenerate combined, by-image, completely individual, or +combined report layouts without rerunning analysis.
+- Existing source DOCX is preserved; regenerated split output goes to Word_Report/Split_From_<report>.
+- Manual summary selection and batch summary mirroring moved onto the new recovery/summaries card.
+- Reports-only Word grouping remains independent of summary export/mirroring settings.
+
+v202 - Fixed cross-user OG rainbow heat maps (Fiji decoder, BEAST Word-only image gate, long-path fallback) and added strict content-progress worker restart.
+v201 - Added independent lossy report, generated-image cleanup, and master no-lossless-visuals options.
+v199 - Report-mode permutations are now independent from Excel/batch summary export checkboxes.
+v199 - Strand rainbow heat map report option added.
+YOURE A BETA GDL ANALYSIS v199 - MULTIPLE SWIFT MAGNIFICATION PROFILES
+
+- Bundled Imaging.magn now contains both uploaded profiles: 4X and 10X.
+- Set Scale reads profile names from the bundled .magn file and shows them in an editable dropdown.
+- Current decoded scales: 4X = 1393073.211153188 px/m = 0.717837362741 um/pixel; 10X = 3280093.532240634 px/m = 0.304869355148 um/pixel.
+- A fixed 4X or 10X profile can be selected for a single-objective batch.
+- AUTO only chooses among multiple profiles when the image/folder path contains a profile token such as 4X or 10X; it does not silently guess.
+- Quick Runs save and restore the selected Swift profile.
+
+YOURE A BETA GDL ANALYSIS v196 - QUICK RUN + SWIFT UNIT FIX
+
+- Swift Imaging .magn Resolution is explicitly defined as pixels per meter (px/m), never pixels per micron.
+- Scale conversion is centralized as: mm/pixel = 1000 / (px/m), um/pixel = 1,000,000 / (px/m).
+- TIFF audit metadata now writes GDL_SWIFT_MAGN_RESOLUTION_PIXELS_PER_METER; the older PPM key remains readable for backward compatibility.
+- Portable Quick Runs now serialize every current editable GUI control in addition to the normalized run settings.
+- This fixes persistence of Word/JMP histogram binning settings, including automatic binning and separate EPD/Roundness/Circularity bin counts.
+- Quick Run JSON format version increased to 2. Older Quick Run files remain loadable.
+
+YOURE A BETA GDL ANALYSIS v195 - BEAST FREEZE FIX
+
+- Finalizes workers from fully published assigned results.
+- Bounds terminal-marker/snapshot lag and requeues only unpublished jobs.
+- Prevents partial/canceled records from failing export with missing hist_dir.
+- Retains Swift .magn scaling and 10 concurrent JMP workers.
+
+YOURE A BETA GDL ANALYSIS v195 - SWIFT .MAGN SCALE BRIDGE
+
+- Reads Swift Imaging 3.0 Imaging.magn files directly.
+- Searches beside each source image, through configured parent folders, and in the bundled Swift Magnification Tables folder.
+- AUTO profile selection uses a single profile or matches profile names in image/folder paths.
+- Converts Swift Resolution from pixels per meter (px/m) to mm/pixel and applies the calibration before cropping, sweeping, and particle analysis.
+- Preserves profile, Resolution, pixel size, and table path in image audit metadata, run notes, manifests, Word summary tables, and BEAST revised summaries.
+- Calibrated TIFF inputs now save as separate _scaled.tif copies instead of being skipped.
+- The supplied 4X profile decodes as 1390466.1089001775 pixels per meter (px/m) = 0.7191832966 um/pixel.
+
+YOURE A BETA GDL ANALYSIS v193 - SWIFT IMAGING METADATA
+
+- Added Imaging software metadata to the Reports page.
+- Default imaging software is Swift Imaging 3.0.
+- Added the metadata to Word reports, summary tables, run notes, manifests, and BEAST revised summaries.
+- Added a capture-automation assessment document.
+
+YOURE A BETA GDL ANALYSIS v193 - 10 JMP CRASH-RESILIENT POOL
+
+- Restored the BEAST JMP default to 10 simultaneous JMP instances.
+- Safe mode no longer reduces the pool to one process.
+- JMP workers launch minimized and JMP window tiling remains disabled.
+- Every JMP worker receives an isolated TEMP/TMP folder inside its run folder.
+- A crashed or early-exit worker is retried independently while the other JMP slots continue.
+- Default retries increased to 2, retry delay reduced to 1 second, and launch staggering set to 1 second.
+
+YOURE A BETA GDL ANALYSIS v193 - JMP CRASH GUARD
+
+- Added safe serialized JMP launch mode.
+- Disabled JMP window tiling by default.
+- Added automatic retry after early JMP exit or timeout.
+- Changed default JMP parallel instances from 10 to 1 and launch stagger from 0.5 to 4 seconds.
+
+YOURE A BETA GDL ANALYSIS v193 - REPORT SELECTION CARD
+
+- Moved all threshold-selection controls into a separate Report Selection sidebar card immediately after Report.
+- Removed selection criteria, target values, importance weights, distances, and weighted score tables from Word reports.
+- Replaced Threshold_Selection_Manifest.csv with Threshold_Selection_Manifest.xls.
+- The Excel manifest is now the sole location for selection criteria and scoring details.
+
+YOURE A BETA GDL ANALYSIS v193 - THRESHOLD-SELECTION REPORTS
+
+- Added Reports-page selection workflow for one report per image at each threshold.
+- Added five target criteria with 1-5 importance weights.
+- Added weighted candidate selection across median-radius/sweep runs.
+- Added a full combined batch report plus a selected individual-report folder.
+- Added Threshold_Selection_Manifest.csv for auditability.
+- Supported in normal and BEAST processing.
+
+YOURE A BETA GDL ANALYSIS v193 - SCALE METHOD + SIX BEAST REPORT MODES
+
+- Added a Reports-page dropdown recording how scale was set.
+- Default scale method is Needle scale; Old Plastic and New Glass are included.
+- Additional scale labels can be added in GDL_User_Defaults.py.
+- Added six Word report modes for normal processing and BEAST MODE:
+  no reports, combined, individual by image, completely separate individual,
+  individual by image + combined, and completely separate individual + combined.
+- BEAST JMP graphs/histograms are now independent from Word report grouping.
+- Scale method is written into DOCX headers, run notes, report summary tables,
+  run manifests, and the BEAST revised-summary sheet.
+
+YOURE A BETA GDL ANALYSIS v193 - FIXED THRESHOLD-40 FIBER NETWORK
+
+- Replaced the sparse Fiber Fixer output with a complete fiber network derived from the threshold-40 segmentation.
+- The fiber mask is generated once per selected image/crop before sweep runs begin.
+- The full network is skeletonized and expanded to a fixed 3-pixel width.
+- The same cached wireframe is applied to every higher-threshold segmented sweep run.
+- File and folder selectors start in the first available Tarleton Work Zone path.
+- Completion opens the output folder instead of auto-opening the Word report.
+- All README/text documentation is organized in the Documentation folder.
+- LINES OF CODE now includes a total line count.
+
+YOURE A BETA GDL ANALYSIS v193 - FIBER FIXER PREVIEW + SWEEP
+
+- Added Fiber Fixer preview overlay output that shows the wireframe before it is burned into the segmented mask.
+- Added a Fiber Fixer threshold-offset sweep on the Sweep card.
+- The preview overlay saves into the run Images folder and the file path is also exported in notes/summary output.
+
+YOURE A BETA GDL ANALYSIS v193 - FIBER FIXER
+
+- Added a new Fiber Fixer card, OFF by default.
+- Fiber Fixer makes a lower-threshold copy, skeletonizes the recovered intact fibers,
+  converts that centerline network into a thin wireframe mask, and burns it back into
+  the main segmented mask as BLACK before large-pore repair and Analyze Particles.
+- Added save options for the lower-threshold helper mask and the saved wireframe mask.
+- Kept the Large Pore Repair card OFF by default.
+
+YOURE A BETA GDL ANALYSIS v193 - BLUE ANTI-NECK REMOVED
+
+- Removed the v183 skeleton/EDM blue-target anti-neck pass completely.
+- Removed its UI controls, defaults, settings, reports, and processing logic.
+- Retained the aggressive forced-largest-pore pass.
+- Retained the recursive green-target multi-neck pass.
+- Retained the review-only tiny-spur pass.
+- Fill Holes remains display-only for previews shown outside the script.
+- The master Large Pore Repair card remains OFF by default.
+
+YOURE A BETA GDL ANALYSIS v193 - GREEN-TARGET MULTI-NECK PASS
+
+- Added recursive medium-pore neck detection tuned from the user's green marks.
+- Parent area range defaults to 2,000-18,000 px.
+- Neck radius defaults to 2-10 px.
+- Repair area defaults to 100-2,500 px with span and mean-thickness filters.
+- Accepted children are recursively checked again, allowing chained cuts in
+  the same original merged pore.
+- Added an optional review-only tiny-spur profile.
+- The prior aggressive largest-pore behavior is retained.
+- Master Large Pore Repair card remains OFF by default.
+
+YOURE A BETA GDL ANALYSIS v193 - AGGRESSIVE LARGEST-PORE FIX
+
+- Added a forced pass that tests the single largest pore before all other repairs.
+- Forced proposals are ranked by split balance, not by the smallest repair.
+- Expanded the aggressive rescue search to radius 4-36 px.
+- Forced-largest search reaches radius 48 px, repair area 8000 px,
+  30% parent fraction, and 220 px span.
+- Exact two-child topology remains mandatory.
+- Master Large Pore Repair card remains OFF by default.
+- Review mode is recommended for the aggressive pass.
+
+YOURE A BETA GDL ANALYSIS v193 - PORTABLE BUNDLE
+
+LARGE PORE REPAIR INTEGRATION
+-----------------------------
+- Added a new Large Pore Repair sidebar card. The master checkbox is OFF by default.
+- Runs after thresholding and ordered binary cleanup, before Analyze Particles.
+- Uses black fibers / white pores and inserts small black repairs only when one large parent pore becomes exactly two substantial child pores.
+- Includes review and automatic-conservative modes. Accepted review repairs appear immediately in red.
+- BEAST/headless workers automatically use conservative automatic mode.
+- Verified defaults from Steve_l_aled_R10_segmented_mask.tif: parent >=10000 px, inspect 25, child >=2000 px, radii 1-10, repair 2-150 px, max 1 percent of parent, max span 25 px, max 5 repairs.
+- Standard segmented outputs remain black/white. Red repair overlays and CSV measurements are saved separately when enabled; the mostly-white standalone repair mask remains OFF by default.
+- Quick Runs and saved defaults include the new card settings.
+
+PATCHED CONTRAST SWEEP
+- The Enhance Contrast sweep now runs four explicit modes:
+  Off; Saturated cutoff only; Normalize; Equalize.
+- Every enabled mode preserves the Saturated pixels value configured in the ORDER contrast step.
+- Sweep labels, report names, run notes, and BEAST workbook columns identify the selected mode.
+
+===================================================
+
+START
+-----
+1. Double-click "LAUNCH SCRIPT.bat", or
+2. Run "RUN IN FIJI.py" directly inside Fiji.
+
+ONE DEFAULTS FILE
+-----------------
+Edit "Defaults and Other Stuff/GDL_User_Defaults.py" for all routine defaults: processing, ORDER, threshold,
+measurements, sweeps, reports, pore maps, BEAST, JMP, workbook, report paths, and
+known Fiji launcher paths. Double-click "Defaults and Other Stuff/EDIT USER DEFAULTS.bat" for quick access.
+
+Defaults and Other Stuff/startup_paths.ini is intentionally separate because it stores machine-specific path
+overrides selected at startup. Blank entries use Defaults and Other Stuff/GDL_User_Defaults.py.
+
+READABLE CODE LAYOUT
+--------------------
+GDL_code/
+  01_Core_Imports_Helpers.py
+  02_User_Interface_Pages.py
+  03_User_Interface_Settings.py
+  04_Image_Processing_Sweeps.py
+  05_Reports_Manual_Tools_Pore_Maps.py
+  06A_Large_Pore_Repair.py
+  06_Threshold_Analysis_JMP.py
+  07_Run_Engine_Exports.py
+  08_Workbook_JMP_Launch_Helpers.py
+  09_BEAST_Workers_Main.py
+  resources/
+
+Keep RUN IN FIJI.py, Defaults and Other Stuff/GDL_User_Defaults.py, GDL_code, and Defaults and Other Stuff/startup_paths.ini together.
+
+v175 CHANGES
+------------
+- Small pore-map marker default increased from 6 px to 8 px.
+- Large pore-map marker remains 14 px.
+- Pore-map marker opacity default increased to 70 percent.
+- EPD distribution cutoff lines remain in the graph but their text labels are removed.
+- The Word report caption states the red, blue, and green cutoff meanings dynamically.
+- All user-editable defaults are centralized in Defaults and Other Stuff/GDL_User_Defaults.py.
+- Numbered part files are replaced with descriptive module filenames.
+
+
+v175 CHANGES
+------------
+- Removed requested status/setup columns from the Word complete-summary table.
+- Average EPD and Max EPD now appear immediately after threshold columns.
+- Binary iteration, Minimum/Maximum, and binary-order fields appear only when active and varying.
+- Both pore maps now use the same strict cleaned-data rule as All Pore Data: EPD > cutoff.
+
+
+v175 PORE-MAP SAVE FIX
+----------------------
+- Fixed the cleaned pore-map tuple-unpack error that returned a PNG path without creating the file.
+- Pore-map PNG/TIFF saves now retry and verify file size/PNG decodability.
+- Word-report assembly can recover a missing PNG from the verified TIFF.
+- Failed image saves now return blank paths instead of nonexistent paths.
+
+
+v175 CHANGES
+------------
+- Fixed local variable segmented_overlay_png referenced before assignment.
+- Overlay generation is explicitly nonfatal and initializes to a blank path at run startup.
+- Successful run results now publish segmented_overlay_png so Word report assembly can find it.
+- Full Python tracebacks are written into Fiji_Log.txt for future run failures.
+
+
+v175 CHANGES
+------------
+- Batch sweeps can create one Word report per original source image plus one full combined sweep report.
+- Crops and all sweep combinations are grouped using the original source-image path.
+- Every grouped report receives its own summary XLS export.
+- Batch-sweep summaries are sent to every available configured All Reports folder by default.
+- Added an Enhance Contrast OFF/ON sweep dimension. It can be combined with all other sweep parameters.
+
+
+v175 CHANGES
+------------
+- Reworked BEAST Fiji agent supervision. Each agent writes a periodic heartbeat file.
+- A long-running ImageJ operation no longer gets killed merely because it has not completed a run within the slow-job warning period.
+- Missing heartbeats, unexpected process exits, claim failures, per-run timeouts, and emergency process timeouts now trigger an agent restart.
+- Restarts receive only unfinished exact jobs; completed jobs are not repeated.
+- Controller fallback remains active after the configured runtime restart limit is exhausted.
+- Added configurable heartbeat interval/timeout, claim timeout, single-run timeout, and runtime restart count.
+- Added BEAST_Fiji_Workers/BEAST_Agent_Recovery_Summary.txt.
+- Default startup timeout increased to 120 seconds, slow-job warning to 600 seconds, emergency agent lifetime to six hours, and runtime retries to two.
+
+PORTABLE QUICK RUNS
+-------------------
+The Dashboard now contains five configurable Quick Run slots.
+
+1. Click a Quick Run button to load that slot into the normal settings GUI.
+2. Use Rename to choose a readable slot name.
+3. Configure ORDER, Processing, Threshold, Sweep, Report, BEAST, and all other pages normally.
+4. Press Run. The script asks whether to create/update the selected Quick Run.
+5. Choose Yes to save a readable JSON configuration file inside the Quick Runs folder using this format:
+   quick run#-(name).json
+
+The Quick Run file stores the complete configured settings object, including duplicate ordered processing steps. It is data-only JSON and can be edited directly in a text editor. Copy it into the Quick Runs folder on another installation and the matching Dashboard slot will load it automatically. Only one saved file should be kept for each slot number; when a slot is resaved, older files for that slot are removed.
+
+
+
+v175 WATCHDOG / QUICK RUN / CONTRAST SELECTION PATCH
+- Persistent command-prompt watchdog reports abnormal Fiji termination.
+- Relaunches Fiji and reruns RUN IN FIJI.py after a crash or incomplete termination.
+- Normal completion and user cancellation do not trigger an automatic rerun.
+- Quick Run save prompt is change-only, based on a stable GUI/name snapshot.
+- Enhance Contrast sweep modes are independently selectable.
+
+
+V175 BEAST SINGLE-INSTANCE CRASH FIX
+------------------------------------
+- Diagnosed the supplied crash log: a visible BEAST preflight macro reached the existing controller through Fiji single-instance handoff.
+- The probe's System.exit call then closed the controller Fiji process.
+- Modern native Jaunch names such as fiji-windows-x64.exe are now detected explicitly.
+- Both config/jaunch/fiji.toml and config/fiji.toml layouts are recognized.
+- BEAST probes/workers receive --allow-multiple before -macro or --run.
+- The preflight receives an isolation JVM property and will not call System.exit when that property is absent.
+- Main watchdog launch also uses --allow-multiple for modern Fiji as a second isolation layer.
+
+V175 QUICK RUN STORAGE CLEANUP
+------------------------------
+- Added a main-level Quick Runs folder.
+- All new quick run#-(name).json files save there.
+- Discovery, rename, replacement, and duplicate cleanup now operate in that folder.
+- Legacy root-level Quick Run files are automatically migrated; newer duplicates win.
+
+v193 CRASH RECOVERY / QUICK RUN / REPORT / PORTRAIT FIXES
+- Deletes current-user ImageJ-*.stub single-instance files after force-closing Fiji and before every watchdog relaunch.
+- Uses a unique watchdog status file per launch attempt so older sessions cannot overwrite the current status.
+- Adds --forbid-single-instance to modern controller, preflight, and worker Fiji launches; legacy workers use -port0.
+- Skips external Fiji preflight and workers completely when one Fiji agent is selected.
+- Fixes Quick Run application so saved ORDER and Processing parameters replace the visible Processing controls instead of being overwritten by them.
+- Turns BEAST combined DOCX + JMP graph reporting on by default.
+- Restores a valid John GDL JPEG and embeds a fallback copy in the UI code.
+
+v209
+- Prevented duplicate Word reports across normal reporting and Threshold Selection using a semantic report-emission registry.
+- Added Report_Emission_Manifest.csv.
+- Added optional strict image-by-image batch live report folders.
+- BEAST parallelism is constrained inside one image at a time when the live batch option is enabled.
+- Added visible/logged Image X of N complete status after that image's runs and reports finish.
+- Added Batch_Final/Combined_Report and Batch_Final/Summaries organization.

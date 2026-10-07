@@ -1,0 +1,19 @@
+V193 SCALE METHOD AND BEAST REPORT MODES
+
+Scale method:
+- Reports page dropdown: How scale was set
+- Default: Needle scale
+- Included choices: Needle scale, Old Plastic, New Glass
+- Edit report_scale_method_options in Defaults and Other Stuff/GDL_User_Defaults.py to add choices.
+
+Word report modes:
+1. No Word reports
+2. Combined Word report
+3. Individual by image
+4. Completely separate individual reports
+5. Individual by image + combined
+6. Completely separate individual reports + combined
+
+Individual by image groups every crop and sweep run from the same original input image.
+Completely separate individual reports creates one DOCX for each processed run.
+BEAST JMP graphs/histograms are controlled independently from Word report grouping.

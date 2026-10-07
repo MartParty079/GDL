@@ -1,0 +1,373 @@
+Historical source path inventory — documentation examples only, never active configuration.
+
+analysis/gdl/baseline\RUN IN FIJI.py:10:CONFIG_PATH = os.path.join(SUPPORT_DIR, "startup_paths.ini")
+analysis/gdl/baseline\RUN IN FIJI.py:29:    keys = ["FIJI_LAUNCHER", "JMP_EXECUTABLE", "MODULE_FOLDER", "DEFAULT_OUTPUT_FOLDER", "EXTRA_USER_ROOTS", "SHOW_PATH_DIALOG"]
+analysis/gdl/baseline\RUN IN FIJI.py:48:    gd.addStringField("Default output folder", cfg.get("DEFAULT_OUTPUT_FOLDER", ""), 65)
+analysis/gdl/baseline\RUN IN FIJI.py:57:    cfg["DEFAULT_OUTPUT_FOLDER"] = gd.getNextString().strip()
+analysis/gdl/baseline\RUN IN FIJI.py:69:    output = cfg.get("DEFAULT_OUTPUT_FOLDER", "").strip()
+analysis/gdl/baseline\RUN IN FIJI.py:77:    os.environ["GDL_EXTRA_USER_ROOTS"] = cfg.get("EXTRA_USER_ROOTS", "")
+analysis/gdl/baseline\RUN IN FIJI.py:78:    os.environ["GDL_FIJI_LAUNCHER_OVERRIDE"] = cfg.get("FIJI_LAUNCHER", "")
+analysis/gdl/baseline\RUN IN FIJI.py:79:    os.environ["GDL_JMP_EXE_OVERRIDE"] = jmp
+analysis/gdl/baseline\RUN IN FIJI.py:80:    os.environ["GDL_V193_LAUNCHER"] = os.path.abspath(__file__)
+analysis/gdl/baseline\RUN IN FIJI.py:94:    status_path = os.environ.get("GDL_V193_WATCHDOG_STATUS", "").strip()
+analysis/gdl/baseline\RUN IN FIJI.py:95:    session_id = os.environ.get("GDL_V193_WATCHDOG_SESSION", "").strip()
+analysis/gdl/baseline\RUN IN FIJI.py:124:            message = "Missing GDL code module:\n" + path
+analysis/gdl/baseline\RUN IN FIJI.py:143:        message = "Missing user defaults file:\n" + DEFAULTS_PATH + "\n\nKeep the Defaults and Other Stuff folder beside RUN IN FIJI.py."
+analysis/gdl/baseline\RUN IN FIJI.py:154:        message = "Missing GDL code folder:\n" + code_dir + "\n\nKeep RUN IN FIJI.py, GDL_code, and Defaults and Other Stuff together."
+analysis/gdl/baseline\RUN IN FIJI.py:191:        show_startup_error("The GDL script failed:\n" + error_text + "\n\nThe watchdog console will report the failure.")
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:10:import tempfile
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:14:CONFIG_PATH = os.path.join(SUPPORT_DIR, "startup_paths.ini")
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:102:    current_home = os.path.abspath(os.path.expanduser("~")).lower()
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:111:    roots = [os.path.join(os.path.expanduser("~"), "Fiji"), os.path.join(os.path.expanduser("~"), "Fiji.app")]
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:237:    username = str(os.environ.get("USERNAME", os.environ.get("USER", ""))).strip()
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:239:    for candidate in [os.environ.get("TEMP", ""), os.environ.get("TMP", ""),
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:240:                      os.path.join(os.environ.get("LOCALAPPDATA", ""), "Temp"),
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:241:                      tempfile.gettempdir()]:
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:341:    env = os.environ.copy()
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:429:            "in Defaults and Other Stuff\\startup_paths.ini."
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_Analysis_Launcher_v209.py:433:        _show_error("Missing RUN IN FIJI.py:\n" + RUN_SCRIPT_PATH)
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:14:# Startup search defaults. startup_paths.ini can still override these.
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:16:    r"C:\Users\vgolf\Documents\Fiji.app\fiji-windows-x64.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:17:    r"C:\Users\mkime\fiji-latest-win64-jdk\Fiji\fiji-windows-x64.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:18:    r"C:\Users\mkime\Fiji\fiji-windows-x64.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:19:    r"C:\Users\vgolf\Fiji\fiji-windows-x64.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:21:DEFAULT_EXTRA_USER_ROOTS = "C:/Users/mkime;C:/Users/vgolf;C:/Users/vgolf/Documents;C:/Users/mkime/fiji-latest-win64-jdk"
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:24:JMP_EXE_DEFAULT = "C:/Program Files/JMP/JMPSTUDENT/19/jmp.exe"
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:25:ALL_REPORTS_FOLDER_MICHELSON = "C:/Users/mkime/tarleton.edu (NTNET)/Michelson, Andrew - GDL Stuffs/All Reports"
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:26:ALL_REPORTS_FOLDER_VGOLF = "C:/Users/vgolf/OneDrive - tarleton.edu (NTNET)/GDL Stuffs/All Reports"
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:29:    "C:/Program Files/JMP/JMPSTUDENT/19/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:30:    "C:/Program Files/JMP/JMPSTUDENT/20/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:31:    "C:/Program Files/JMP/JMP/19/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:32:    "C:/Program Files/JMP/JMP/18/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:33:    "C:/Program Files/JMP/JMP/17/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:34:    "C:/Program Files/JMP/JMP/16/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:35:    "C:/Program Files/SAS/JMP/19/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:36:    "C:/Program Files/SAS/JMP/18/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:37:    "C:/Program Files/SAS/JMP/17/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:38:    "C:/Program Files/SAS/JMP/16/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:39:    "C:/Program Files/SAS/JMPPRO/19/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:40:    "C:/Program Files/SAS/JMPPRO/18/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:41:    "C:/Program Files/SAS/JMPPRO/17/jmp.exe",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:42:    "C:/Program Files/SAS/JMPPRO/16/jmp.exe"
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:96:    # Put Imaging.magn beside the source images, in a parent folder, or in the
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:97:    # bundled Swift Magnification Tables folder. v199 reads all profiles in
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:101:    "swift_magn_filename": "Imaging.magn",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:205:    "summary_xls_destination": "All available All Reports folders",
+analysis/gdl/baseline\Defaults and Other Stuff\GDL_User_Defaults.py:269:    "batch_sweep_export_all_summaries_to_all_reports": True,
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:759:            quick_run_app_dir(),
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:760:            "Swift Magnification Tables",
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:761:            str(DEFAULTS.get("swift_magn_filename", "Imaging.magn"))
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:798:            "<html><div style='width:760px;'><b>Profiles read from bundled Imaging.magn:</b> " +
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:804:    fields["swift_magn_use_bundle_fallback"] = add_checkbox_row(scale_page, "Also use the bundled Swift Magnification Tables folder", DEFAULTS["swift_magn_use_bundle_fallback"])
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:806:    scale_page.add(JLabel("<html><div style='width:760px;'>Search order: image folder â†’ parent folders â†’ bundled table folder. Swift Resolution is interpreted as pixels per meter (px/m). v199 supports multiple profiles in the same Imaging.magn file; select 4X or 10X explicitly, or use AUTO for profile-labeled image/folder names.</div></html>"))
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1207:        if bool(fields.get("_quick_run_loading", False)):
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1892:    fields["batch_sweep_export_all_summaries_to_all_reports"] = add_checkbox_row(
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1894:        "Batch sweep summaries: copy every report summary to all available All Reports folders",
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1895:        DEFAULTS["batch_sweep_export_all_summaries_to_all_reports"]
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1902:            "Auto-detect available All Reports folder",
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1903:            "Michelson/Andrew All Reports folder",
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1904:            "vgolf/OneDrive All Reports folder",
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1905:            "All available All Reports folders",
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1917:    recovery.add(JLabel("Auto-detect checks both configured All Reports locations and falls back to Word_Report."))
+analysis/gdl/baseline\GDL_code\02_User_Interface_Pages.py:1949:    report.add(JLabel("Excel summary collection and all reports-only/recovery tools have moved to the new Report Recovery + Summaries card."))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:45:# v196: makes Swift Resolution units explicit as pixels per meter (px/m) and Quick Runs persist every current GUI field, including all JMP/Word histogram binning controls.
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:46:# v199: supports multiple Swift .magn profiles in one table and populates a 4X/10X objective selector directly from Imaging.magn.
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:78:from java.awt import Color, Desktop, Font, Dialog, Image, GraphicsEnvironment
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:108:                               "ALL_REPORTS_FOLDER_MICHELSON", "ALL_REPORTS_FOLDER_VGOLF"]:
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:485:# PORTABLE QUICK RUN HELPERS
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:488:QUICK_RUN_SLOT_COUNT = 5
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:489:QUICK_RUN_FOLDER_NAME = "Quick Runs"
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:490:QUICK_RUN_FILE_PATTERN = re.compile(r"^quick run([1-5])-\((.*)\)\.json$", re.IGNORECASE)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:491:QUICK_RUN_PROCESSING_KEYS = set([
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:504:def quick_run_app_dir():
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:530:def quick_run_html_text(value):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:534:def quick_run_safe_file_name(name):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:543:def quick_run_gui_snapshot(fields, display_name):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:545:    captured = {"quick_run_name": str(display_name).strip(), "fields": {}}
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:567:def quick_run_capture_all_settings(fields, parsed_settings=None):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:569:    Build a portable Quick Run from the *entire current GUI*, then merge in
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:574:    the portable Quick Run if its parser was missing or renamed. v196 makes the
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:575:    GUI itself the source of truth for Quick Run persistence. This explicitly
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:583:            captured[str(key)] = quick_run_portable_value(parsed_settings[key])
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:607:            captured[key] = quick_run_portable_value(value)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:611:                IJ.log("Quick Run could not capture field " + str(key) + ": " + str(quick_capture_error))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:615:    captured["quick_run_saved_gui_field_count"] = int(gui_count)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:616:    captured["quick_run_save_schema"] = "v196-all-gui-settings"
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:620:def quick_run_storage_dir():
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:621:    """Return the dedicated portable Quick Runs folder, creating it as needed."""
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:622:    folder = os.path.join(quick_run_app_dir(), QUICK_RUN_FOLDER_NAME)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:631:def migrate_legacy_quick_run_files():
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:632:    """Move older root-level Quick Run JSON files into the dedicated folder."""
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:633:    app_dir = quick_run_app_dir()
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:634:    storage_dir = quick_run_storage_dir()
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:642:        if QUICK_RUN_FILE_PATTERN.match(str(file_name)) is None:
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:655:                    IJ.log("Moved newer legacy Quick Run into Quick Runs folder: " + str(target))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:658:                    IJ.log("Removed older duplicate root-level Quick Run: " + str(source))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:661:                IJ.log("Moved legacy Quick Run into Quick Runs folder: " + str(target))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:663:            IJ.log("Could not migrate legacy Quick Run " + str(source) + ": " + str(migration_error))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:666:def quick_run_target_path(slot, name):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:667:    slot_number = max(1, min(QUICK_RUN_SLOT_COUNT, int(slot)))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:668:    return os.path.join(quick_run_storage_dir(), "quick run" + str(slot_number) + "-(" + quick_run_safe_file_name(name) + ").json")
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:671:def quick_run_files_for_slot(slot):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:674:    migrate_legacy_quick_run_files()
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:675:    root_dir = quick_run_storage_dir()
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:678:            match = QUICK_RUN_FILE_PATTERN.match(str(file_name))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:685:        IJ.log("Could not scan Quick Run files: " + str(e))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:693:def load_quick_run_file(path, expected_slot=None):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:708:            raise RuntimeError("Quick Run file must contain a JSON object")
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:709:        raw_settings = payload.get("quick_run_settings", None)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:711:            raise RuntimeError("quick_run_settings must be a JSON object")
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:712:        file_slot = int(payload.get("quick_run_slot", record["slot"] if record["slot"] > 0 else 0))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:715:        raw_name = str(payload.get("quick_run_name", "")).strip()
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:717:            match = QUICK_RUN_FILE_PATTERN.match(os.path.basename(str(path)))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:721:            raw_name = "Quick Run " + str(record["slot"])
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:725:            IJ.log("Quick Run slot metadata mismatch in " + str(path) + "; using filename slot " + str(expected_slot))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:732:def discover_quick_runs():
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:734:    for slot in range(1, QUICK_RUN_SLOT_COUNT + 1):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:737:            "name": "Quick Run " + str(slot),
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:742:        files = quick_run_files_for_slot(slot)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:746:            loaded = load_quick_run_file(path, slot)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:756:                match = QUICK_RUN_FILE_PATTERN.match(os.path.basename(files[0]))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:763:                IJ.log("Multiple Quick Run " + str(slot) + " files found. Loaded newest valid file: " + str(chosen.get("path", "")))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:767:def quick_run_process_summary(settings):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:789:def quick_run_portable_value(value):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:795:            out[str(key)] = quick_run_portable_value(value[key])
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:798:        return [quick_run_portable_value(item) for item in value]
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:802:def quick_run_clean_settings(settings):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:811:            cleaned[key_text] = quick_run_portable_value(settings[key])
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:815:def save_quick_run_file(slot, name, settings):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:816:    slot_number = max(1, min(QUICK_RUN_SLOT_COUNT, int(slot)))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:819:        display_name = "Quick Run " + str(slot_number)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:820:    target = quick_run_target_path(slot_number, display_name)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:822:    cleaned = quick_run_clean_settings(settings)
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:824:        "quick_run_format_version": 2,
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:825:        "quick_run_slot": slot_number,
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:826:        "quick_run_name": display_name,
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:827:        "quick_run_settings": cleaned
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:840:    for old_path in quick_run_files_for_slot(slot_number):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:845:            IJ.log("Could not remove older Quick Run file " + str(old_path) + ": " + str(cleanup_error))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:846:    IJ.log("Saved portable Quick Run " + str(slot_number) + ": " + str(target))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:850:def set_quick_run_component_value(component, value):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:881:        IJ.log("Could not apply Quick Run GUI value: " + str(e))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:885:def apply_quick_run_settings_to_fields(fields, saved_settings, processing_panel):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:893:            if key in QUICK_RUN_PROCESSING_KEYS or str(key).startswith("pipeline_") or str(key).startswith("_"):
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:897:                set_quick_run_component_value(component, merged[key])
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:918:    fields["_quick_run_loading"] = True
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:923:            set_quick_run_component_value(combo, pipeline_operation_label(token))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:925:        fields["_quick_run_loading"] = False
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:934:            cache[prefix + str(key)] = quick_run_portable_value(step[key])
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:936:    # page snapshot overwrites the just-loaded Quick Run values with the old GUI.
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:1199:def preferred_gdl_work_zone_directory():
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:1201:        r"C:\Users\mkime\tarleton.edu (NTNET)\Michelson, Andrew - GDL Stuffs\The Work Zone",
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:1202:        r"C:\Users\vgolf\tarleton.edu (NTNET)\Michelson, Andrew - GDL Stuffs\The Work Zone"
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:1214:    start_dir = preferred_gdl_work_zone_directory()
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:1326:            msg += "Non-TIF images found:\n"
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:1367:    roots = ["C:/Program Files/JMP", "C:/Program Files/SAS", "C:/Program Files"]
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:1379:                if "jmp" not in lower_root and root != "C:/Program Files":
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:2775:        lines.append("Batch sweep summaries to All Reports: " + ("ON" if field_text_value(fields.get("batch_sweep_export_all_summaries_to_all_reports")) else "OFF"))
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:2926:        "swift_magn_filename": "Swift magnification-table filename. The script searches beside each image, then parent folders, then the bundled Swift Magnification Tables folder.",
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:2927:        "swift_magn_profile_name": "Objective/magnification profile read from the Swift table, such as 4X or 10X. The dropdown is populated from the bundled Imaging.magn table. AUTO uses a single profile or matches the profile token in the image/folder path.",
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:2929:        "swift_magn_use_bundle_fallback": "Also search the script bundle's Swift Magnification Tables folder.",
+analysis/gdl/baseline\GDL_code\01_Core_Imports_Helpers.py:2935:        "summary_xls_destination": "Choose which shared All Reports folder receives the Excel summary. Auto mode checks both configured workstation paths.",
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:10:    quick_run_registry = discover_quick_runs()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:11:    active_quick_run_slot = [None]
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:12:    active_quick_run_baseline = [None]
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:13:    quick_run_buttons = {}
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:14:    quick_run_rename_buttons = {}
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:15:    quick_run_status_labels = {}
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:201:    quick_run_card = JPanel()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:202:    quick_run_card.setLayout(BoxLayout(quick_run_card, BoxLayout.Y_AXIS))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:203:    quick_run_card.setBackground(Color(242, 248, 255))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:204:    quick_run_card.setBorder(BorderFactory.createCompoundBorder(
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:208:    quick_run_card.setMaximumSize(Dimension(900, 430))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:209:    quick_run_card.add(JLabel("<html><b style='font-size:16px;'>Portable Quick Runs</b><br>Select one of five slots, configure any page, then press Run. v199 saves every current editable setting, including Word/JMP histogram binning and the selected Swift objective profile. A save confirmation appears only when the selected Quick Run name or configuration changed.</html>"))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:210:    quick_run_card.add(Box.createVerticalStrut(8))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:211:    quick_run_active_label = JLabel("No Quick Run selected. A normal Run will not create or update a Quick Run file.")
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:212:    quick_run_card.add(quick_run_active_label)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:213:    quick_run_card.add(Box.createVerticalStrut(10))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:215:    for quick_slot in range(1, QUICK_RUN_SLOT_COUNT + 1):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:233:        quick_run_buttons[quick_slot] = quick_main_button
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:234:        quick_run_rename_buttons[quick_slot] = quick_rename_button
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:235:        quick_run_status_labels[quick_slot] = quick_status
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:236:        quick_run_card.add(quick_row)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:237:        if quick_slot < QUICK_RUN_SLOT_COUNT:
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:238:            quick_run_card.add(Box.createVerticalStrut(6))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:240:    dashboard.add(quick_run_card)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:367:        "report_filename_mode", "export_main_summary_xls", "summary_xls_destination", "summary_xls_custom_folder", "reports_only_recovery_mode", "reports_only_source_mode", "reports_only_output_mode", "batch_sweep_reports_by_og_image", "batch_sweep_export_all_summaries_to_all_reports", "batch_live_image_report_folders_enabled", "no_lossless_images_in_reports", "dont_save_lossless_generated_images", "no_lossless_images_at_all",
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:404:    def refresh_quick_run_dashboard():
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:405:        active_slot = active_quick_run_slot[0]
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:407:            quick_run_active_label.setText("No Quick Run selected. A normal Run will not create or update a Quick Run file.")
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:409:            active_record = quick_run_registry.get(active_slot, {})
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:410:            quick_run_active_label.setText("ACTIVE: Quick Run " + str(active_slot) + " - " + str(active_record.get("name", "")) + ". Unchanged runs skip the save prompt.")
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:411:        for slot_number in range(1, QUICK_RUN_SLOT_COUNT + 1):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:412:            record = quick_run_registry.get(slot_number, {})
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:413:            display_name = str(record.get("name", "Quick Run " + str(slot_number)))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:415:            quick_run_buttons[slot_number].setText(button_prefix + "Quick Run " + str(slot_number) + ": " + display_name)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:419:                    detail = "File error: " + error_text + ". Selecting this slot loads current defaults instead. Process: " + quick_run_process_summary(DEFAULTS)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:421:                    detail = "Not saved yet. Default process: " + quick_run_process_summary(DEFAULTS)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:423:                detail = "Process: " + quick_run_process_summary(record.get("settings", {}))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:427:            quick_run_status_labels[slot_number].setText("<html><div style='width:410px;'>" + quick_run_html_text(detail) + "</div></html>")
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:429:    def activate_quick_run(slot_number, announce=True):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:430:        record = quick_run_registry.get(slot_number)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:434:            fresh = load_quick_run_file(str(record.get("path", "")), slot_number)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:437:                quick_run_registry[slot_number] = fresh
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:445:            apply_quick_run_settings_to_fields(fields, source_settings, proc)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:447:            IJ.log("Could not load Quick Run " + str(slot_number) + " into GUI: " + str(quick_apply_error))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:448:            JOptionPane.showMessageDialog(dialog, "Could not load Quick Run settings:\n" + str(quick_apply_error), "Quick Run Error", JOptionPane.ERROR_MESSAGE)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:450:        active_quick_run_slot[0] = int(slot_number)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:451:        active_quick_run_baseline[0] = quick_run_gui_snapshot(fields, str(record.get("name", "")))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:452:        refresh_quick_run_dashboard()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:458:                "Loaded Quick Run " + str(slot_number) + ": " + str(record.get("name", "")) + "\n\nSource: " + source_note + "\nEdit any normal settings, then press Run.",
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:459:                "Quick Run Loaded", JOptionPane.INFORMATION_MESSAGE)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:461:    def rename_quick_run(slot_number):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:462:        record = quick_run_registry.get(slot_number, {})
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:463:        current_name = str(record.get("name", "Quick Run " + str(slot_number)))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:464:        entered = JOptionPane.showInputDialog(dialog, "Enter the name for Quick Run " + str(slot_number) + ":", current_name)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:469:            JOptionPane.showMessageDialog(dialog, "Quick Run name cannot be blank.", "Rename Quick Run", JOptionPane.WARNING_MESSAGE)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:471:        if active_quick_run_slot[0] != int(slot_number):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:472:            activate_quick_run(slot_number, False)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:473:            record = quick_run_registry.get(slot_number, record)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:475:        quick_run_registry[slot_number] = record
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:476:        refresh_quick_run_dashboard()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:478:            "Quick Run " + str(slot_number) + " is now named " + new_name + " for this setup.\n\nBecause the name changed, Run will ask whether to save the updated portable file.",
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:479:            "Quick Run Renamed", JOptionPane.INFORMATION_MESSAGE)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:481:    for quick_slot in range(1, QUICK_RUN_SLOT_COUNT + 1):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:482:        def _make_quick_run_action(slot_number):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:483:            def _quick_run_action(event):
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:484:                activate_quick_run(slot_number, True)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:485:            return _quick_run_action
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:488:                rename_quick_run(slot_number)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:490:        quick_run_buttons[quick_slot].addActionListener(_make_quick_run_action(quick_slot))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:491:        quick_run_rename_buttons[quick_slot].addActionListener(_make_quick_rename_action(quick_slot))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:493:    refresh_quick_run_dashboard()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:791:        settings["batch_sweep_export_all_summaries_to_all_reports"] = parse_bool_checkbox(fields["batch_sweep_export_all_summaries_to_all_reports"])
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1104:            settings["swift_magn_filename"] = "Imaging.magn"
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1517:        if settings.get("batch_enabled", False) and settings.get("sweep_enabled", False) and settings.get("batch_sweep_export_all_summaries_to_all_reports", True) and str(settings.get("summary_xls_destination", "")) != "Manual selection at end":
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1519:            settings["summary_xls_destination"] = "All available All Reports folders"
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1566:        selected_quick_slot = active_quick_run_slot[0]
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1568:            selected_quick_record = quick_run_registry.get(int(selected_quick_slot), {})
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1569:            selected_quick_name = str(selected_quick_record.get("name", "Quick Run " + str(selected_quick_slot))).strip()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1570:            current_quick_snapshot = quick_run_gui_snapshot(fields, selected_quick_name)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1571:            quick_run_changed = active_quick_run_baseline[0] is None or current_quick_snapshot != active_quick_run_baseline[0]
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1572:            if quick_run_changed:
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1573:                target_quick_path = quick_run_target_path(int(selected_quick_slot), selected_quick_name)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1575:                    "This Quick Run changed. Save the updated configuration as Quick Run " + str(selected_quick_slot) + " - " + selected_quick_name + "?\n\nThe portable file will be written inside the Quick Runs folder as:\n" + target_quick_path + "\n\nChoose No to run without changing the saved Quick Run.",
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1576:                    "Save Changed Portable Quick Run", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1579:                        quick_run_settings_to_save = quick_run_capture_all_settings(fields, settings)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1580:                        saved_quick_path = save_quick_run_file(int(selected_quick_slot), selected_quick_name, quick_run_settings_to_save)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1581:                        IJ.log("Quick Run v209 saved all current GUI settings; captured GUI fields=" + str(quick_run_settings_to_save.get("quick_run_saved_gui_field_count", "")))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1583:                            "Quick Run saved successfully.\n\n" + saved_quick_path + "\n\nCopy this file into the Quick Runs folder on another installation to share the same configuration.",
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1584:                            "Quick Run Saved", JOptionPane.INFORMATION_MESSAGE)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1586:                        IJ.log("Could not save portable Quick Run: " + str(quick_save_error))
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1588:                            "The analysis will continue, but the Quick Run file could not be saved:\n\n" + str(quick_save_error),
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1589:                            "Quick Run Save Error", JOptionPane.ERROR_MESSAGE)
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:1591:                IJ.log("Quick Run " + str(selected_quick_slot) + " was unchanged; save confirmation skipped.")
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:2604:    filename = str(settings.get("swift_magn_filename", "Imaging.magn")).strip()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:2606:        filename = "Imaging.magn"
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:2660:                app_dir = quick_run_app_dir()
+analysis/gdl/baseline\GDL_code\03_User_Interface_Settings.py:2661:                add_candidate(os.path.join(app_dir, "Swift Magnification Tables", filename))
+analysis/gdl/baseline\GDL_code\04_Image_Processing_Sweeps.py:138:        msg += "PNG images found:\n"
+analysis/gdl/baseline\GDL_code\04_Image_Processing_Sweeps.py:2084:            "Instead:\n"
+analysis/gdl/baseline\GDL_code\04_Image_Processing_Sweeps.py:2151:            "Manual largest pore rank #" + str(rank_num) + " area:\n"
+analysis/gdl/baseline\GDL_code\05_Reports_Manual_Tools_Pore_Maps.py:974:            "Zoom/pan options:\n"
+analysis/gdl/baseline\GDL_code\05_Reports_Manual_Tools_Pore_Maps.py:2066:    xml += '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+analysis/gdl/baseline\GDL_code\06A_Large_Pore_Repair.py:303:        if GraphicsEnvironment.isHeadless():
+analysis/gdl/baseline\GDL_code\06A_Large_Pore_Repair.py:591:                    "Proposed BLACK repair:\n" +
+analysis/gdl/baseline\GDL_code\06A_Large_Pore_Repair.py:1013:                        "Proposed BLACK repair:\n" +
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1099:    document_xml += '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" mc:Ignorable="w14 wp14">'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1103:    rels_xml += '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1105:        rels_xml += '<Relationship Id="' + rel_id + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="' + target + '"/>'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1106:    rels_xml += '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1110:    content_types += '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1123:    root_rels += '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1124:    root_rels += '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1125:    root_rels += '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1126:    root_rels += '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1130:    core_xml += '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1134:    app_xml += '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>ImageJ/Fiji</Application></Properties>'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1140:        settings_xml += '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:settings>'
+analysis/gdl/baseline\GDL_code\06_Threshold_Analysis_JMP.py:1142:        settings_xml += '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:doNotAutoCompressPictures/></w:settings>'
+analysis/gdl/baseline\GDL_code\07_Run_Engine_Exports.py:146:        IJ.log("WARNING: Run folder path is still long. If JMP cannot open CSVs, choose a shorter output folder such as C:/GDL_OUT.")
+analysis/gdl/baseline\GDL_code\07_Run_Engine_Exports.py:1868:            environment = builder.environment()
+analysis/gdl/baseline\GDL_code\07_Run_Engine_Exports.py:1869:            environment.put("TEMP", worker_temp)
+analysis/gdl/baseline\GDL_code\07_Run_Engine_Exports.py:1870:            environment.put("TMP", worker_temp)
+analysis/gdl/baseline\GDL_code\07_Run_Engine_Exports.py:1871:            environment.put("GDL_JMP_WORKER_RUN_DIR", run_dir)
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:830:    workbook_xml.append('xmlns:html="http://www.w3.org/TR/REC-html40">')
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:1152:        "; batch summary mirror=" + str(bool(settings.get("batch_sweep_export_all_summaries_to_all_reports", False))) +
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:1256:        "; batch summary mirror=" + str(bool(settings.get("batch_sweep_export_all_summaries_to_all_reports", False))) +
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:1317:    local["batch_sweep_export_all_summaries_to_all_reports"] = False
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2094:            IJ.showMessage("Manual Summary Selection", "Copied " + str(len(source_paths)) + " summary files to:\n" + destination_dir)
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2097:            choice = JOptionPane.showConfirmDialog(None, "Copied:\n" + os.path.basename(source_paths[0]) + "\n\nCopy another summary into the same folder?", "Manual Summary Selection", JOptionPane.YES_NO_OPTION)
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2364:    choice = str(settings.get("summary_xls_destination", "Auto-detect available All Reports folder"))
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2368:    if choice == "Michelson/Andrew All Reports folder":
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2369:        folders = [ALL_REPORTS_FOLDER_MICHELSON]
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2370:    elif choice == "vgolf/OneDrive All Reports folder":
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2371:        folders = [ALL_REPORTS_FOLDER_VGOLF]
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2372:    elif choice == "All available All Reports folders":
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2373:        for candidate in [ALL_REPORTS_FOLDER_MICHELSON, ALL_REPORTS_FOLDER_VGOLF]:
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2387:        for candidate in [ALL_REPORTS_FOLDER_MICHELSON, ALL_REPORTS_FOLDER_VGOLF]:
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2394:        IJ.log("No configured All Reports folder was available. Excel summary will use: " + fallback)
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2468:    xlsx_write_text(zos, '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">')
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2644:            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2658:            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2659:            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2660:            '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2661:            '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2666:            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2675:            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2676:            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2677:            '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2678:            '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2679:            '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2684:            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2696:            '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:2703:            '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:3023:    workbook_xml.append('xmlns:html="http://www.w3.org/TR/REC-html40">')
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:3053:    choice = str(settings.get("summary_xls_destination", "Auto-detect available All Reports folder"))
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:3396:        "2. Use the Fiji menu for the camera plugin that creates a live ImageJ image window. Common locations are:\n"
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:3730:            p = os.environ.get("GDL_BEAST_WORKER_CONFIG", "")
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:3887:        for _base in os.environ.get("GDL_EXTRA_USER_ROOTS", "").split(";"):
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:3954:            temp_dir = str(System.getProperty("java.io.tmpdir")) if 'System' in globals() else str(os.environ.get("TEMP", ""))
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4032:            add_root(os.environ.get(env_name, ""))
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4038:        r"C:\Users\mkime\Fiji", r"C:\Users\mkime\Fiji.app",
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4039:        r"C:\Users\vgolf\Fiji", r"C:\Users\vgolf\Fiji.app",
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4040:        r"C:\Users\vgolf\Documents\Fiji.app",
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4041:        r"C:\Users\mkime\fiji-latest-win64-jdk\Fiji"
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4046:        user_profile = str(os.environ.get("USERPROFILE", ""))
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4168:    override = os.environ.get("GDL_FIJI_LAUNCHER_OVERRIDE", "").strip()
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4240:        candidates.append(str(os.environ.get("GDL_V193_LAUNCHER", "")))
+analysis/gdl/baseline\GDL_code\08_Workbook_JMP_Launch_Helpers.py:4254:        candidates.append(str(os.environ.get("GDL_BEAST_PARENT_SCRIPT", "")))
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:74:        f.write('try:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:75:        f.write('    if not _isolated:\n        raise Exception("BEAST preflight entered an existing Fiji instance; isolated launch property is missing")\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:91:        f.write('except:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:92:        f.write('    try:\n        _beast_write(_err,traceback.format_exc())\n    except:\n        pass\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:93:        f.write('    if _isolated:\n        System.exit(2)\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:94:        f.write('if _isolated:\n    System.exit(0)\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:343:        f.write('    while True:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:344:        f.write('        try:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:348:        f.write('        except:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:354:        f.write('try:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:355:        f.write('    os.environ["GDL_V193_LAUNCHER"] = GDL_APP_LAUNCHER_PATH\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:365:        f.write('    for _part_name in _parts:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:370:        f.write('except:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:371:        f.write('    try:\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:375:        f.write('    except:\n        pass\n')
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:406:        env = builder.environment()
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:779:    # Reliability-first supervision.  Old Quick Runs may still carry the v202/v209
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1432:            msg += "\n\nExisting report used as source:\n" + source_report_path
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1433:            msg += "\n\nSplit/rebuilt reports are under:\n" + os.path.join(recovery_root, "Word_Report")
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1434:        msg += "\n\nOutput root:\n" + recovery_root
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1487:        msg_yab += "Output root:\n" + str(output_root) + "\n\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1488:        msg_yab += "Captured TIFFs:\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1494:            msg_yab += "\nScale frame:\n" + str(yab_scale_path) + "\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1496:            msg_yab += "\nNotes:\n" + str(yab_notes_path) + "\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:1516:            IJ.error("No Images Found", "No image files were found in:\n" + input_folder)
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2145:    "; batch summary mirror=" + str(bool(settings.get("batch_sweep_export_all_summaries_to_all_reports", False))) +
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2186:                "; batch summary mirror=" + str(bool(settings.get("batch_sweep_export_all_summaries_to_all_reports", False)))
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2337:summary_msg = summary_msg + "Output root:\n" + output_root + "\n\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2339:    summary_msg = summary_msg + "Fiji/ImageJ saved log:\n" + fiji_log_path + "\n\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2342:    summary_msg = summary_msg + "Manifest:\n" + manifest_path + "\n\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2344:    summary_msg = summary_msg + "BEAST MODE detailed log:\n" + beast_log_path(output_root) + "\n\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2345:    summary_msg = summary_msg + "BEAST MODE checkpoint:\n" + beast_checkpoint_path(output_root) + "\n\n"
+analysis/gdl/baseline\GDL_code\09_BEAST_Workers_Main.py:2347:    summary_msg = summary_msg + "Run all JMP scripts BAT:\n" + bat_path + "\n\n"
+analysis/gdl/baseline\Defaults and Other Stuff\startup_paths.ini:6:DEFAULT_OUTPUT_FOLDER=

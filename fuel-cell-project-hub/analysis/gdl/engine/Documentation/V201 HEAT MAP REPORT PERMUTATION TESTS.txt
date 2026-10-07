@@ -1,0 +1,16 @@
+v201 heat-map report permutation logic tests
+
+PASS summaries=False | No Word reports                                   | reports=0 | heatmaps/report=[]
+PASS summaries=False | Combined Word report                              | reports=1 | heatmaps/report=[3]
+PASS summaries=False | Individual by image                               | reports=3 | heatmaps/report=[1, 1, 1]
+PASS summaries=False | Completely separate individual reports            | reports=5 | heatmaps/report=[1, 1, 1, 1, 1]
+PASS summaries=False | Individual by image + combined                    | reports=4 | heatmaps/report=[3, 1, 1, 1]
+PASS summaries=False | Completely separate individual reports + combined | reports=6 | heatmaps/report=[3, 1, 1, 1, 1, 1]
+PASS summaries=True | No Word reports                                   | reports=0 | heatmaps/report=[]
+PASS summaries=True | Combined Word report                              | reports=1 | heatmaps/report=[3]
+PASS summaries=True | Individual by image                               | reports=3 | heatmaps/report=[1, 1, 1]
+PASS summaries=True | Completely separate individual reports            | reports=5 | heatmaps/report=[1, 1, 1, 1, 1]
+PASS summaries=True | Individual by image + combined                    | reports=4 | heatmaps/report=[3, 1, 1, 1]
+PASS summaries=True | Completely separate individual reports + combined | reports=6 | heatmaps/report=[3, 1, 1, 1, 1, 1]
+
+Invariant: each generated DOCX embeds exactly one heat map per unique OG image represented in that DOCX; the summaries checkbox does not participate in this logic.

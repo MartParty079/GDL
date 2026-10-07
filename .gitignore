@@ -1,0 +1,7 @@
+# Allow only the application source tree and repository workflow files.
+/*
+!/.gitignore
+!/.gitattributes
+!/AGENTS.md
+!/README.md
+!/fuel-cell-project-hub/

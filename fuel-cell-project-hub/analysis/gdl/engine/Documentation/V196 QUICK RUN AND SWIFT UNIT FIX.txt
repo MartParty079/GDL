@@ -1,0 +1,34 @@
+YOURE A BETA GDL ANALYSIS v196
+QUICK RUN PERSISTENCE + SWIFT .MAGN UNIT FIX
+
+SWIFT .MAGN
+-----------
+Swift Imaging 3.0 Resolution values are treated as pixels per meter (px/m).
+For the bundled/user-supplied 4X profile:
+  Resolution = 1390466.1089001775 px/m
+  mm/pixel   = 1000 / Resolution = 0.0007191832965932366
+  um/pixel   = 1000000 / Resolution = 0.7191832965932367
+
+The code no longer uses ambiguous PPM wording for newly written audit metadata.
+New TIFF audit key:
+  GDL_SWIFT_MAGN_RESOLUTION_PIXELS_PER_METER
+The legacy GDL_SWIFT_MAGN_RESOLUTION_PPM key is still written/read for compatibility.
+
+QUICK RUNS
+----------
+Quick Runs now save two layers:
+1. Normalized settings collected by the Run button.
+2. Every current editable GUI JTextField, JCheckBox, and JComboBox value.
+
+This prevents settings from being omitted just because a parser/save list did not explicitly contain a newer GUI field. It specifically covers:
+- JMP automatic histogram binning
+- Fixed/default bin count
+- EPD histogram bins
+- Roundness histogram bins
+- Circularity histogram bins
+- Histogram axes/ticks/titles
+- Word report modes and report metadata
+- Sweep, BEAST, scale, processing, and report-selection controls
+
+Quick Run file format version: 2
+Existing version-1 Quick Run JSON files remain compatible.

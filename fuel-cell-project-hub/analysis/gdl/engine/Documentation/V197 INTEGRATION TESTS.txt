@@ -1,0 +1,28 @@
+YOURE A BETA v198 - INTEGRATION TESTS
+
+1. Python/Jython syntax
+   PASS - all 14 .py files compile under CPython syntax validation.
+
+2. Uploaded Swift table decode
+   PASS - two profiles decoded from bundled Imaging.magn:
+   4X  = 1,393,073.211153188 px/m = 0.717837362741 um/pixel
+   10X = 3,280,093.532240634 px/m = 0.304869355148 um/pixel
+
+3. Multi-profile UI
+   PASS - Set Scale uses an editable JComboBox populated from the bundled .magn table, with AUTO retained.
+
+4. Settings parsing
+   PASS - the Swift profile combo is read through field_text_value(), so JComboBox selection is valid.
+
+5. AUTO safety
+   PASS - AUTO requires a tokenized profile match (for example 4X or 10X) when multiple profiles exist and does not silently select the first profile.
+
+6. Quick Run persistence
+   PASS - v196+ all-GUI-field serialization includes swift_magn_profile_name, so 4X/10X selections save and restore.
+
+7. Bundled table
+   PASS - the supplied two-profile Imaging.magn is included in Swift Magnification Tables.
+
+Runtime note
+------------
+The package was not executed inside the user's Windows Fiji/Jython installation in this environment.

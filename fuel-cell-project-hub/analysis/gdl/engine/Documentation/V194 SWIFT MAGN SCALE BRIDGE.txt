@@ -1,0 +1,72 @@
+YOURE A BETA GDL ANALYSIS v195
+SWIFT IMAGING 3.0 .MAGN SCALE BRIDGE
+====================================
+
+TESTED INPUT
+------------
+File: Imaging.magn
+Swift Imaging version shown by user: x64, 3.0.29807.20251021
+Profile decoded: 4X
+Swift Resolution decoded: 1390466.1089001775 pixels per meter (px/m)
+
+CONVERSION
+----------
+mm per pixel = 1000 / Resolution
+um per pixel = 1000000 / Resolution
+
+For the supplied 4X profile:
+mm per pixel = 0.0007191832965932366
+um per pixel = 0.7191832965932367
+
+SEARCH ORDER
+------------
+1. The folder containing each selected source image.
+2. Parent folders above that image folder.
+3. The script's Swift Magnification Tables folder.
+
+SET SCALE PAGE
+--------------
+Read and apply scale from a Swift Imaging .magn table before processing
+Magnification-table filename
+Swift profile name
+Parent folders to search
+Use bundled fallback
+Override an existing calibration
+
+PROFILE SELECTION
+-----------------
+AUTO:
+- Uses the table automatically when it contains exactly one profile.
+- With multiple profiles, matches names such as 4X or 10X in the image/folder path.
+- Refuses to guess when multiple profiles exist and no path-name match is found.
+
+A specific profile name can be entered instead of AUTO.
+
+PROCESSING ORDER
+----------------
+Swift .magn scale is applied before:
+- crop creation,
+- preprocessing,
+- threshold sweeps,
+- median-radius sweeps,
+- particle analysis,
+- EPD and area calculations.
+
+FALLBACK ORDER
+--------------
+1. Swift .magn table
+2. Manual direct scale
+3. Red-reference-line scale workflow
+
+OUTPUT AND AUDIT DATA
+---------------------
+The calibrated ImageJ image uses millimetres as its physical unit.
+The TIFF Info metadata includes:
+GDL_SWIFT_MAGN_PROFILE
+GDL_SWIFT_MAGN_RESOLUTION_PPM
+GDL_SWIFT_MAGN_MM_PER_PIXEL
+GDL_SWIFT_MAGN_UM_PER_PIXEL
+GDL_SWIFT_MAGN_TABLE
+
+Reports and manifests include the selected profile, Resolution, and pixel size.
+Original source images are not overwritten. Calibrated copies use _scaled.tif.

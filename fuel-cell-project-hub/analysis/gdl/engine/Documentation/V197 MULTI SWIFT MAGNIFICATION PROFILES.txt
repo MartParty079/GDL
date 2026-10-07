@@ -1,0 +1,36 @@
+YOURE A BETA v198 - MULTIPLE SWIFT MAGNIFICATION PROFILES
+
+Purpose
+-------
+Support Swift Imaging 3.0 Imaging.magn files containing more than one
+objective/magnification profile.
+
+Verified uploaded Imaging.magn
+--------------------------------
+4X
+  Swift Resolution: 1,393,073.211153188 pixels per meter
+  Scale: 0.717837362741 um/pixel
+
+10X
+  Swift Resolution: 3,280,093.532240634 pixels per meter
+  Scale: 0.304869355148 um/pixel
+
+Behavior
+--------
+- Set Scale now shows a Swift objective / magnification profile dropdown.
+- The dropdown is populated from the bundled Imaging.magn table on startup.
+- Current choices are AUTO, 4X, and 10X.
+- The combo box remains editable for future profile names.
+- Fixed 4X or 10X should be used when an entire batch uses one objective.
+- AUTO can be used for mixed batches only when the image or parent-folder
+  path contains an objective token such as 4X or 10X.
+- AUTO does not guess when multiple profiles exist and no objective can be
+  identified.
+- Quick Runs save and restore the selected Swift profile because v196+ saves
+  every GUI field.
+
+Scale conversion
+----------------
+um/pixel = 1,000,000 / pixels_per_meter
+
+The bundled Imaging.magn in this release is the uploaded two-profile file.

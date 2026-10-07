@@ -6,7 +6,44 @@ An initial Windows desktop app for the fuel-cell capstone. Built from the suppli
 
 Double-click **Start Hub.cmd** in this folder once the environment is installed. On first launch the Software page scans your computer. Use **Locate application** for executable tools it cannot find, or follow the vendor installation guide. Teams uses **Test Launch** with `msteams://`; it never requires a Teams executable path. **Continue anyway** opens the dashboard; missing required tools keep a warning visible at startup.
 
-Open **Settings** to enter the team's real goals, plan, agenda notes, decisions, GitHub repository, project folder, and shared resource links. Agenda notes are manually maintained; the shared agenda button opens your existing document. No live Teams/Word content synchronization is implemented.
+Open **Settings Ã¢â€ â€™ Storage** to select your locally synced project folder. Use **General** for goals, plan, meeting notes, and decisions; **Project resources** for the repository and resource links; **Software** for shared tool requirements; and **History** to review or restore settings revisions. **Updates** contains a personal startup-check switch and the public release repository. File/folder shortcuts use paths relative to your selected project root; online shortcuts use http/https URLs. Agenda notes are manually maintained; the shared agenda button opens your existing document. No live Teams/Word content synchronization is implemented.
+
+## Shared Storage
+
+Project files and large datasets live in the shared **SharePoint / OneDrive project library**. Each user syncs that library locally and selects their local synced project root once. **OneDrive/SharePoint owns the files; Fuel Cell Project Hub indexes and organizes references to them.**
+
+Shared metadata uses relative paths, such as `03_Experiments/E-20261010-A/R03/video.mp4`. Absolute Windows paths belong only in the local profile. The same relative reference resolves against each user's own synced root.
+
+1. Open **Settings Ã¢â€ â€™ Storage Ã¢â€ â€™ Locate Synced Folder**.
+2. Select the project folder; the wizard validates access and the project marker. An unrelated, unmarked folder requires explicit confirmation. System roots and your home root are rejected.
+3. Review missing standard folders. Optionally check **Create missing standard folders when I finish setup**, or use **Create Missing Folders** later. Nothing is renamed, moved, or deleted.
+4. Finish to create the project marker if needed, save the root locally, and build the initial background index. Cancel before Finish leaves storage unchanged.
+5. Open **Project Ã¢â€ â€™ Files & Data** using the workspace sidebar. Search names, relative paths, categories, or sample/experiment/run/procedure IDs. Filter by type, experiment, sample, or archive status; **More filters** reveals run, procedure, and modified dates. Click a column heading to sort. Filters persist across refreshes and workspace navigation; **Clear filters** resets them. **Reports** opens the file browser filtered to reports.
+6. Select a result and use **Open**, **Open Containing Folder**, **Copy Relative Path**, or **View Metadata**.
+
+**Refresh Index** walks directory metadata, compares relative paths, size, and modified timestamps, retains IDs for known paths, and records additions/modifications/removals. **Rebuild Index** performs a complete metadata rescan while retaining known IDs and deletion history. No full scan runs automatically at startup. **Cancel indexing** preserves the previous index until the scan commits.
+
+OneDrive Files On-Demand is supported without reading dataset contents or hashing files. Cloud-only images, videos, spreadsheets, and other data are indexed from directory metadata; opening a file explicitly lets Windows hydrate it normally. Small local `experiment.json`, `run.json`, `sample.json`, `procedure.json`, and `metadata.json` files supply relationships. Cloud-only, linked, malformed, unsupported-schema, or oversized metadata is skipped with warnings. Shared project configuration itself is read to connect the project.
+
+Files inside `99_Archive` are indexed and hidden by default; choose **Include Archived** to find them. Removed files remain as unavailable records in the local cache, with removal events and summary counts; recovery belongs to OneDrive/SharePoint. Raw-data records show whether their size or timestamp changed after initial indexing. Stable IDs are guaranteed for a persistent relative path; automatic rename/move identity matching is not implemented.
+
+The UI reports local folder availability, not OneDrive's cloud sync completion. If the root or marker becomes unavailable, use **Locate Again** or **Open OneDrive**; the rest of the hub remains usable. Index warnings are available under Storage. Code-executing file formats require **Open Containing Folder** so you can explicitly choose an editor or tool.
+
+`ProjectStorageProvider` defines the provider contract; local OneDrive and read-only Microsoft Graph providers implement it. Content search, ingest, automatic archiving and data copying are not included. See [storage schema and architecture](docs/STORAGE_SCHEMA.md).
+
+## Microsoft account and historical data
+
+Local storage paths are now directly editable under **Settings Ã¢â€ â€™ Storage**. **Microsoft Account** provides browser sign-in with the supplied Entra registration and encrypted Windows token caching. **Cloud & Old Test Data** browses university OneDrive/SharePoint folders, indexes metadata and controls LocalOnly/CloudOnly/Hybrid mode. **Project folders** edits portable folder mappings, including GDL default input/output/reports paths.
+
+**Files & Data** starts with **Current project**. Select **Old Test Data** to search permanent historical references and notes, or **All sources** to compare them. Classification overrides change metadata only. No bulk downloads or cloud file changes occur.
+
+See [Microsoft login](docs/microsoft_login.md), [legacy import](docs/legacy_data_import.md), and [editable storage configuration](docs/storage_configuration.md).
+
+## GDL analysis and engine updates
+
+YOURE A BETA GDL Analysis v209 is integrated under **Project Ã¢â€ â€™ Analysis** and **Settings Ã¢â€ â€™ Analysis Tools**. Configure paths, launch the existing Fiji interface, view watchdog status/logs, and import newer GDL ZIPs without replacing script folders manually. **Check for engine updates** searches the registered source folder; compatible updates retain the previous engine for rollback and preserve personal Quick Runs.
+
+The existing launcher can close open Fiji/ImageJ windows, so every real launch requires a warning confirmation. No real Fiji analysis was launched during this integration, as requested. See the [GDL setup and update guide](docs/gdl_analysis.md) for paths, output modes, cancellation and validation limits.
 
 ## Development setup
 
@@ -23,6 +60,7 @@ If Python is not on PATH, use your Python executable's full path for the first c
 ## Implemented in this first development version
 
 - Dashboard, Activity, Software, Project, Bugs, and Settings navigation.
+- Shared light design system with blue accents, line icons, consistent cards and status pills, workspace sidebars, grouped settings, loading placeholders, actionable empty states, inline errors with expandable details, and timed notifications. Layout supports laptop windows from 1024 Ãƒâ€” 700. See [design implementation notes](docs/DESIGN_SYSTEM.md).
 - Background scans using configured paths, Windows App Paths, PATH, and bounded common install locations. Scanning never executes applications or installers.
 - Required/Optional/Retired tool lifecycle, local executable overrides, manual executable selection, re-scan, and launch.
 - Launch types: `exe`, `uri`, and `url`. Teams uses the Windows `msteams://` protocol; GitHub opens in a browser, and GitHub Desktop retains its optional executable launcher. Old manifest entries with no launch type still default to `exe`.
@@ -31,18 +69,23 @@ If Python is not on PATH, use your Python executable's full path for the first c
 - Project links and folder/document launching; fixed dashboard cards without invented progress or project data.
 - Explicit confirmation for project settings, revision history, and restore that preserves the previous state.
 - Local activity, local bug reports with automatic context, status editing, and explicit JSON export. Reports are never automatically posted.
-- Background GitHub latest-release checks at startup when a public release repository is configured; notifications only. No download or installation.
+- Background GitHub release checks with a personal startup preference, manual retry, and nonmodal update notices. Releases open only when requested; no automatic download or installation.
+- Synced storage setup, missing-folder validation/creation, local background indexing, incremental change records, searchable files, archive awareness, and directory/metadata relationship inference.
 
 ## Data and configuration
 
 - `config/software_manifest.json`: shared tool metadata and vendor guides; no user paths.
 - `config/project_defaults.json`: initial empty project configuration.
-- `config/project.json`: saved project settings, created on Apply.
-- `config/history/`: immutable settings revisions created on Apply/Restore.
+- `config/project.json` and `config/history/`: fallback project settings/history before storage is connected.
+- `<synced root>/.projecthub/project.json`: authoritative shared project marker and settings once connected; schema version 1.
+- `<synced root>/.projecthub/history/`: settings revisions created on Apply/Restore for a connected project.
 - `%LOCALAPPDATA%/FuelCellProjectHub/`: machine-specific paths, setup state, local activity, and bugs.
+- `%LOCALAPPDATA%/FuelCellProjectHub/index/file_index.json`: this user's generated file index; never written into the shared project library.
 - `FUEL_HUB_DATA_DIR` can override local state for testing or a portable profile.
 
-JSON writes replace files atomically. Invalid JSON stops startup without overwriting the file. This is a **single-user development app**; concurrent shared editing is not supported. Keep project config/history with your backed-up project folder. The app doesn't create or move experimental data.
+JSON writes replace files atomically and reject non-JSON values. Invalid core app configuration stops startup without overwriting the file. Invalid storage metadata or cache shows an error without blocking unrelated hub features; corrupt caches are preserved rather than automatically deleted. Restore valid JSON or select a fresh local profile to recover a corrupt cache.
+
+Each machine builds its own index, avoiding multi-user index writes. Shared settings detect edits since connection and require reconnection before overwriting newer settings; this is not a distributed lock. Coordinate shared settings edits and rely on OneDrive/SharePoint version history for sync conflicts. Legacy absolute folder shortcuts are preserved in local profile overrides and omitted from future shared writes. Existing historical files are not rewritten automatically.
 
 Manifest launch configuration:
 
@@ -61,9 +104,18 @@ Add the existing `category`, `lifecycle`, `url` (installation guide), and `note`
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 .\.venv\Scripts\python.exe tests\smoke_ui.py
+.\.venv\Scripts\python.exe tests\smoke_storage_ui.py
+.\.venv\Scripts\python.exe tests\smoke_design_ui.py
+.\.venv\Scripts\python.exe tests\smoke_gdl_ui.py
 ```
 
 The smoke test uses Qt's offscreen platform and isolated temporary state. It exercises startup, scanning, every page, a settings revision, a bug report, and screenshots the dashboard for review.
+
+The storage smoke test exercises the setup wizard, folder creation, background indexing, `S-001` search, Video filtering, and opening/copying relative references in an isolated project fixture. It renders Storage and Files / Data for visual review. Test file-open actions are mocked; no fixture files are launched externally.
+
+The design smoke test renders loading, empty, inline-error, grouped-settings, and minimum laptop states using isolated temporary state. Behavioral tests cover sorting/open-target integrity, preserved filters, shared-setting confirmation, personal preferences, and visible laptop controls.
+
+The GDL smoke test verifies editable analysis paths, dependency validation, Analysis navigation, standard/laptop layouts and simulated launch/status/stop. GDL tests also exercise package updates/rollback, preserved Quick Runs and Swift units, watchdog retry/session identity and rejection of unsafe or incomplete ZIPs. Fiji/JMP launches are mocked.
 
 ## Remaining milestones
 
@@ -72,6 +124,37 @@ This starts V0.1; it is not a completed packaged release.
 1. Confirm detection on the actual installed Swift, JMP, Office, and SolidWorks versions. Portable executable software may require manual path selection; Teams instead requires a registered URI handler.
 2. Add approved quick-install flows, version detection, and a reliable packaged `.exe` with PyInstaller.
 3. Implement selective app/script updates with signed/verified release assets, backup, and rollback. Current checks support public GitHub releases only.
-4. Add request handling and team synchronization in later versions. Samples, procedures, experiments, automatic agenda synchronization, Microsoft login, and AI are out of this first build.
+4. Add request handling and coordinated shared editing in later versions. Sample/procedure/experiment management remains future work; this version indexes their file relationships only. Automatic agenda synchronization, Microsoft login, Graph, and AI remain outside this build.
 
 Installer buttons currently open official vendor pages; they do not install anything. Retiring a tool preserves its metadata and configured path and disables launching it.
+
+## Reduced-permission Microsoft login
+
+Initial Microsoft sign-in requests **User.Read only**. Open **Settings â†’ Microsoft Account â†’ Sign in** to authenticate and view identity and permission status. Optional **My OneDrive** requests Files.Read only when chosen; **Connect SharePoint / search sites** requests Sites.Read.All only when chosen. Admin approval never blocks local indexing or cached metadata. See [Microsoft setup](docs/microsoft_login.md).
+
+The current validated Windows build is `dist/windows-branded-complete/FuelCellProjectHub/FuelCellProjectHub.exe`. Keep its entire directory together. The older `dist/FuelCellProjectHub` package is obsolete. Build with `tools/build_windows.ps1`; this creates an onedir package containing the app, defaults and managed GDL engine, without personal profile settings or token caches.
+
+## Development workflow and app branding
+
+GitHub = application/managed analysis source. OneDrive/SharePoint = project data.
+Work directly on main with the standing [Codex workflow](docs/CODEX_WORKFLOW.md).
+
+```powershell
+git pull --ff-only origin main
+# Implement, run applicable tests, review and explicitly stage changes.
+git commit -m "Describe the behavior"
+git push origin main
+```
+
+Never force-push or discard uncommitted work. Local profiles, datasets, runtime,
+private original GDL baseline and build directories are ignored. Packaging .spec
+source remains tracked. Source pushes do not publish a release or automatically
+update installed apps.
+
+The shared resource resolver loads assets/app_icon.ico in source and packaged
+runs. The PNG master and multiresolution Windows ICO are bundled, used by the
+application and main window, and embedded in the Windows executable. The Windows
+process declares FuelCellProjectHub.Desktop as its taskbar identity. No About
+dialog or installer exists yet; future shortcuts should use the same ICO.
+
+To retain previous builds, use `tools/build_windows.ps1 -OutputDirectory dist/windows-branded-complete` with a fresh output directory. Output must stay under dist. Install PyInstaller in the development virtual environment to build; it is not a runtime dependency.

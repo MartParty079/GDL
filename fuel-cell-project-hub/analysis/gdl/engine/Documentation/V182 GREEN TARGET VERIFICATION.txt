@@ -1,0 +1,26 @@
+V193 GREEN-TARGET VERIFICATION
+
+Source annotation:
+Steve_l_inal_R1_segmented_mask_largest_pore_highlight.png
+
+Substantive green annotation components tested: 18
+Recovered with the v193 profiles: 18
+Primary recursive green-target cuts: 17
+Review-only tiny-spur cuts: 1
+
+The primary recovered green targets used:
+- parent areas in the approximate 2,373-9,057 px preview range;
+- closing radii 2-7 px;
+- repair areas 121-1,294 px;
+- repair spans 21-112 px;
+- exact two-child topology.
+
+The full processing image is larger than the report preview, so v193 defaults
+allow parent areas through 18,000 px, radii through 10 px, repair areas through
+2,500 px, and spans through 165 px.
+
+The pass is recursive. After an accepted repair, each resulting child is added
+back to the queue. This is necessary for the green chains where several marked
+cuts belong to one original merged pore.
+
+The master Large Pore Repair card remains OFF by default.

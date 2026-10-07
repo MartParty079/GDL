@@ -1,0 +1,18 @@
+V193 BLUE ANTI-NECK REMOVAL
+
+Removed:
+- skeleton/EDM anti-neck algorithm
+- blue-target anti-neck settings
+- blue-target anti-neck UI section
+- anti-neck result/report fields
+- recursive skeleton cross-section pass
+
+Retained:
+- standard conservative repair
+- aggressive largest-pore rescue
+- forced-largest-pore balanced split
+- recursive green-target multi-neck pass
+- review-only tiny-spur pass
+- red repair overlays and CSV/report outputs
+
+The master Large Pore Repair card remains OFF by default.

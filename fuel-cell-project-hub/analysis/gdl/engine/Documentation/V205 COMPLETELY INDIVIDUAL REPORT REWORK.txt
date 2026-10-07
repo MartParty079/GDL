@@ -1,0 +1,21 @@
+YOURE A BETA v205 - Completely Individual Report Rework
+
+Goal
+- Completely separate individual reports must create one DOCX per processed run/crop/sweep.
+- Word grouping must behave identically with Excel summaries OFF or ON.
+
+Architecture
+- Completely-individual output has its own exporter instead of sharing the general loop.
+- Output folder: Word_Report/Completely_Individual_Reports
+- Deterministic files are prefixed Run_0001, Run_0002, etc.
+- Each run is wrapped in its own try/except; one bad run cannot abort later reports.
+- The exporter snapshots report settings for each DOCX.
+- export_main_summary_xls and batch_sweep_export_all_summaries_to_all_reports are not consulted to decide DOCX creation.
+- Final log records expected/created/failure counts.
+
+Test matrix
+- Normal and BEAST authoritative report modes.
+- Completely separate only and completely separate + combined.
+- export_main_summary_xls OFF/ON.
+- batch_sweep_export_all_summaries_to_all_reports OFF/ON.
+- Per-run failure isolation.

@@ -1,0 +1,29 @@
+YOURE A BETA v193 LARGE PORE REPAIR INTEGRATION TESTS
+
+PASS - All Python/Jython files pass syntax compilation
+PASS - All Large Pore Repair defaults exist
+PASS - Large Pore Repair master default is OFF
+PASS - Verified sample defaults are installed
+PASS - Large-pore helper module loads before threshold analysis
+PASS - RUN IN FIJI.py includes helper module
+PASS - GDL_code/09_BEAST_Workers_Main.py includes helper module
+PASS - New sidebar card/page is defined
+PASS - Card master checkbox uses OFF default
+PASS - Settings collection includes every Large Pore Repair field
+PASS - Quick Run system captures new card generically
+PASS - Repair executes before segmented mask save
+PASS - Repair executes before Analyze Particles
+PASS - Repair mask output is optional and OFF by default
+PASS - Review decisions are replayed after threshold reruns
+PASS - Run result publishes repair count and files
+PASS - Word/report summary includes repair metrics
+PASS - Reference detector finds five conservative repairs on supplied sample
+
+Reference sample candidates:
+  parent rank 3; parent 18280 px; radius 1; repair 2 px; children 9418/8860 px
+  parent rank 4; parent 16556 px; radius 2; repair 6 px; children 10002/6548 px
+  parent rank 7; parent 15306 px; radius 7; repair 138 px; children 9317/5851 px
+  parent rank 11; parent 13759 px; radius 5; repair 13 px; children 11101/2645 px
+  parent rank 22; parent 10727 px; radius 9; repair 53 px; children 6034/4640 px
+
+TOTAL: 18 passed / 18 checks

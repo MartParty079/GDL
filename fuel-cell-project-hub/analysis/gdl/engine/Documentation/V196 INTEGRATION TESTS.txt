@@ -1,0 +1,22 @@
+YOURE A BETA GDL ANALYSIS v196 - INTEGRATION TESTS
+
+1. PASS - all 14 Python/Jython files pass CPython syntax compilation.
+2. PASS - APPLICATION_VERSION is v196.
+3. PASS - LAUNCH SCRIPT.bat points to GDL_Analysis_Launcher_v196.py.
+4. PASS - Quick Run save path uses quick_run_capture_all_settings(fields, settings).
+5. PASS - Quick Run format version is 2; version-1 files remain accepted by the loader.
+6. PASS - generic Quick Run capture iterates every editable GUI field rather than a hand-maintained save list.
+7. PASS - JMP automatic histogram binning is captured.
+8. PASS - fixed/default histogram bin count is captured.
+9. PASS - EPD histogram bin count is captured.
+10. PASS - Roundness histogram bin count is captured.
+11. PASS - Circularity histogram bin count is captured.
+12. PASS - Swift .magn Resolution is labeled pixels per meter (px/m).
+13. PASS - new TIFF audit metadata key is GDL_SWIFT_MAGN_RESOLUTION_PIXELS_PER_METER.
+14. PASS - legacy GDL_SWIFT_MAGN_RESOLUTION_PPM metadata remains readable for compatibility.
+15. PASS - bundled Imaging.magn decodes one 4X profile.
+16. PASS - 4X Swift Resolution decodes as 1390466.1089001775 px/m.
+17. PASS - 4X conversion gives 0.7191832965932367 um/pixel.
+18. PASS - documentation and current launcher/version references are updated for v196.
+
+NOTE: Syntax/static integration checks were run in the build container. The package was not executed inside the user's Windows Fiji/Jython + Swift Imaging installation.

@@ -1,0 +1,38 @@
+YOURE A BETA v208 - Integration Tests
+
+Source basis
+- Reworked from v207 after inspecting the supplied failing BEAST Word_Report ZIP.
+- Supplied ZIP contained combined DOCX output but no Completely_Individual_Reports files, matching the BEAST report-mode override defect.
+
+Static validation
+PASS - All GDL Python/Jython modules compile with Python syntax validation.
+PASS - v208 launcher exists and LAUNCH SCRIPT.bat points to GDL_Analysis_Launcher_v208.py.
+PASS - Old final BEAST beast_word_report_mode override removed.
+PASS - BEAST no longer unconditionally forces export_main_summary_xls ON.
+
+Report-mode authority matrix
+PASS - 24 combinations tested: 6 report modes x BEAST OFF/ON x summaries OFF/ON.
+PASS - word_report_mode remains authoritative even when a conflicting legacy beast_word_report_mode is injected.
+
+Completely-individual exporter
+PASS - 6 completed runs -> 6 DOCX files with summaries OFF.
+PASS - 6 completed runs -> 6 DOCX files with summaries ON.
+PASS - Synthetic transient failure on one run is retried and later runs continue.
+PASS - Individual_Report_Manifest.csv created with one row per expected run.
+
+BEAST final report ledger
+PASS - Controller + recovered/worker-style records merge into one canonical completed-run ledger.
+PASS - Duplicate representations of the same run order are deduplicated.
+PASS - Missing controller records can be recovered from persistent reporting sources.
+
+Summary export
+PASS - Completely-individual report groups receive one matching *_summaries.xls per report when selected.
+PASS - 4 individual reports -> 4 individual summary XLS files + 1 additional BEAST master workbook.
+PASS - Summary export OFF -> no summary files from the summary exporter.
+PASS - Report_Summary_Manifest.csv maps report files to summary files.
+
+Expected v208 BEAST invariant
+If the final report ledger contains N reportable completed runs and the selected mode is
+"Completely separate individual reports", the exporter targets N individual DOCX files.
+If summary export is selected, it also targets N matching per-report summary XLS files,
+plus the optional BEAST master workbook.

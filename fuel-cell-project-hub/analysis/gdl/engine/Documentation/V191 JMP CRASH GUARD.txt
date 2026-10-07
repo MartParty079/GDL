@@ -1,0 +1,14 @@
+V193 JMP CRASH GUARD
+
+Observed failure:
+- JMP Student Edition crashed inside WindowMgr.initSwitcher while BEAST had multiple JMP processes active and was tiling JMP windows.
+
+Changes:
+- Safe JMP launch mode is ON by default.
+- Default parallel JMP processes reduced from 10 to 1.
+- Minimum safe launch stagger is 4 seconds.
+- JMP window tiling is OFF by default and separated from Fiji/ImageJ tiling.
+- Early JMP exits and timeouts are automatically requeued once after a 6 second delay.
+- Existing Fiji parallel processing remains unchanged.
+
+You can disable Safe JMP launch mode and increase parallel JMP instances later, but one instance is the recommended stable setting for JMP Student Edition.

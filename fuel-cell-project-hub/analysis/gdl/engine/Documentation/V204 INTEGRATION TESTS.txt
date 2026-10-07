@@ -1,0 +1,23 @@
+YOURE A BETA v204 - INTEGRATION TESTS
+
+STATIC / SYNTAX
+- Every Python/Jython source file compiles under the available Python parser.
+- Launcher/default/current GUI version paths resolve to v204.
+- No old static chunks = [[] worker assignment remains in run_parallel_fiji_pool.
+- Worker configuration contains exactly one exact input item per external Fiji process.
+- Shared pending queue refills every free worker slot.
+- A failed agent requeues only its current exact run.
+- Heartbeat failure, startup failure, claim failure, confirmed content stall, process exit, and hard run timeout all feed the same per-run retry path.
+- Old Quick Runs cannot reduce v204 runtime content-stall supervision below 900 seconds.
+- Content stalls require an additional 45-second unchanged-signature confirmation before restart.
+- JMP starts after the dynamic Fiji queue settles and uses the bounded JMP pool.
+- Bounded JMP pool now honors safe-launch settings and retries launch/early-exit/timeout failures.
+- Final Successful runs log counts only ImageJ Status == COMPLETED.
+
+SUPPLIED-LOG LOAD-BALANCE REPLAY
+- Old v203 static round-robin grouping concentrated the slow contrast=Off runs on two workers.
+- Using supplied completed durations plus conservative estimates for the three unfinished Off runs, static grouping has an estimated 2116.7 s makespan.
+- The v204 shared-queue schedule estimates 1433.8 s with the same four slots (~32% lower makespan), because a fast slot immediately accepts another pending run.
+
+LIMITATION
+- This container cannot launch the user's Windows Fiji/JMP installation, so OS/Fiji integration must be confirmed on the user's workstation. The code path, queue invariants, syntax, packaging, and supplied-log scheduling replay were validated here.

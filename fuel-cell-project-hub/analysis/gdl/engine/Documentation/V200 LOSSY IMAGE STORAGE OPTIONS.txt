@@ -1,0 +1,28 @@
+YOURE A BETA v201 - LOSSY IMAGE STORAGE OPTIONS
+
+New Report-page controls:
+1. No lossless images in Word reports
+   - Keeps normal generated PNG/TIFF outputs on disk.
+   - Converts report media to temporary RGB JPEG copies before embedding in DOCX.
+   - Temporary JPEG staging files are removed after the DOCX is packaged.
+   - Word do-not-auto-compress-pictures is omitted in this mode.
+
+2. Do not retain lossless generated run images
+   - Numerical image processing remains unchanged.
+   - Several redundant per-run TIFF writes are skipped up front.
+   - After Word/XLSX exports are complete, remaining PNG/TIFF visualization files in each run Images and Histograms folder are replaced by JPEG files.
+   - A lossless file is removed only after its JPEG replacement is verified.
+
+3. No lossless generated/report visuals at all
+   - Master override that enables both options above.
+   - Checking this box also checks the two component boxes in the GUI.
+
+Protected analysis sources:
+- Calibrated capture TIFFs, Scaled image TIFFs, and calibrated crop TIFFs are preserved because they can be analysis inputs and should not acquire JPEG artifacts.
+- The options affect visualization/report storage, not thresholding, pore measurements, EPD, porosity, or JMP numerical data.
+
+Persistence:
+- All three controls are normal GUI fields, are included in Quick Run snapshots/files, and are available to saved defaults/presets.
+- Existing Quick Runs that do not contain the new fields fall back to OFF/default behavior.
+
+v199 report-mode/summary decoupling remains in place.

@@ -1,0 +1,24 @@
+{
+  "startup": true,
+  "msal_version": "1.39.0",
+  "settings_tabs": [
+    "General",
+    "Storage",
+    "Software",
+    "Project resources",
+    "Updates",
+    "History",
+    "Analysis Tools",
+    "Microsoft Account",
+    "Cloud & Old Test Data",
+    "Project folders"
+  ],
+  "application_icon_loaded": true,
+  "window_icon_loaded": true,
+  "icon_asset_present": true,
+  "local_path_editable": true,
+  "default_origin": "current",
+  "engine_manifest_present": true,
+  "fiji_launched": false,
+  "dpapi_round_trip": true
+}

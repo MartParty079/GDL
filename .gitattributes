@@ -1,0 +1,9 @@
+* text=auto
+# Preserve legacy engine / Quick Run bytes and their inherited formatting.
+fuel-cell-project-hub/analysis/gdl/engine/** -text whitespace=-trailing-space,-blank-at-eof
+fuel-cell-project-hub/tests/fixtures/gdl_legacy_v209/** -text whitespace=-trailing-space,-blank-at-eof
+# Archived Markdown source uses deliberate trailing spaces for line breaks.
+fuel-cell-project-hub/docs/reference/** whitespace=-trailing-space
+*.png binary
+*.ico binary
+*.magn binary

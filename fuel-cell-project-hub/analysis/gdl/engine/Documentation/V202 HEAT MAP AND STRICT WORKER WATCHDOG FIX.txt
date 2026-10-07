@@ -1,0 +1,42 @@
+YOURE A BETA v202 - HEAT MAP + STRICT WORKER WATCHDOG FIX
+===========================================================
+
+1. VGOLF / CROSS-USER HEAT MAP FIXES
+------------------------------------
+- Heat-map source decoding now uses Fiji/ImageJ IJ.openImage first.
+- Java ImageIO is only a fallback. This avoids user/Fiji/JRE-dependent TIFF decoder failures.
+- Heat-map PNG output is verified after writing; zero-byte/failed output raises a clear error.
+- Long Windows/OneDrive output paths are budgeted. The OG filename convention is preserved when safe;
+  if the full path is too long the filename is shortened and receives a stable hash.
+- If a run's Images folder is too deep, heat maps retry in a shorter top-level "Heat Maps" folder.
+- BEAST Word-report image generation no longer depends on JMP graph generation. If BEAST Word reports
+  are enabled, workers retain/generate the images the controller needs even when JMP graphs are OFF.
+- Heat maps remain pre-segmentation, keyed per original image, and embedded once per OG image per report.
+
+2. STRICT FIJI WORKER RESTART BEHAVIOR
+--------------------------------------
+- Heartbeat now means only: the worker JVM/thread is alive.
+- A separate worker_X_CONTENT_PROGRESS.txt marker tracks actual processing milestones.
+- The marker advances at image open, scale prep, heat-map rendering, preprocessing, mask creation,
+  fiber fixer, large-pore repair, Analyze Particles, CSV creation, report image creation, and final result.
+- A current heartbeat no longer protects a worker whose content progress is stale.
+- When content progress exceeds the configured no-progress timeout, the worker is treated as hung,
+  force-terminated, relaunched, and only unfinished jobs are retried.
+- Runtime restarts remain bounded; controller fallback remains the final recovery path.
+
+3. STRICTER DEFAULTS
+--------------------
+- Content/no-progress restart: 300 sec (was a 600 sec warning only).
+- Runtime worker restarts: 4 (was 2).
+- Missing heartbeat restart: 60 sec (was 90).
+- Real-job claim timeout: 120 sec (was 180).
+- Single-run hard timeout: 1800 sec (was 3600).
+- UI label now explicitly says the no-progress setting RESTARTS the agent.
+
+4. VALIDATION
+-------------
+- All 14 Python/Jython source files pass syntax compilation.
+- BEAST output-gate tests confirm Word reports still produce run images with JMP graphs disabled.
+- True BEAST data-only mode still suppresses run-image writes.
+- Static watchdog checks confirm the old "heartbeat current; processing continues" behavior is removed.
+- Long-path heat-map filename test produced a path at/below the 238-character safety budget.

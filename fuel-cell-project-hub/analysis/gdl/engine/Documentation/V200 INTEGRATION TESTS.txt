@@ -1,0 +1,14 @@
+YOURE A BETA v201 - INTEGRATION TESTS
+
+PASS - Python syntax compilation: all 14 .py files compiled with zero syntax errors.
+PASS - Three new lossless-policy defaults exist and are OFF by default.
+PASS - All three Report-page controls are present and parsed into run settings.
+PASS - No-lossless master override forces both component policies ON at run time.
+PASS - Quick Run persistence remains generic over all GUI fields, so all three controls are captured/restored.
+PASS - Report media collection routes non-JPEG report images through temporary JPEG conversion when requested.
+PASS - Generated-image cleanup runs only after Word and Excel export stages.
+PASS - Existing v199 report-summary decoupling remains present.
+PASS - 48 report-plan combinations tested: six Word-report modes x summaries OFF/ON x four lossless-policy states; grouping plan was invariant.
+PASS - Java headless ImageIO/BufferedImage PNG-to-RGB-JPEG conversion test wrote and decoded a 128x96 JPEG successfully.
+PASS - Lossless cleanup only deletes a PNG/TIFF after a replacement JPEG verifies successfully.
+PASS - Calibrated analysis-source TIFFs (capture, Scaled image, crop inputs) are excluded from final visualization cleanup.

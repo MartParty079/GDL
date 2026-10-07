@@ -1,0 +1,7 @@
+v198
+
+Added a new Reports card option for a strand rainbow heat map.
+- Include strand rainbow heat map in Word reports
+- Save strand rainbow heat map PNG in the Images folder
+
+The heat map is generated from the original grayscale image. Darkest brightness is purple and maximum brightness is red, with blue/cyan/green/yellow between.

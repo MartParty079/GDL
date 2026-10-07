@@ -1,0 +1,19 @@
+V193 SWIFT IMAGING METADATA AND CAPTURE AUTOMATION
+
+Metadata change
+- Added Imaging software to the Reports page.
+- Default: Swift Imaging 3.0.
+- Options are editable in GDL_User_Defaults.py under report_imaging_software_options.
+- The value is written to Word reports, report summary tables, run notes,
+  ImageJ_JMP_Run_Manifest.csv, and BEAST revised-summary output.
+
+Capture-automation assessment
+- Swift Imaging 3.0 supports normal still-image and video capture.
+- Some current product listings describe time-lapse/series capture, but the public
+  Swift quick-start guide sends detailed operation questions to the Help menu inside
+  the installed application.
+- No documented public Swift Imaging 3.0 desktop automation API was confirmed.
+- Reliable direct automation may be possible through a model-specific SwiftCam SDK;
+  the exact camera model and installed Swift Imaging build are required before adding it.
+- A safe near-term workflow is built-in time-lapse/series capture into a watched folder,
+  followed by automatic GDL intake and processing.

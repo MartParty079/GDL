@@ -1,0 +1,28 @@
+{
+  "id": "gdl_analysis",
+  "name": "YOURE A BETA GDL Analysis",
+  "version": "209",
+  "entrypoint": "RUN IN FIJI.py",
+  "launcher": "Defaults and Other Stuff/GDL_Analysis_Launcher_v209.py",
+  "module_folder": "GDL_code",
+  "quick_run_folder": "Quick Runs",
+  "swift_folder": "Swift Magnification Tables",
+  "modules": [
+    "01_Core_Imports_Helpers.py",
+    "02_User_Interface_Pages.py",
+    "03_User_Interface_Settings.py",
+    "04_Image_Processing_Sweeps.py",
+    "05_Reports_Manual_Tools_Pore_Maps.py",
+    "06A_Large_Pore_Repair.py",
+    "06B_Fiber_Fixer.py",
+    "06_Threshold_Analysis_JMP.py",
+    "07_Run_Engine_Exports.py",
+    "08_Workbook_JMP_Launch_Helpers.py",
+    "09_BEAST_Workers_Main.py"
+  ],
+  "requires": [
+    "fiji",
+    "jmp"
+  ],
+  "adapter_version": 1
+}

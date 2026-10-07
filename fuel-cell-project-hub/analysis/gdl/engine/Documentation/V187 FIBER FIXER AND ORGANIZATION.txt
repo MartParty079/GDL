@@ -1,0 +1,15 @@
+V193 FIBER FIXER
+
+Fiber Fixer remains OFF by default.
+
+When enabled:
+1. Each selected image/crop is opened before sweep processing.
+2. Dark pores are selected at grayscale 0-40, then the complementary phase is treated as the intact fiber network.
+3. The complete fiber phase is skeletonized.
+4. The skeleton is expanded to a fixed 3-pixel network.
+5. The wireframe mask and original-image preview are saved once.
+6. The cached black wireframe is burned into every higher-threshold segmented sweep run.
+
+Completion behavior:
+- Always opens the completed output folder in the controller Fiji session.
+- Does not auto-open the Word report.

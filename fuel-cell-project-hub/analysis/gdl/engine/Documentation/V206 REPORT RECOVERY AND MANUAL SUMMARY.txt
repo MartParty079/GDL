@@ -1,0 +1,14 @@
+YOURE A BETA v206
+
+REPORT RECOVERY / MANUAL SUMMARY REWORK
+
+1. Report recovery begins immediately after the output root and run count are known.
+2. Report_Recovery stores rotating pickle snapshots of completed run records and report settings.
+3. Each controller-completed run refreshes the recovery snapshot.
+4. Cancel/failure no longer suppresses Word reporting. Completed runs are finalized into the selected report mode.
+5. If zero completed runs are available, a minimal GDL Partial Status Report DOCX is still created.
+6. RUN IN FIJI.py has a launcher-level emergency finalizer for uncaught exceptions after an output folder exists.
+7. REPORTS ONLY mode selects an existing output root and rebuilds reports without rerunning Fiji analysis.
+8. Recovery sources: v206 Report_Recovery snapshots, BEAST worker/agent result pickle slots, ImageJ_JMP_Run_Manifest.csv, BEAST_MODE_Checkpoint.csv, and completed run folders with ImageJ processing notes.
+9. Excel summary destination now includes Manual selection at end. Summaries are staged under Word_Report/_Manual_Summary_Staging, then the user selects one or all and copies them into a newly named folder.
+10. The manual picker can include summary files already present in a recovered output folder.

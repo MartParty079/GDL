@@ -1,0 +1,8 @@
+V193 FIBER FIXER PREVIEW AND SWEEP
+
+Added:
+- Save preview overlay showing the Fiber Fixer wireframe before burn-in
+- Sweep control for Fiber Fixer threshold-max offset
+
+New run order remains:
+threshold -> ordered binary cleanup -> Fiber Fixer -> Large Pore Repair -> Analyze Particles

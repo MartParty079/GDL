@@ -1,0 +1,11 @@
+V193 REPORT SELECTION CARD
+
+UI:
+- Report remains a standalone card.
+- Report Selection is a new card immediately after Report.
+- All five target controls and threshold-selection output controls moved to Report Selection.
+
+OUTPUT:
+- Selected individual Word reports do not display selection criteria or scores.
+- The full combined Word report does not display selection criteria or scores.
+- Threshold_Selection_Manifest.xls contains the selected median radius, candidate count, weighted score, actual values, targets, importance weights, and normalized distances.

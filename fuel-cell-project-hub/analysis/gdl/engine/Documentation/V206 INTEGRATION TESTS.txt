@@ -1,0 +1,8 @@
+V206 integration validation:
+ - 14 Python/Jython source files compiled with CPython syntax validation.
+ - 48 report-mode matrix cases preserved across normal/BEAST and summary/mirror toggles.
+ - Recovery manifest/run-folder reconstruction test recovered heat-map, segmented, pore-map, and true-original assets.
+ - Rotating recovery pickle round-trip test passed.
+ - Manual summary staging destination test passed.
+ - Duplicate manual-summary copy naming test passed.
+ - Partial report finalizer decision-path test passed.

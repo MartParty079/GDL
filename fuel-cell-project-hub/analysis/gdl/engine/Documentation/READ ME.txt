@@ -1,0 +1,130 @@
+v202 - Fixed cross-user OG rainbow heat maps (Fiji decoder, BEAST Word-only image gate, long-path fallback) and added strict content-progress worker restart.
+v201 - Added Report-page space-saving image controls: lossy DOCX media, JPEG-only retained generated visuals, or both.
+v199 - Report grouping is decoupled from the final batch Excel-summaries checkbox.
+v199 - Strand rainbow heat map report option added.
+YOURE A BETA GDL ANALYSIS v202
+
+v199 Swift multi-objective update:
+- Imaging.magn can contain multiple Swift profiles.
+- The Set Scale page reads the bundled table and offers AUTO, 4X, and 10X.
+- 4X: 1,393,073.211153188 px/m = 0.717837362741 um/pixel.
+- 10X: 3,280,093.532240634 px/m = 0.304869355148 um/pixel.
+- Choose a fixed objective for a single-objective batch. For mixed batches, AUTO requires 4X/10X in the image or parent-folder name.
+- Quick Runs preserve the selected Swift objective plus all other GUI settings.
+- v195 BEAST freeze protection and v196 complete Quick Run saving remain included.
+================================
+
+START THE PROGRAM
+-----------------
+Double-click LAUNCH SCRIPT.bat.
+
+The launcher force-closes any existing Fiji/ImageJ instance, waits briefly,
+and opens one fresh Fiji instance before running the GDL script. Modern Fiji
+launches use --allow-multiple only as isolation protection, so a surviving hidden
+instance cannot receive the GDL script through Fiji single-instance handoff.
+
+RUN IN FIJI.py is also provided for manual use from Fiji's script runner. Manual
+execution inside an already-running Fiji session cannot close the session that is
+currently executing it, so LAUNCH SCRIPT.bat is the recommended start method.
+
+CLEAN FOLDER LAYOUT
+-------------------
+Documentation/READ ME.txt
+Documentation/LINES OF CODE.txt
+RUN IN FIJI.py
+LAUNCH SCRIPT.bat
+GDL_code\
+Quick Runs\
+Defaults and Other Stuff\
+Swift Magnification Tables\
+
+GDL_code contains the numbered application modules and image resources.
+Quick Runs contains all five portable Quick Run JSON configurations.
+Defaults and Other Stuff contains:
+- GDL_User_Defaults.py: routine processing/report defaults
+- startup_paths.ini: machine-specific Fiji, JMP, and output paths
+- GDL_Analysis_Launcher_v201.py: external launcher logic
+- EDIT USER DEFAULTS.bat and EDIT STARTUP PATHS.bat
+- Documentation/CHANGELOG AND NOTES.txt
+
+
+SWIFT IMAGING .MAGN SCALE BRIDGE
+--------------------------------
+The Set Scale page can read Imaging.magn automatically. Put the table:
+- beside the source images,
+- in one of the configured parent folders, or
+- in the bundled Swift Magnification Tables folder.
+
+Default profile selection is AUTO. AUTO uses the only table profile, or matches
+a profile name such as 4X in the image or folder name. The Swift Resolution
+number is interpreted as pixels per meter (px/m) and converted to mm/pixel before
+cropping, sweeping, or particle analysis.
+
+The included Imaging.magn contains:
+- Profile: 4X
+- Resolution: 1390466.1089001775 pixels per meter (px/m)
+- Pixel size: 0.7191832966 um/pixel
+
+
+QUICK RUNS
+----------
+The Dashboard contains five configurable Quick Run slots. Select a slot, rename
+it, configure the normal pages, and press Run. Confirm the save prompt to create:
+
+quick run#-(name).json
+
+Quick Run JSON files are saved inside the dedicated Quick Runs folder. v199 serializes every current editable GUI control directly, then also stores the normalized run settings. This includes JMP automatic/fixed histogram binning, EPD bins, Roundness bins, Circularity bins, axis controls, report modes, scale controls, BEAST settings, sweeps, and future standard text/checkbox/dropdown settings. Copy a
+Quick Run file into another v199 Quick Runs folder to share the configuration.
+Older root-level Quick Run files are moved into this folder automatically.
+
+ENHANCE CONTRAST SWEEP
+----------------------
+The sweep supports four explicit modes:
+- Off
+- Saturated cutoff only
+- Normalize
+- Equalize
+
+IMPORTANT
+---------
+The forced-close launcher intentionally terminates open Fiji/ImageJ processes.
+Save any unrelated Fiji work before launching this analysis package.
+
+
+V193 WATCHDOG + QUICK RUN + CONTRAST SWEEP UPDATE
+-------------------------------------------------
+- LAUNCH SCRIPT.bat keeps its command prompt open.
+- It force-closes old Fiji/ImageJ instances, opens a clean Fiji session, and tracks that session.
+- If Fiji disappears before the GDL script reaches COMPLETED or CANCELED, the console reports a crash, waits 5 seconds, relaunches Fiji, and reruns RUN IN FIJI.py.
+- Watchdog state and event logs are stored in Defaults and Other Stuff.
+- Press Ctrl+C in the watchdog console to stop automatic relaunching.
+- Quick Run save confirmation appears only when the selected Quick Run name or GUI configuration changed.
+- Sweep > Enhance Contrast now has separate selectors for Off, Saturated cutoff only, Normalize, and Equalize. Any subset can be swept.
+
+
+V193 CRASH FIX + QUICK RUN FOLDER
+---------------------------------
+- Fixed the BEAST preflight crash shown by the supplied log.
+- Current native Fiji launchers now always receive --allow-multiple for BEAST probes and workers.
+- The preflight uses an isolation JVM property and refuses to call System.exit inside the controller Fiji instance.
+- The main watchdog launch also opts out of Fiji single-instance handoff.
+- Added a dedicated Quick Runs folder at the main package level.
+- Existing root-level quick run#-(name).json files migrate into Quick Runs automatically.
+
+
+V193 RELIABILITY UPDATE
+- One selected Fiji agent means controller-only processing: no external Fiji preflight is launched.
+- Every Fiji launch explicitly forbids single-instance forwarding.
+- Stale ImageJ stub files are removed automatically before relaunch.
+- Quick Runs now restore both ORDER and every Processing-page parameter.
+- BEAST combined DOCX reporting is ON by default.
+- John GDL portrait has a validated file plus an embedded fallback.
+
+
+LARGE PORE REPAIR CARD
+----------------------
+A new Large Pore Repair sidebar page is included. It is OFF by default. When enabled, it runs after threshold/binary cleanup and before Analyze Particles. The feature requires black fibers and white pores. Review mode marks proposals in red and asks for approval; Automatic conservative mode accepts only candidates that split one large parent pore into exactly two substantial children.
+
+
+DOCUMENTATION ORGANIZATION
+All README, changelog, verification, patch-note, and line-count text files are stored in the Documentation folder.

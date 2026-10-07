@@ -1,0 +1,15 @@
+YOURE A BETA v208 - BEAST Completely Individual Report + Summary Rework
+
+Root cause fixed:
+- v207 had two report-mode selectors. BEAST could override the Report-card selection and silently produce Combined reports.
+
+v208 invariants:
+1. word_report_mode is the single authoritative report-mode setting in Normal and BEAST.
+2. Completely separate individual reports means exactly one DOCX attempt per reportable completed run.
+3. The completely-individual exporter retries each failed DOCX up to three times and writes Individual_Report_Manifest.csv.
+4. Final BEAST reporting builds a ledger by merging controller records, Report_Recovery snapshots, disposable-worker results, manifest/checkpoint data, and completed run folders.
+5. Excel summary export is user-selected in BEAST; it is no longer forced ON.
+6. When summaries are selected, every actual Word report group receives a matching *_summaries.xls. Completely-individual mode therefore creates one summary per run report.
+7. The BEAST three-sheet XLSX remains an additional master workbook when summaries are selected.
+8. Report_Summary_Manifest.csv records report-to-summary mapping.
+9. The emergency report finalizer will not duplicate reports after the main final report phase already succeeded.

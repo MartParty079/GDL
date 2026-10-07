@@ -1,0 +1,13 @@
+V193 10 JMP RESILIENT POOL
+
+Default configuration:
+- Parallel JMP instances: 10
+- Crash-resilient parallel JMP mode: ON
+- Launch JMP workers minimized: ON
+- Isolated TEMP folder per JMP worker: ON
+- JMP window tiling: OFF
+- Launch stagger: 1 second
+- Automatic retries: 2
+- Retry delay: 1 second
+
+The pool remains at 10 slots. When one JMP process exits before creating the required outputs, only that run is requeued and replaced. The other JMP processes continue.

@@ -1,0 +1,11 @@
+YOURE A BETA GDL ANALYSIS v195 - INTEGRATION TESTS
+
+1. PASS - 14 Python/Jython files parse under CPython syntax validation
+2. PASS - 4 Fiji workers and 10 JMP workers remain the defaults; finalization guards are enabled
+3. PASS - Published-result inference and terminal-marker bounded fallback are integrated
+4. PASS - Partial/canceled records no longer require hist_dir; normal records derive it safely
+5. PASS - Swift Imaging .magn scale bridge remains packaged
+6. PASS - v195 launcher and BAT references are consistent
+7. PASS - v195 freeze-fix documentation is present
+
+Total: 7 checks passed.

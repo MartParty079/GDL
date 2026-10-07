@@ -1,0 +1,25 @@
+v201 - Pre-segmentation original-image rainbow heat map report fix
+
+Problem fixed:
+- v200 created/recovered strand heat maps during Word-report construction and did not persist strand_heat_map_png in the finished run record.
+- That could leave DOCX reports without the generated heat map and tied the visualization to a segmentation run instead of the original image.
+
+New behavior:
+- The rainbow heat map is created/cached immediately after the original image is opened/saved and BEFORE preprocessing/thresholding/segmentation.
+- strand_heat_map_png is stored directly in every finished run record.
+- Heat maps are keyed by true original image. For crop workflows, crop_source_image is the OG key/source.
+- Sweep/crop runs that refer to the same OG image reuse one heat map instead of regenerating it.
+- Every Word-report permutation that includes heat maps embeds exactly one heat map per unique OG image in that DOCX.
+- The heat map is placed before segmented imagery in the report.
+- Separate per-run reports still contain one map because each report has one OG image.
+- Combined reports contain one map for each distinct OG image and do not repeat it for every sweep permutation.
+- Individual-by-image reports contain one map for their OG image.
+- Threshold-selection reports inherit the same rule.
+- Report heat-map inclusion now defaults ON. The checkbox still allows deliberate opt-out.
+- Saved heat-map file naming uses: <original file stem>_rainbow_heat_map.png.
+
+Lossless/JPEG policies remain compatible: Word can embed temporary JPEG copies and final generated-image cleanup may replace the saved heat-map PNG with JPEG only after report/export completion.
+
+Additional root-cause fix:
+- The v198-v200 Report-page heat-map checkboxes were present in the GUI but missing from 03_User_Interface_Settings.py runtime parsing.
+- v201 explicitly reads report_include_strand_heat_map and report_save_strand_heat_map into settings, so GUI/Quick Run choices actually reach processing/report code.
