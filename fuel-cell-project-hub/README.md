@@ -2,13 +2,68 @@
 
 An initial Windows desktop app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
 
+## Research projects and legacy data
+
+Use **Settings > Storage** to configure research through the Project, Storage,
+Indexing and Categories tabs. **Save locations** references existing folders;
+it does not create markers, standard folders, or copy datasets. Browse, type,
+validate, open or reset the fields without editing application code. Add several
+legacy roots by entering one folder per line. Changing the current project
+preserves the previous project's identity and catalog; the project selector can
+return to it. Disconnected sources retain their last known references.
+
+Current defaults are **GDL Research** in `GDL research - General` and **Michelson
+GDL Stuffs** in `Michelson, Andrew's files - GDL Stuffs`. Michelson is historical
+**Legacy Data / Old Test Data**, kept separate from current research and treated
+as read-only. Research paths derive from OneDriveCommercial / OneDrive and are
+saved only in your personal Local AppData profile.
+
+**Index Current Project**, **Index Legacy Data**, **Index Everything**, **Quick
+Refresh**, **Rebuild Index**, and **Index Selected Folder** run in the background
+with cancellation. Rebuild backs up the database and preserves manual metadata.
+The dashboard shows current/legacy counts, last indexing time and source status.
+Project Files supports combined or separate sources, category, extension,
+document type, modified dates, tags and duplicate filters, with 200 results per
+page. **Edit Metadata** adds manual categories, tags, title and notes without
+changing files. **Import into Current Project** explicitly copies a selected
+local legacy file, keeps its original, and never overwrites an existing file.
+
+| Configurable location | Default |
+|---|---|
+| Active Project Root | OneDrive / `GDL research - General` |
+| Legacy Roots | OneDrive / `Michelson, Andrew's files - GDL Stuffs` |
+| Shared Storage | Active default research folder; no automatic writes |
+| Index / Database | Local AppData / FuelCellProjectHub / catalog |
+| Generated Output | Local AppData / FuelCellProjectHub / generated |
+| Temp / Cache | Local AppData / FuelCellProjectHub / cache |
+| Backups | Local AppData / FuelCellProjectHub / backups |
+
+The SQLite catalog is the unified searchable index. Older JSON indexes remain
+as backed-up migration inputs and provider transport snapshots. Scans collect
+metadata recursively without reading online-only content. Full scans hash only
+resident files up to 1 MB, within a 32 MB budget per run. Larger/unavailable files
+can have provisional duplicate warnings. Unsupported content types still have
+searchable metadata. The app does not measure OneDrive sync completion.
+
+Application code is in `app/services` and `app/ui`; portable defaults in `config`;
+managed GDL source in `analysis/gdl/engine`; assets, tests, documentation and
+packaging tools each have their own directory. Runtime configuration, history,
+logs, databases and caches stay outside installed source. See the
+[cleanup manifest](cleanup_manifest.md) and
+[research architecture, validation and remaining limitations](docs/research_storage.md).
+
 ## Open the app
 
 Double-click **Start Hub.cmd** in this folder once the environment is installed. On first launch the Software page scans your computer. Use **Locate application** for executable tools it cannot find, or follow the vendor installation guide. Teams uses **Test Launch** with `msteams://`; it never requires a Teams executable path. **Continue anyway** opens the dashboard; missing required tools keep a warning visible at startup.
 
 Open **Settings Ã¢â€ â€™ Storage** to select your locally synced project folder. Use **General** for goals, plan, meeting notes, and decisions; **Project resources** for the repository and resource links; **Software** for shared tool requirements; and **History** to review or restore settings revisions. **Updates** contains a personal startup-check switch and the public release repository. File/folder shortcuts use paths relative to your selected project root; online shortcuts use http/https URLs. Agenda notes are manually maintained; the shared agenda button opens your existing document. No live Teams/Word content synchronization is implemented.
 
-## Shared Storage
+## Advanced shared-library setup
+
+The marker-based wizard below remains available under **Settings > Storage >
+Advanced shared setup** for explicitly managed shared libraries. It is separate
+from the read-only research configuration above; do not use it to initialize
+the current or legacy research folders merely to index them.
 
 Project files and large datasets live in the shared **SharePoint / OneDrive project library**. Each user syncs that library locally and selects their local synced project root once. **OneDrive/SharePoint owns the files; Fuel Cell Project Hub indexes and organizes references to them.**
 

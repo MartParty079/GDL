@@ -53,6 +53,10 @@ class HubWindow(QMainWindow):
         self.storage_settings = StorageSettings(store, self.microsoft_graph)
         store.storage_settings = self.storage_settings
         self.storage_panel = StoragePanel(store, self)
+        from app.ui.research_panel import ResearchPanel
+        self.research_panel = ResearchPanel(self.storage_settings, self, self.storage_panel)
+        self.research_panel.changed.connect(self.storage_changed)
+        self.research_panel.busy_changed.connect(self.storage_busy_changed)
         self.files_panel = FilesPanel(store, self)
         self.storage_panel.changed.connect(self.storage_changed)
         self.storage_panel.busy_changed.connect(self.storage_busy_changed)
@@ -211,7 +215,8 @@ class HubWindow(QMainWindow):
         row.addWidget(body, 1)
         container.addWidget(workspace)
         p = self.store.project
-        layout.addWidget(SectionHeader("Overview", p.get("storage", {}).get("project_name", "Fuel cell capstone"),
+        active_name = self.storage_settings.locations.value['active']['name'] if self.storage_settings.catalog else p.get("storage", {}).get("project_name", "Fuel cell capstone")
+        layout.addWidget(SectionHeader("Overview", active_name,
             button("Open project repo", lambda: self.guard(lambda: open_resource(p["repository"])), True)))
         goal = card("Primary goal", p["goal"] or "Set the goal that guides the team's current work.", "goal")
         if p["supporting_goals"]:
@@ -223,9 +228,21 @@ class HubWindow(QMainWindow):
             plan.layout().addWidget(button("Add next steps", lambda: self.open_settings(0)))
         provider = self.store.provider
         storage_status = "Indexing" if self.storage_panel.indexing else provider.status() if provider else "Needs setup"
+        if self.storage_settings.catalog:
+            sources_available = all(s['status'] == 'Available' for s in self.storage_settings.locations.status())
+            storage_status = 'Indexing' if self.research_panel.indexing else 'Connected' if sources_available else 'Unavailable'
         storage = card("Storage & index", "OneDrive / SharePoint", "storage")
         storage.layout().addWidget(StatusPill(storage_status, "success" if storage_status == "Connected" else "info" if storage_status == "Indexing" else "warning"))
-        if provider and storage_status != "Unavailable":
+        if self.storage_settings.catalog:
+            summary = self.storage_settings.catalog.summary()
+            available = all(s['status'] == 'Available' for s in self.storage_settings.locations.status())
+            storage.layout().addWidget(label(f"Current Project Files: {summary['current']:,} · Legacy Indexed Files: {summary['legacy']:,}"))
+            storage.layout().addWidget(label('Last indexed: ' + (local_datetime(summary['last_indexed']) if summary['last_indexed'] else 'Not indexed')))
+            storage.layout().addWidget(label('Index Status: ' + ('Indexing' if self.research_panel.indexing else 'Ready' if available else 'Source unavailable · index preserved')))
+            storage.layout().addWidget(label('Active Project: ' + Path(self.store.project_folder()).name + f" · Legacy Sources: {summary['sources'] - 1}"))
+            for caption, origin in (('Current Project', 'current'), ('Legacy Data', 'legacy'), ('All Files', '')):
+                storage.layout().addWidget(button(caption, lambda checked=False, value=origin: self.show_research_files(value)))
+        elif provider and storage_status != "Unavailable":
             try:
                 from app.ui.storage_panels import size_text
                 summary = provider.summary()
@@ -235,7 +252,7 @@ class HubWindow(QMainWindow):
                 storage.layout().addWidget(label("The index is unavailable. Reconnect storage to retry.", "muted"))
         else:
             storage.layout().addWidget(label("Connect your synced project library to browse files.", "muted"))
-        storage.layout().addWidget(button("View storage" if provider else "Connect storage", lambda: self.open_settings(1)))
+        storage.layout().addWidget(button("View storage" if provider or self.storage_settings.catalog else "Connect storage", lambda: self.open_settings(1)))
         if self.scanning and not self.results:
             tools = SkeletonCard("Checking your system…")
         else:
@@ -465,6 +482,17 @@ class HubWindow(QMainWindow):
         layout.addWidget(label("Code and releases stay in GitHub. Project files and large data stay in your existing shared storage.", "muted"))
         layout.addStretch()
 
+    def show_research_files(self, origin):
+        self.show_page('Project')
+        self.files_panel.origin.setCurrentIndex(max(0, self.files_panel.origin.findData(origin)))
+        self.files_panel.reload()
+        parent = self.files_panel.parentWidget()
+        while parent:
+            if isinstance(parent, QTabWidget):
+                parent.setCurrentWidget(self.files_panel)
+                break
+            parent = parent.parentWidget()
+
     def update_project_sidebar(self, selected):
         active = "Resources" if selected == 0 else "Analysis" if selected == 2 else "Reports" if self.workspace_section == "Reports" else "Files & Data"
         for control in self.project_sidebar.findChildren(QPushButton):
@@ -622,7 +650,10 @@ class HubWindow(QMainWindow):
                 tabs.addTab(scroll, name)
                 continue
             if name == "Storage":
-                tabs.addTab(self.storage_panel, name)
+                scroll = QScrollArea()
+                scroll.setWidgetResizable(True)
+                scroll.setWidget(self.research_panel)
+                tabs.addTab(scroll, name)
                 continue
             if name == "Analysis Tools":
                 scroll = QScrollArea()
@@ -813,8 +844,9 @@ class HubWindow(QMainWindow):
         notify(self, "GitHub check unavailable. You can retry under Settings → Updates.", "warning")
 
     def closeEvent(self, event):
-        if self.workers or self.storage_panel.indexing or any(panel.tasks for panel in (self.microsoft_panel, self.cloud_panel, self.folder_panel)):
+        if self.workers or self.storage_panel.indexing or self.research_panel.indexing or any(panel.tasks for panel in (self.microsoft_panel, self.cloud_panel, self.folder_panel)):
             self.storage_panel.cancel_index()
+            self.research_panel.cancel_index()
             self.banner.setText("Finishing a background check. Please close the app again in a moment.")
             event.ignore()
         else:

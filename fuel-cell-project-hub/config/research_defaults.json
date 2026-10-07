@@ -1,0 +1,5 @@
+{
+  "active": {"name": "GDL Research", "folder": "GDL research - General"},
+  "legacy": [{"name": "Michelson GDL Stuffs", "folder": "Michelson, Andrew's files - GDL Stuffs"}],
+  "application_folders": {"database": "catalog", "generated": "generated", "cache": "cache", "backups": "backups"}
+}

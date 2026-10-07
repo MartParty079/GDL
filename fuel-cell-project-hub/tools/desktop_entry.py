@@ -31,6 +31,23 @@ def self_check(report):
                   'icon_asset_present': resource_path('assets/app_icon.ico').is_file(),
                   'local_path_editable': not window.storage_panel.root.isReadOnly(), 'default_origin': window.files_panel.origin.currentData(),
                   'engine_manifest_present': (ROOT / 'analysis/gdl/manifest.json').is_file(), 'fiji_launched': False}
+        current, legacy = Path(temporary) / 'current', Path(temporary) / 'legacy'
+        current.mkdir()
+        legacy.mkdir()
+        (current / 'current.txt').write_text('current')
+        (legacy / 'historical.txt').write_text('legacy')
+        panel = window.research_panel
+        panel.active.setText(str(current))
+        panel.legacy.setPlainText(str(legacy))
+        panel.paths['shared_storage'].setText(str(current))
+        if not panel.save():
+            raise ValueError('Packaged research configuration failed.')
+        indexed = window.storage_settings.catalog.refresh()
+        window.files_panel.reload()
+        result.update(research_catalog_available=True, research_current_files=indexed['current'],
+                      research_legacy_files=indexed['legacy'], research_index_errors=indexed['errors'],
+                      research_template_present=resource_path('config/research_defaults.json').is_file(),
+                      research_sources_unchanged=not (current / '.projecthub').exists() and not (legacy / '.projecthub').exists())
         cache = FilePersistenceWithDataProtection(str(Path(temporary) / 'test-cache.bin'))
         cache.save('noncredential-test')
         result['dpapi_round_trip'] = cache.load() == 'noncredential-test'

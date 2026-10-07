@@ -40,7 +40,8 @@ class Store:
         self.local_dir = Path(local_dir or os.environ.get("FUEL_HUB_DATA_DIR") or
                               Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local/share")) / "FuelCellProjectHub")
         defaults = read_json(self.config_dir / "project_defaults.json", {})
-        self.project = read_json(self.config_dir / "project.json", defaults)
+        self.project = read_json(self.local_dir / 'project_settings.json',
+                                 read_json(self.config_dir / "project.json", defaults))
         self.local = read_json(self.local_dir / "local.json", {"paths": {}, "setup_complete": False})
         self.events = read_json(self.local_dir / "activity.json", [])
         self.bugs = read_json(self.local_dir / "bugs.json", [])
@@ -67,7 +68,7 @@ class Store:
                 self.project["links"][name] = ""
                 self.migration_pending = True
         self.project.setdefault("storage", {"project_name": "Fuel Cell Capstone", "online_url": ""})
-        if self.local["local_project_root"]:
+        if self.local["local_project_root"] and not self.local.get('project_locations', {}).get('enabled'):
             try:
                 self.connect_storage(self.local["local_project_root"], persist=False)
             except (OSError, ValueError) as exc:
@@ -99,11 +100,11 @@ class Store:
                     "previous": copy.deepcopy(self.project), "next": copy.deepcopy(value)}
         if self.provider:
             self.provider.save_project(value, revision)
-        elif self.local.get("local_project_root"):
+        elif self.local.get("local_project_root") and not self.local.get('project_locations', {}).get('enabled'):
             raise ValueError("Shared storage unavailable. Reconnect it before changing project settings.")
         else:
-            write_json(self.config_dir / "history" / (revision["id"] + ".json"), revision)
-            write_json(self.config_dir / "project.json", value)
+            write_json(self.local_dir / "history" / (revision["id"] + ".json"), revision)
+            write_json(self.local_dir / "project_settings.json", value)
         self.project = copy.deepcopy(value)
         self.cache_project()
         self.record("Settings", reason)
@@ -111,7 +112,8 @@ class Store:
     def history(self):
         if self.provider:
             return self.provider.history()
-        return [read_json(p, {}) for p in sorted((self.config_dir / "history").glob("*.json"), reverse=True)]
+        paths = [*(self.local_dir / 'history').glob('*.json'), *(self.config_dir / 'history').glob('*.json')]
+        return [read_json(p, {}) for p in sorted(paths, reverse=True)]
 
     def connect_storage(self, root, persist=True):
         from app.services.project_storage import LocalOneDriveProvider
@@ -143,6 +145,9 @@ class Store:
         return provider
 
     def project_folder(self):
+        locations = self.local.get('project_locations', {})
+        if locations.get('enabled'):
+            return locations['active']['root_path']
         return self.local.get("local_project_root") or self.local.get("local_project_folder", "")
 
     def add_bug(self, title, detail, context, version, expected="", steps=""):

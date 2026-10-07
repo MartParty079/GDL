@@ -407,7 +407,9 @@ class ProjectStorageTests(unittest.TestCase):
         persisted = read_json(store.local_dir / "local.json", {})
         self.assertEqual(persisted["local_project_folder"], legacy["project_folder"])
         self.assertEqual(persisted["local_resource_paths"]["Reports"], legacy["links"]["Reports"])
-        self.assertNotIn("C:/Users", (app_root / "config/project.json").read_text())
+        self.assertNotIn("C:/Users", (store.local_dir / "project_settings.json").read_text())
+        # Installed configuration is a preserved migration input, never a runtime write target.
+        self.assertEqual(read_json(app_root / 'config/project.json', {}), legacy)
 
     def test_atomic_write_rejects_non_json_number_preserving_old_file(self):
         path = self.base / "valid.json"

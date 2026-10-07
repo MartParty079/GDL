@@ -5,7 +5,7 @@ import sys
 from pathlib import PurePosixPath
 
 BLOCKED_DIRECTORIES = {'.venv', 'venv', 'env', '__pycache__', 'build', 'dist', 'runtime',
-                       'logs', 'auth', 'tokens', 'secrets', '.projecthub', '.test-state'}
+                       'logs', 'auth', 'tokens', 'secrets', '.projecthub', '.test-state', 'cache', 'backups', 'generated'}
 DATA_EXTENSIONS = {'.tif', '.tiff', '.mp4', '.avi', '.mov', '.csv', '.xls', '.xlsx', '.parquet', '.h5', '.hdf5'}
 SECRET_PATTERNS = [re.compile(r'gh[pousr]_[A-Za-z0-9]{30,}'), re.compile(r'github_pat_[A-Za-z0-9_]{30,}'),
                    re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
@@ -18,9 +18,9 @@ def audit_blob(name, data):
     problems = []
     if any(part in BLOCKED_DIRECTORIES for part in path.parts) or 'analysis/gdl/baseline/' in name:
         problems.append('local/runtime/private directory')
-    if path.suffix.lower() in DATA_EXTENSIONS or path.suffix.lower() in {'.pyc', '.pyo', '.log', '.token'}:
+    if path.suffix.lower() in DATA_EXTENSIONS or path.suffix.lower() in {'.pyc', '.pyo', '.log', '.token', '.sqlite3', '.db'}:
         problems.append('dataset or generated file')
-    if path.name in {'local.json', 'local_config.json', 'user_config.json', 'tokens.bin'} or path.name.startswith('.env'):
+    if path.name in {'local.json', 'local_config.json', 'user_config.json', 'project_settings.json', 'tokens.bin'} or path.name.startswith('.env'):
         problems.append('personal configuration or credentials')
     if name.endswith('/config/project.json') or '/config/history/' in name:
         problems.append('live project configuration')

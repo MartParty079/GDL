@@ -132,7 +132,8 @@ def infer_relationships(relative):
 
 
 def search_items(items, query="", category="", experiment="", run="", sample="", procedure="",
-                 date_from="", date_to="", archive="active", origin="", legacy_project=""):
+                 date_from="", date_to="", archive="active", origin="", legacy_project="",
+                 extension="", tags="", document_type="", source="", duplicate=""):
     words = query.casefold().split()
     result = []
     for item in items:
@@ -142,6 +143,16 @@ def search_items(items, query="", category="", experiment="", run="", sample="",
             continue
         if legacy_project and item.get('legacy_project_id', '') != legacy_project:
             continue
+        if extension and item.get('extension', Path(item['name']).suffix).casefold() != extension.casefold():
+            continue
+        if source and item.get('source_name', '') != source:
+            continue
+        if document_type and item.get('document_type', item.get('category', '')) != document_type:
+            continue
+        if tags and tags.casefold() not in str(item.get('tags', '')).casefold():
+            continue
+        if duplicate and item.get('duplicate_status', '') != duplicate:
+            continue
         if archive == "active" and item["archived"] or archive == "archived" and not item["archived"]:
             continue
         if any(value and item.get(key, "").casefold() != value.casefold() for key, value in
@@ -150,7 +161,7 @@ def search_items(items, query="", category="", experiment="", run="", sample="",
         date = item["modified"][:10]
         if date_from and date < date_from or date_to and date > date_to:
             continue
-        text = " ".join(str(item.get(key, "")) for key in ("name", "relative_path", "category", 'subcategory', 'data_origin', 'legacy_project_id', 'legacy_project_name', 'legacy_note', *RELATION_KEYS)).casefold()
+        text = " ".join(str(item.get(key, "")) for key in ("name", "relative_path", "category", 'subcategory', 'data_origin', 'source_name', 'tags', 'title', 'notes', 'document_type', 'availability', 'duplicate_status', 'legacy_project_id', 'legacy_project_name', 'legacy_note', *RELATION_KEYS)).casefold()
         if all(word in text for word in words):
             result.append(item)
     return sorted(result, key=lambda i: i["relative_path"].casefold())

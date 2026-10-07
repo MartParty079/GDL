@@ -21,6 +21,44 @@ class StorageSettings:
         self.store, self.graph = store, graph
         from app.services.storage import read_json
         self.default_rules = read_json(store.config_dir / 'file_classification.json', {})
+        from app.services.research_catalog import ProjectLocations
+        self.locations = ProjectLocations(store)
+        self.catalog = None
+        if self.locations.value.get('enabled'):
+            self.connect_catalog()
+
+    def connect_catalog(self):
+        from app.services.research_catalog import ResearchCatalog
+        import sqlite3
+        self.catalog_error = ''
+        # The previous marker-based mapping is retained only as a migration
+        # reference. Research settings must never write that shared source.
+        self.store.provider = None
+        try:
+            self.catalog = ResearchCatalog(self.store, self.locations)
+            self.catalog.import_snapshots()
+            self.catalog.log('startup', project_id=self.locations.value['active']['id'])
+        except (OSError, ValueError, sqlite3.Error):
+            self.catalog = None
+            self.catalog_error = 'Research index unavailable. The existing database was preserved. Check the Index / Database location or restore a backup; Microsoft login and other tools remain available.'
+
+    def save_locations(self, value):
+        import sqlite3
+        from app.services.research_catalog import ProjectLocations
+        ProjectLocations.validate(value)
+        if value == self.locations.value and self.catalog:
+            return
+        destination = Path(value['database']) / 'research.sqlite3'
+        if self.catalog and destination.resolve() != self.catalog.path.resolve():
+            if destination.exists():
+                raise ValueError('The destination already has a catalog. Choose an empty index folder to preserve both databases.')
+            self.catalog.backup('before-relocation')
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            from contextlib import closing
+            with self.catalog.connect() as previous, closing(sqlite3.connect(destination)) as new:
+                previous.backup(new)
+        self.locations.save(value)
+        self.connect_catalog()
 
     def validate_root(self, value):
         provider = LocalOneDriveProvider(value, self.store.local_dir / 'index')
@@ -30,6 +68,7 @@ class StorageSettings:
         return provider, marker
 
     def change_root(self, value, initialize=False):
+        self.protect_research_source(value)
         provider = LocalOneDriveProvider(value, self.store.local_dir / 'index')
         marker = provider.validate_root(require_marker=False, allow_unmarked=initialize)
         previous_id = self.store.local.get('project_id', '')
@@ -56,6 +95,15 @@ class StorageSettings:
             self.store.save_project(self.store.project, 'Storage mapping connected; portable project definitions retained')
         self.store.cache_project()
         return self.store.provider
+
+    def protect_research_source(self, value):
+        if not self.locations.value.get('enabled'):
+            return
+        target = Path(value).expanduser().resolve()
+        for source in self.locations.sources():
+            root = Path(source['root_path']).resolve()
+            if target == root or root in target.parents or target in root.parents:
+                raise ValueError('This is configured research storage. Use the Project and Indexing tabs to reference it without shared-library initialization or writes.')
 
     def reset_root(self):
         self.store.cache_project()
@@ -158,6 +206,9 @@ class StorageSettings:
         self.store.save_project(value, 'Historical project note changed')
 
     def set_override(self, item, values):
+        if self.catalog:
+            self.catalog.set_override(item, values)
+            return
         allowed = {'category', 'subcategory', 'experiment_id', 'sample_id', 'procedure_id', 'legacy_note'}
         if set(values) - allowed or any(not isinstance(v, str) for v in values.values()):
             raise ValueError('Unsupported file metadata override.')
@@ -174,7 +225,8 @@ class StorageSettings:
         cloud = self.store.project.get('current_cloud_connection')
         tier = 'sharepoint' if cloud and cloud.get('site_id') else 'files'
         cloud_available = cloud and self.graph.auth.permission_status().get(tier) == 'Available'
-        if local and (mode != 'CloudOnly' or not cloud_available):
+        research_matches = bool(local) and (not self.catalog or local.root.resolve() == Path(self.locations.value['active']['root_path']).resolve())
+        if local and research_matches and (mode != 'CloudOnly' or not cloud_available):
             try:
                 local_items = local.list_items()
             except (OSError, ValueError):
@@ -201,9 +253,15 @@ class StorageSettings:
                 records.extend(i for i in self.provider(project).list_items() if not i.get('is_folder'))
             except (OSError, ValueError):
                 continue
+        if self.catalog:
+            if records:
+                self.catalog.ingest(records)
+            return self.catalog.rows()
         return records
 
     def open_item(self, item, parent=False):
+        if item.get('provider') == 'ResearchLocal' and self.catalog:
+            return self.catalog.open_item(item, parent)
         if item.get('provider') != 'MicrosoftGraph':
             if not self.store.provider:
                 raise ValueError('Reconnect the local project folder to open this file.')

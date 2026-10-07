@@ -97,6 +97,8 @@ class RootWizard(QWizard):
             return True
         try:
             self.allow_unmarked = False
+            if hasattr(self.store, 'storage_settings'):
+                self.store.storage_settings.protect_research_source(self.root_field.text())
             provider = LocalOneDriveProvider(self.root_field.text(), self.store.local_dir / "index")
             if not self.root_field.text().strip():
                 raise ValueError("Select a synced project folder.")
@@ -458,6 +460,7 @@ class FilesPanel(QWidget):
     def __init__(self, store, parent=None):
         super().__init__(parent)
         self.store, self.rows = store, []
+        self.page, self.page_size = 0, 200
         self.loading = False
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -466,11 +469,15 @@ class FilesPanel(QWidget):
         layout.addWidget(SectionHeader("Files & Data", "Search the project library without duplicating its files."))
         self.search = SearchField("Search files, paths, or relationship IDs…")
         self.search.setAccessibleName("Search project files")
-        self.search.textChanged.connect(self.populate)
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.setInterval(250)
+        self.search_timer.timeout.connect(self.populate)
+        self.search.textChanged.connect(lambda: self.search_timer.start() if len(getattr(self, 'items', [])) > 200 else self.populate())
         layout.addWidget(self.search)
         origins = QHBoxLayout()
         self.origin, self.legacy_filter = QComboBox(), QComboBox()
-        for caption, value in (('Current project', 'current'), ('Old Test Data', 'legacy'), ('All sources', '')):
+        for caption, value in (('Current Project', 'current'), ('Legacy Data · Old Test Data', 'legacy'), ('All Files', '')):
             self.origin.addItem(caption, value)
         self.legacy_filter.addItem('All previous projects', '')
         self.origin.currentIndexChanged.connect(self.populate)
@@ -509,6 +516,17 @@ class FilesPanel(QWidget):
         extra.addWidget(self.date_from, 1, 2)
         extra.addWidget(text("Through date"), 0, 3)
         extra.addWidget(self.date_to, 1, 3)
+        for column, (key, caption) in enumerate((('extension', 'Extension'), ('document_type', 'Document type'), ('source', 'Source'), ('duplicate', 'Duplicates'))):
+            control = QComboBox()
+            control.addItem('All', '')
+            control.currentIndexChanged.connect(self.populate)
+            self.filters[key] = control
+            extra.addWidget(text(caption), 2, column)
+            extra.addWidget(control, 3, column)
+        self.tags = QLineEdit()
+        self.tags.setPlaceholderText('Filter tags')
+        self.tags.textChanged.connect(self.populate)
+        extra.addWidget(self.tags, 4, 0, 1, 4)
         self.archive = QComboBox()
         for name, key in (("Active only", "active"), ("Include Archived", "all"), ("Archived only", "archived")):
             self.archive.addItem(name, key)
@@ -536,8 +554,8 @@ class FilesPanel(QWidget):
         layout.addWidget(self.empty_state)
         self.error = ErrorBanner()
         layout.addWidget(self.error)
-        self.table = QTableWidget(0, 7)
-        self.table.setHorizontalHeaderLabels(["Name", "Type", "Experiment", "Sample", "Modified", "Size", 'Origin / previous project'])
+        self.table = QTableWidget(0, 9)
+        self.table.setHorizontalHeaderLabels(["Name", "Category", "Experiment", "Sample", "Modified", "Size", 'Source / project', 'Availability', 'Duplicates'])
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -552,11 +570,25 @@ class FilesPanel(QWidget):
             self.table.setColumnWidth(column, width)
         self.table.itemDoubleClicked.connect(lambda _: self.open_selected())
         layout.addWidget(self.table)
+        self.pagination = QWidget()
+        pagination = QHBoxLayout(self.pagination)
+        pagination.setContentsMargins(0, 0, 0, 0)
+        pagination.addWidget(Button('Previous page', lambda: self.change_page(-1)))
+        self.page_label = label('')
+        pagination.addWidget(self.page_label)
+        pagination.addWidget(Button('Next page', lambda: self.change_page(1)))
+        pagination.addStretch()
+        layout.addWidget(self.pagination)
         self.file_actions = QWidget()
-        row = QHBoxLayout(self.file_actions)
+        row = QGridLayout(self.file_actions)
         row.setContentsMargins(0, 0, 0, 0)
-        for name, callback in (("Open", self.open_selected), ("Open Containing Folder", self.open_parent), ("Copy Relative Path", self.copy_path), ("View Metadata", self.view_metadata), ('Edit classification', self.edit_classification)):
-            row.addWidget(action(name, callback))
+        for column, (name, callback) in enumerate((("Open", self.open_selected), ("Open Folder", self.open_parent), ("Copy Path", self.copy_path), ("Metadata", self.view_metadata), ('Edit Metadata', self.edit_classification), ('Import into Current Project', self.import_current))):
+            control = action(name, callback)
+            if name == 'Import into Current Project':
+                self.import_button = control
+                row.addWidget(control, 1, 0, 1, 5, Qt.AlignLeft)
+            else:
+                row.addWidget(control, 0, column)
         layout.addWidget(self.file_actions)
         self.table.setSortingEnabled(True)
         self.table.sortItems(0, Qt.AscendingOrder)
@@ -577,6 +609,7 @@ class FilesPanel(QWidget):
             control.setCurrentIndex(0)
         self.date_from.clear()
         self.date_to.clear()
+        self.tags.clear()
         self.archive.setCurrentIndex(0)
         self.origin.setCurrentIndex(0)
         self.legacy_filter.setCurrentIndex(0)
@@ -594,6 +627,9 @@ class FilesPanel(QWidget):
         self.legacy_filter.addItem('All previous projects', '')
         for project in self.store.project.get('legacy_projects', []):
             self.legacy_filter.addItem(project['name'], project['legacy_project_id'])
+        if hasattr(self.store, 'storage_settings') and self.store.storage_settings.catalog:
+            for project in self.store.storage_settings.locations.value['legacy']:
+                self.legacy_filter.addItem(project['name'], project['id'])
         self.legacy_filter.setCurrentIndex(max(0, self.legacy_filter.findData(selected)))
         self.legacy_filter.blockSignals(False)
         for key, field in self.filters.items():
@@ -601,7 +637,7 @@ class FilesPanel(QWidget):
             field.blockSignals(True)
             field.clear()
             field.addItem("All", "")
-            record_key = "category" if key == "category" else key + "_id"
+            record_key = {'category': 'category', 'extension': 'extension', 'document_type': 'document_type', 'source': 'source_name', 'duplicate': 'duplicate_status'}.get(key, key + '_id')
             for value in sorted({i.get(record_key, "") for i in self.items} - {""}):
                 field.addItem(value, value)
             index = field.findData(selected)
@@ -609,6 +645,9 @@ class FilesPanel(QWidget):
                 field.addItem(selected, selected)
                 index = field.findData(selected)
             field.setCurrentIndex(max(0, index))
+            field.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            field.setMinimumContentsLength(8)
+            field.setMinimumWidth(80)
             if field.count() > 15:
                 field.setEditable(True)
                 field.setInsertPolicy(QComboBox.NoInsert)
@@ -617,7 +656,11 @@ class FilesPanel(QWidget):
             field.blockSignals(False)
         self.populate()
 
-    def populate(self):
+    def change_page(self, direction):
+        self.page = max(0, min(self.page + direction, max(0, (len(self.rows) - 1) // self.page_size)))
+        self.populate(preserve_page=True)
+
+    def populate(self, *args, preserve_page=False):
         if not hasattr(self, "table") or not hasattr(self, "items"):
             return
         for field in (self.date_from, self.date_to):
@@ -636,7 +679,13 @@ class FilesPanel(QWidget):
                     return
         self.rows = search_items(self.items, query=self.search.text(), archive=self.archive.currentData(),
             origin=self.origin.currentData(), legacy_project=self.legacy_filter.currentData(),
-            date_from=self.date_from.text(), date_to=self.date_to.text(), **{key: field.currentData() for key, field in self.filters.items()})
+            date_from=self.date_from.text(), date_to=self.date_to.text(), tags=self.tags.text(), **{key: field.currentData() for key, field in self.filters.items()})
+        if not preserve_page:
+            self.page = 0
+        visible_rows = self.rows[self.page * self.page_size:(self.page + 1) * self.page_size]
+        self.pagination.setVisible(len(self.rows) > self.page_size)
+        self.import_button.setVisible(bool(getattr(getattr(self.store, 'storage_settings', None), 'catalog', None)) and any(i.get('data_origin') == 'legacy' for i in visible_rows))
+        self.page_label.setText(f'Page {self.page + 1} / {max(1, (len(self.rows) + self.page_size - 1) // self.page_size)} · {len(self.rows):,} matches')
         active_filters = self.search.text() or any(control.currentIndex() > 0 for control in self.filters.values()) or self.date_from.text() or self.date_to.text() or self.archive.currentIndex() > 0
         self.clear_button.setVisible(bool(active_filters))
         self.skeleton.setVisible(self.loading and not self.items)
@@ -645,7 +694,8 @@ class FilesPanel(QWidget):
         self.file_actions.setEnabled(bool(self.rows))
         self.file_actions.setVisible(bool(self.rows))
         if not self.rows and not self.loading:
-            if not self.store.provider or self.store.provider.status() == "Unavailable":
+            catalog = getattr(getattr(self.store, 'storage_settings', None), 'catalog', None)
+            if not catalog and (not self.store.provider or self.store.provider.status() == "Unavailable"):
                 title, description, caption, callback = "Connect project storage", "Select your synced OneDrive folder before browsing project files.", "Connect storage", self.connect_requested.emit
             elif active_filters:
                 title, description, caption, callback = "No matching files", "Try another search or clear the current filters.", "Clear filters", self.clear_filters
@@ -653,10 +703,12 @@ class FilesPanel(QWidget):
                 title, description, caption, callback = "No indexed files", "Refresh the index under Storage to discover project files.", "Open storage", self.connect_requested.emit
             self.empty_state.set_state(title, description, caption, callback)
         self.table.setSortingEnabled(False)
-        self.table.setRowCount(len(self.rows))
-        for row_number, item in enumerate(self.rows):
+        self.table.setRowCount(len(visible_rows))
+        for row_number, item in enumerate(visible_rows):
             origin = ('Old Test Data · ' + item.get('legacy_project_name', '') + ' · ' + item.get('legacy_project_id', '')) if item.get('data_origin') == 'legacy' else item.get('data_origin', 'current').title()
-            values = [item["name"], item["category"], item["experiment_id"], item["sample_id"], local_datetime(item["modified"]), size_text(item["size"]), origin]
+            if item.get('data_origin') != 'legacy':
+                origin += ' · ' + item.get('source_name', '')
+            values = [item["name"], item["category"], item["experiment_id"], item["sample_id"], local_datetime(item["modified"]), size_text(item["size"]), origin, item.get('availability', ''), item.get('duplicate_status', '')]
             for column, value in enumerate(values):
                 cell = SortableItem(str(value))
                 cell.setData(Qt.UserRole, item["relative_path"])
@@ -668,7 +720,7 @@ class FilesPanel(QWidget):
                 cell.setToolTip(str(value) + "\n" + item["relative_path"])
                 self.table.setItem(row_number, column, cell)
         self.table.setSortingEnabled(True)
-        self.notice.set_message("Refreshing index… Showing last known files." if self.loading and self.items else "Loading project files…" if self.loading else f"{len(self.rows):,} matching {'file' if len(self.rows) == 1 else 'files'}." if self.store.provider else "")
+        self.notice.set_message("Refreshing index… Showing last known files." if self.loading and self.items else "Loading project files…" if self.loading else f"{len(self.rows):,} matching {'file' if len(self.rows) == 1 else 'files'}.")
 
     def selected(self):
         row = self.table.currentRow()
@@ -709,6 +761,7 @@ class FilesPanel(QWidget):
             output.setReadOnly(True)
             layout.addWidget(label('Origin: ' + item.get('data_origin', 'current') + '\nPrevious project: ' + item.get('legacy_project_name', '') + '\nReference note: ' + item.get('legacy_note', '') + '\nClassification: ' + item.get('classification_source', '') + ' · ' + item.get('classification_confidence', '') + '\nSubcategory: ' + item.get('subcategory', '')))
             output.setPlainText("\n".join(("File: " + item["name"], "Relative path: " + item["relative_path"], "Type: " + item["category"], "Experiment: " + (item["experiment_id"] or "None"), "Run: " + (item["run_id"] or "None"), "Sample: " + (item["sample_id"] or "None"), "Procedure: " + (item["procedure_id"] or "None"), "Modified: " + local_datetime(item["modified"]), "Size: " + size_text(item["size"]), "Archived: " + ("Yes" if item["archived"] else "No"), "Modified after initial indexing: " + ("Yes" if item.get("modified_after_initial_index") else "No"))))
+            output.setPlainText(json.dumps(item, indent=2, ensure_ascii=False))
             layout.addWidget(output)
             layout.addWidget(action("Close", dialog.accept))
             dialog.exec()
@@ -719,17 +772,21 @@ class FilesPanel(QWidget):
         if not item or not hasattr(self.store, 'storage_settings'):
             return
         from app.services.file_classifier import CATEGORIES
+        from app.services.research_catalog import RESEARCH_CATEGORIES
         dialog = QDialog(self)
         dialog.setWindowTitle('Edit file metadata · ' + item['name'])
         layout = QVBoxLayout(dialog)
         layout.addWidget(label('These metadata overrides leave the file and its permanent origin unchanged.'))
         form = QFormLayout()
         category = QComboBox()
-        category.addItems(CATEGORIES)
+        category.addItems(list(dict.fromkeys((*CATEGORIES, *RESEARCH_CATEGORIES))))
         category.setCurrentText(item['category'])
         form.addRow('Category', category)
         fields = {}
-        for key in ('subcategory', 'experiment_id', 'sample_id', 'procedure_id', 'legacy_note'):
+        keys = ('subcategory', 'experiment_id', 'sample_id', 'procedure_id', 'legacy_note')
+        if self.store.storage_settings.catalog:
+            keys += ('tags', 'title', 'notes')
+        for key in keys:
             fields[key] = QLineEdit(item.get(key, ''))
             form.addRow(key.replace('_', ' ').title(), fields[key])
         layout.addLayout(form)
@@ -741,6 +798,24 @@ class FilesPanel(QWidget):
                 self.reload()
             except (OSError, ValueError) as exc:
                 self.error.show_error('Metadata could not be saved', exc)
+
+    def import_current(self):
+        item = self.selected()
+        settings = getattr(self.store, 'storage_settings', None)
+        if not item or not settings or not settings.catalog:
+            return
+        if item.get('provider') != 'ResearchLocal' or item.get('data_origin') != 'legacy':
+            self.notice.set_message('Select a locally indexed legacy reference to import.', 'info')
+            return
+        if QMessageBox.question(self, 'Copy legacy reference?', 'Copy this file into the current project? The legacy original will remain unchanged.') != QMessageBox.Yes:
+            return
+        try:
+            destination = settings.catalog.import_current(item)
+            settings.catalog.refresh(quick=True, source_ids=[settings.locations.value['active']['id']])
+            self.reload()
+            notify(self, 'Copied to Current Project: ' + destination.name, 'success')
+        except (OSError, ValueError) as exc:
+            self.error.show_error('Import unavailable', exc)
 
 
 class SortableItem(QTableWidgetItem):

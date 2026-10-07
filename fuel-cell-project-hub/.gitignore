@@ -63,6 +63,14 @@ analysis/gdl/baseline/
 99_Archive/
 # Packaging source .spec files intentionally remain tracked.
 *.tmp
+*.sqlite3
+*.sqlite3-*
+*.db
+cache/
+temp/
+backups/
+generated/
+project_settings.json
 *.temp
 ~$*
 *.part

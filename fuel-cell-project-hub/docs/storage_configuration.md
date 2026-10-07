@@ -1,5 +1,12 @@
 # Editable storage
 
+The default **Settings > Storage** surface now configures current research,
+multiple read-only legacy sources, application-owned paths, indexing and
+categories. See [research storage](research_storage.md). The marker-based
+instructions below apply to **Storage > Advanced shared setup**, which is
+retained for explicitly managed shared libraries. Research indexing does not
+need or create a marker.
+
 **Settings → Storage** has an editable local synced folder field and visible **Browse**, **Change folder**, **Validate**, **Open folder**, **Reset local mapping** actions. The former field was read-only and its locate action hidden under Advanced.
 
 Browse or type a path, validate it, then choose Change folder. Review and confirm the target. Unmarked folders require confirmation to initialize a project marker. Protected/system/home roots, filesystem redirects and folders marked for a different project are rejected. The mapping changes locally; indexing refreshes against that root. Existing files remain in place. Same-project cloud connections, historical definitions and metadata survive reconnects and local reset. An unavailable mapped root must be reconnected before shared settings can be edited.

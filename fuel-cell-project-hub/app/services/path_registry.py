@@ -95,6 +95,14 @@ class PathRegistry:
         local = self.config["paths"].get(key)
         if local:
             return str(Path(local).expanduser())
+        locations = self.store.local.get('project_locations', {})
+        if locations.get('enabled'):
+            research_defaults = {'default_input_folder': locations['active']['root_path'],
+                'default_output_folder': locations['generated'],
+                'report_output_folder': str(Path(locations['generated']) / 'reports'),
+                'temp_work_folder': str(Path(locations['cache']) / 'gdl-work')}
+            if key in research_defaults:
+                return research_defaults[key]
         shared = self.store.project.get("gdl_analysis", {}).get("paths", {}).get(key)
         if shared:
             if not self.store.provider or self.store.provider.status() == "Unavailable":

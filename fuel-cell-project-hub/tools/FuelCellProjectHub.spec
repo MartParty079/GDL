@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_all
 
 from pathlib import Path
 project_directory = Path(SPECPATH).parent
-datas = [(str(project_directory / 'config' / name), 'config') for name in ('project_defaults.json', 'software_manifest.json', 'microsoft_auth.json', 'file_classification.json')]
+datas = [(str(project_directory / 'config' / name), 'config') for name in ('project_defaults.json', 'software_manifest.json', 'microsoft_auth.json', 'file_classification.json', 'research_defaults.json')]
 datas.append((str(project_directory / 'analysis/gdl/engine'), 'analysis/gdl/engine'))
 datas.append((str(project_directory / 'analysis/gdl/manifest.json'), 'analysis/gdl'))
 datas.append((str(project_directory / 'analysis/gdl/hub_runtime.py'), 'analysis/gdl'))
