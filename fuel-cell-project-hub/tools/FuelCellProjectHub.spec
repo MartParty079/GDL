@@ -1,6 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
+import runpy
+from PyInstaller.utils.win32.versioninfo import (VSVersionInfo,FixedFileInfo,StringFileInfo,StringTable,StringStruct,VarFileInfo,VarStruct)
 project_directory = Path(SPECPATH).parent
 datas = [(str(project_directory / 'config' / name), 'config') for name in ('project_defaults.json', 'software_manifest.json', 'file_classification.json', 'research_defaults.json', 'indexing_rules.json')]
 engine = project_directory / 'analysis/gdl/engine'
@@ -10,6 +12,10 @@ for source_file in engine.rglob('*'):
 datas.append((str(project_directory / 'analysis/gdl/manifest.json'), 'analysis/gdl'))
 datas.append((str(project_directory / 'analysis/gdl/hub_runtime.py'), 'analysis/gdl'))
 datas.append((str(project_directory / 'assets'), 'assets'))
+datas.append((str(project_directory / 'CHANGELOG.md'), '.'))
+app_version = runpy.run_path(str(project_directory / 'app/version.py'))['VERSION']
+version_tuple = tuple(int(part) for part in app_version.split('-')[0].split('.')) + (0,)
+version_resource = VSVersionInfo(ffi=FixedFileInfo(filevers=version_tuple,prodvers=version_tuple,mask=0x3f,flags=0,OS=0x40004,fileType=1,subtype=0,date=(0,0)), kids=[StringFileInfo([StringTable('040904B0',[StringStruct('FileDescription','GDL Research Hub'),StringStruct('FileVersion',app_version),StringStruct('ProductName','GDL Research Hub'),StringStruct('ProductVersion',app_version)])]),VarFileInfo([VarStruct('Translation',[1033,1200])])])
 binaries = []
 hiddenimports = ['unittest.mock']
 a = Analysis(
@@ -37,6 +43,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name='FuelCellProjectHub',
+    version=version_resource,
     icon=str(project_directory / 'assets/app_icon.ico'),
     debug=False,
     bootloader_ignore_signals=False,

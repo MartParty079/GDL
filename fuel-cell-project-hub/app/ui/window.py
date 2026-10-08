@@ -61,7 +61,7 @@ class HubWindow(QMainWindow):
         self.scanning = False
         self.update_checking = False
         self.workspace_section = "Resources"
-        self.setWindowTitle("Fuel Cell Project Hub")
+        self.setWindowTitle("GDL Research Hub")
         self.resize(1280, 850)
         self.setMinimumSize(1024, 700)
         shell = QWidget()
@@ -69,11 +69,19 @@ class HubWindow(QMainWindow):
         outer.setContentsMargins(26, 22, 26, 20)
         top = QHBoxLayout()
         identity = QVBoxLayout()
-        identity.addWidget(label("Fuel cell capstone", "eyebrow"))
-        identity.addWidget(label("Project Hub", "title"))
+        identity.addWidget(label("GDL Research Hub", "eyebrow"))
+        identity.addWidget(label(self.storage_settings.locations.value["active"]["name"], "title"))
         top.addLayout(identity)
         top.addStretch()
-        top.addWidget(label("Local workspace · " + __version__, "muted"))
+        self.global_search = QLineEdit()
+        self.global_search.setPlaceholderText("Search all research files...")
+        self.global_search.setMaximumWidth(320)
+        self.global_search.returnPressed.connect(self.search_workspace)
+        top.addWidget(self.global_search)
+        self.index_status = label("Index available" if self.storage_settings.catalog else "Storage not configured", "muted")
+        top.addWidget(self.index_status)
+        from app.ui.research_workspace import version_dialog
+        top.addWidget(button("v" + __version__, lambda: version_dialog(self)))
         outer.addLayout(top)
         self.banner = InlineMessage("Checking your system…", "info")
         outer.addWidget(self.banner)
@@ -91,7 +99,13 @@ class HubWindow(QMainWindow):
             layout.setSizeConstraint(QLayout.SetMinimumSize)
             layout.setContentsMargins(4, 20, 4, 12)
             scroll.setWidget(page)
-            self.tabs.addTab(scroll, name)
+            if name == "Project":
+                scroll.takeWidget()
+                self.tabs.addTab(page, name)
+                layout.setSizeConstraint(QLayout.SetDefaultConstraint)
+                layout.setContentsMargins(0, 4, 0, 0)
+            else:
+                self.tabs.addTab(scroll, name)
             self.pages[name], self.layouts[name] = page, layout
         outer.addWidget(self.tabs)
         self.setCentralWidget(shell)
@@ -103,6 +117,8 @@ class HubWindow(QMainWindow):
         self.render_dashboard()
         self.render_software()
         self.render_project()
+        self.project_tabs.setCurrentIndex(1)
+        self.show_page("Project")
         self.render_activity()
         self.render_bugs()
         self.render_settings()
@@ -436,6 +452,10 @@ class HubWindow(QMainWindow):
 
     def render_project(self):
         selected = self.project_tabs.currentIndex() if hasattr(self, "project_tabs") else 0
+        self.files_panel.setParent(self)
+        if hasattr(self, 'research_workspace'):
+            self.research_workspace.setParent(self)
+            self.gdl_panel.setParent(self)
         container = self.reset("Project")
         tabs = QTabWidget()
         self.project_tabs = tabs
@@ -447,7 +467,10 @@ class HubWindow(QMainWindow):
         resources_scroll.setFrameShape(QFrame.NoFrame)
         resources_scroll.setWidget(resources_page)
         tabs.addTab(resources_scroll, "Resources")
-        tabs.addTab(self.files_panel, "Files & Data")
+        from app.ui.research_workspace import ResearchHub
+        if not hasattr(self, 'research_workspace'):
+            self.research_workspace = ResearchHub(self.storage_settings, self)
+        tabs.addTab(self.research_workspace if self.storage_settings.catalog else self.files_panel, "Files & Data")
         analysis_scroll = QScrollArea()
         analysis_scroll.setWidgetResizable(True)
         analysis_scroll.setFrameShape(QFrame.NoFrame)
@@ -463,6 +486,8 @@ class HubWindow(QMainWindow):
         container.addWidget(workspace)
         tabs.setCurrentIndex(selected)
         tabs.currentChanged.connect(self.update_project_sidebar)
+        self.project_sidebar.setVisible(selected != 1)
+        tabs.currentChanged.connect(lambda index: self.project_sidebar.setVisible(index != 1))
         layout.addWidget(SectionHeader("Project resources", "Open the team's existing files and tools.", button("Edit resources", lambda: self.open_settings(3))))
         resources = {"GitHub repository": self.store.project["repository"], "Project folder": self.store.project_folder(), **self.store.project["links"]}
         for name, target in resources.items():
@@ -474,6 +499,10 @@ class HubWindow(QMainWindow):
 
     def show_research_files(self, origin):
         self.show_page('Project')
+        if self.research_workspace.catalog:
+            self.research_workspace.navigate('Legacy' if origin == 'legacy' else 'Files')
+            self.research_workspace.browser.origin.setCurrentIndex(max(0,self.research_workspace.browser.origin.findData(origin)))
+        self.project_tabs.setCurrentIndex(1)
         self.files_panel.origin.setCurrentIndex(max(0, self.files_panel.origin.findData(origin)))
         self.files_panel.reload()
         parent = self.files_panel.parentWidget()
@@ -504,7 +533,28 @@ class HubWindow(QMainWindow):
         except ValueError:
             self.store.provider.open_item(target)
 
+    def search_workspace(self):
+        self.show_page('Project')
+        self.project_tabs.setCurrentIndex(1)
+        if self.research_workspace.catalog:
+            self.research_workspace.global_search(self.global_search.text())
+        else:
+            self.files_panel.search.setText(self.global_search.text())
+
     def storage_changed(self):
+        self.index_status.setText('Index available' if self.storage_settings.catalog else 'Storage not configured')
+        if hasattr(self, 'research_workspace'):
+            if self.research_workspace.catalog is not self.storage_settings.catalog:
+                if self.research_workspace.busy():
+                    QTimer.singleShot(300, self.storage_changed)
+                    return
+                old = self.research_workspace
+                from app.ui.research_workspace import ResearchHub
+                self.research_workspace = ResearchHub(self.storage_settings, self)
+                old.setParent(None)
+                old.deleteLater()
+            else:
+                self.research_workspace.reload()
         self.files_panel.reload()
         self.render_dashboard()
         self.render_activity()
@@ -655,6 +705,21 @@ class HubWindow(QMainWindow):
         tabs.setCurrentIndex(selected)
 
         general = sections["General"]
+        editor_row = QHBoxLayout()
+        self.code_editor = QLineEdit(self.store.local.get('code_editor', ''))
+        self.code_editor.setPlaceholderText('Optional editor executable; scripts use Notepad by default')
+        editor_row.addWidget(self.code_editor, 1)
+        def save_editor():
+            path = self.code_editor.text().strip()
+            if path and not Path(path).is_file():
+                notify(self, 'Choose an existing editor executable.', 'warning')
+                return
+            self.store.local['code_editor'] = path
+            self.guard(self.store.save_local)
+        editor_row.addWidget(button('Save code editor', save_editor))
+        general.addWidget(label('Code file editor', 'heading'))
+        general.addLayout(editor_row)
+
         overview = card("Project overview", "Keep the dashboard focused on the team's current work.", "overview")
         form = QFormLayout()
         form.setSpacing(16)
@@ -823,11 +888,13 @@ class HubWindow(QMainWindow):
         notify(self, "GitHub check unavailable. You can retry under Settings → Updates.", "warning")
 
     def closeEvent(self, event):
-        if self.workers or self.storage_panel.indexing or self.research_panel.indexing:
+        if self.workers or self.storage_panel.indexing or self.research_panel.indexing or self.research_workspace.busy():
             self.storage_panel.cancel_index()
             self.research_panel.cancel_index()
             self.banner.setText("Finishing a background check. Please close the app again in a moment.")
             event.ignore()
         else:
+            self.closing = True
             self.research_panel.watcher.stop()
+            self.research_workspace.save_layout()
             event.accept()

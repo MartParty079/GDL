@@ -1,6 +1,15 @@
-# Fuel Cell Project Hub
+# GDL Research Hub
 
 A native Windows research management app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
+
+## Research workspace 0.2.0
+
+Open the Project workspace for Samples, Experiments, Images, Data, Reports,
+Timeline, Files and Legacy. Resizable navigation and details panes provide
+resident-only previews, Windows file actions, database-wide sorting and explicit
+metadata associations without moving research files. Click the version in the
+header for About and version history. See [workspace guide](docs/research_workspace.md)
+and [CHANGELOG.md](CHANGELOG.md) for behavior, verification and current limits.
 
 ## Native research indexing
 

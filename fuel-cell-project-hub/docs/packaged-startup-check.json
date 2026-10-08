@@ -24,5 +24,11 @@
   "research_legacy_files": 1,
   "research_index_errors": 0,
   "research_template_present": true,
-  "research_sources_unchanged": true
+  "research_sources_unchanged": true,
+  "version": "0.2.0",
+  "research_objects_available": true,
+  "rendered_pdf_available": true,
+  "spreadsheet_preview_available": true,
+  "image_thumbnail_available": true,
+  "changelog_present": true
 }

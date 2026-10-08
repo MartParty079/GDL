@@ -22,6 +22,9 @@ class Theme:
     WARNING_SOFT = "#FFF6E2"
     ERROR = "#D92D20"
     ERROR_SOFT = "#FDECEC"
+    CURRENT = "#0F766E"
+    EXPERIMENT = "#7C3AED"
+    DATA = "#4338CA"
     BORDER_LIGHT = "#E4E8ED"
     BORDER_MEDIUM = "#D5DAE1"
     SKELETON = "#E8EBEF"
@@ -95,5 +98,11 @@ def apply_theme(window):
         QCheckBox[component="toggle"]::indicator {{ width: 38px; height: 20px; background: {t.BORDER_MEDIUM}; border-radius: 10px; border-left: 4px solid {t.BACKGROUND_SECONDARY}; border-right: 16px solid {t.BORDER_MEDIUM}; }}
         QCheckBox[component="toggle"]::indicator:checked {{ background: {t.ACCENT_PRIMARY}; border-left: 16px solid {t.ACCENT_PRIMARY}; border-right: 4px solid {t.BACKGROUND_SECONDARY}; }}
         QCheckBox[component="toggle"]:focus {{ color: {t.ACCENT_HOVER}; }}
+        QListWidget {{ selection-color: {t.ACCENT_HOVER}; background: {t.BACKGROUND_SECONDARY}; border: 1px solid {t.BORDER_LIGHT}; border-radius: 8px; }}
+        QListWidget::item {{ padding: 9px; border-bottom: 1px solid {t.BORDER_LIGHT}; }}
+        QListWidget::item:hover {{ background: {t.ACCENT_SOFT}; }}
+        QListWidget::item:selected {{ background: {t.ACCENT_SOFT}; border-left: 3px solid {t.ACCENT_PRIMARY}; }}
+        QSplitter::handle {{ background: {t.BORDER_MEDIUM}; width: 5px; }}
+        QPushButton:checked {{ background: {t.ACCENT_SOFT}; color: {t.ACCENT_HOVER}; border-color: {t.ACCENT_PRIMARY}; }}
         QToolTip {{ background: {t.TEXT_PRIMARY}; color: {t.BACKGROUND_SECONDARY}; border: none; padding: 8px; }}
     ''')

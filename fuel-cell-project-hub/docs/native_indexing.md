@@ -1,3 +1,6 @@
+Current schema v4 preserves this native index and adds the
+[research workspace and explicit object links](research_workspace.md).
+
 # Native GDL research indexing
 
 Microsoft authentication and Graph are intentionally removed. Normal operation
@@ -72,7 +75,7 @@ No live Fiji or JMP run is part of this validation.
 
 ## SQLite persistence and migrations
 
-research.sqlite3 schema v3 extends the existing v2 database and retains its
+The native file-index schema introduced in v3 extends the existing v2 database and retains its
 files/metadata/overrides tables and stable IDs. New normalized search/filter
 metadata, projects, sources, directories, content_index, FTS5 content_fts,
 fts_keys, relationships, index_runs and index_errors provide local indexing.

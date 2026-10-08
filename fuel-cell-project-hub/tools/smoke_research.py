@@ -43,6 +43,12 @@ assert window.grab().save(str(folder / 'dashboard.png'))
 window.show_research_files('legacy')
 app.processEvents()
 assert window.grab().save(str(folder / 'legacy-files.png'))
+deadline = time.monotonic() + 30
+while window.research_workspace.busy():
+    app.processEvents()
+    time.sleep(.01)
+    if time.monotonic() > deadline:
+        raise RuntimeError('Workspace did not finish its background query')
 window.close()
 window.deleteLater()
 QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)

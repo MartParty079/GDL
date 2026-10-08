@@ -13,7 +13,7 @@ from app.services.file_classifier import classify_file
 
 RESEARCH_CATEGORIES = ('Literature', 'Research Papers', 'Standards', 'GDL Images', 'Microscopy',
     'Raw Experimental Data', 'Processed Data', 'Analysis', 'Python / MATLAB / Code',
-    'Previous Reports', 'Presentations', 'Test Rig', 'Water Intrusion Testing',
+    'Reports', 'Previous Reports', 'Presentations', 'Test Rig', 'Water Intrusion Testing',
     'Compression Testing', 'Pressure Testing', 'Image Analysis', 'CAD', 'Drawings',
     'Equipment', 'Calibration', 'Procedures', 'Meeting Notes', 'Project Management',
     'Funding / Grants', 'Miscellaneous')
@@ -21,7 +21,7 @@ PATH_LABELS = {'shared_storage': 'Shared Storage', 'database': 'Index / Database
     'generated': 'Generated Output', 'cache': 'Temp / Cache', 'backups': 'Backups'}
 
 
-def research_category(relative):
+def research_category(relative, origin=None):
     value = relative.casefold().replace('_', ' ').replace('-', ' ')
     rules = [('microscopy', 'Microscopy'), ('water intrusion', 'Water Intrusion Testing'),
         ('compression', 'Compression Testing'), ('pressure', 'Pressure Testing'),
@@ -33,7 +33,7 @@ def research_category(relative):
         ('analysis', 'Analysis'), ('management', 'Project Management')]
     for word, category in rules:
         if word in value:
-            return category
+            return 'Reports' if category == 'Previous Reports' and origin == 'current' else category
     extension = Path(relative).suffix.lower()
     if extension in ('.py', '.m', '.jsl', '.ijm', '.ipynb', '.bat', '.ps1', '.r'):
         return 'Python / MATLAB / Code'

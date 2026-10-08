@@ -16,7 +16,7 @@ from app.services.file_classifier import classify_file, CATEGORIES
 from app.indexing.scanner import discover
 from app.indexing.hashing import hash_file
 from app.indexing.extractor import extract, DEFAULT_LIMITS, SUPPORTED
-from app.indexing.search import match_expression, predicates
+from app.indexing.search import match_expression, predicates, SORTS
 
 SCALARS = ('source_id', 'relative_path', 'name', 'name_key', 'parent_folder', 'extension',
     'source_name', 'project_name', 'data_origin', 'category', 'subcategory', 'document_type',
@@ -25,7 +25,7 @@ SCALARS = ('source_id', 'relative_path', 'name', 'name_key', 'parent_folder', 'e
 
 
 class NativeIndex:
-    SCHEMA = 3
+    SCHEMA = 4
 
     def __init__(self, store, locations=None):
         self.phase = 'Idle'
@@ -114,13 +114,15 @@ class NativeIndex:
             db.execute('CREATE TABLE IF NOT EXISTS index_runs(id TEXT PRIMARY KEY,started TEXT,ended TEXT,mode TEXT,sources TEXT,result TEXT,summary TEXT)')
             db.execute('CREATE TABLE IF NOT EXISTS index_errors(run_id TEXT,file_id TEXT,path TEXT,message TEXT)')
             db.execute('CREATE TABLE IF NOT EXISTS relationships(from_id TEXT,to_id TEXT,type TEXT,PRIMARY KEY(from_id,to_id,type))')
-            if version < self.SCHEMA:
+            from app.services.research_workspace import create_schema
+            create_schema(db)
+            if version < 3:
                 cursor = db.execute('SELECT payload FROM files')
                 while batch := cursor.fetchmany(250):
                     for (payload,) in batch:
                         row = json.loads(payload)
                         self.upsert(db, row, update_search=True)
-                db.execute('PRAGMA user_version=3')
+            db.execute('PRAGMA user_version=4')
         if version != self.SCHEMA:
             self.log('migration', previous=version, current=self.SCHEMA)
 
@@ -155,10 +157,25 @@ class NativeIndex:
         db.execute('INSERT INTO file_metadata VALUES (' + ','.join('?' for _ in range(len(SCALARS) + 4)) + ') ON CONFLICT(id) DO UPDATE SET ' +
                    ','.join(k + '=excluded.' + k for k in (*SCALARS, 'size', 'archived', 'favorite')),
                    [row['id'], *values, row['size'], int(row['archived']), int(row['favorite'])])
+        if override:
+            manual=json.loads(override[0])
+            if 'sample_id' in manual or 'experiment_id' in manual:
+                db.execute('INSERT INTO research_file_links VALUES (?,?,?) ON CONFLICT(file_id) DO UPDATE SET sample_id=excluded.sample_id,experiment_id=excluded.experiment_id',
+                    (row['id'],manual.get('sample_id',''),manual.get('experiment_id','')))
         if update_search:
             if body is None:
                 content = db.execute('SELECT text FROM content_index WHERE id=?', (row['id'],)).fetchone()
                 body = content[0] if content else ''
+            context=[]
+            links=db.execute('SELECT sample_id,experiment_id FROM research_file_links WHERE file_id=?',(row['id'],)).fetchone() or ('','')
+            for identity in links:
+                if identity:
+                    obj=db.execute('SELECT payload FROM research_objects WHERE id=? AND origin=?',(identity,row['data_origin'])).fetchone()
+                    if obj:
+                        value=json.loads(obj[0])
+                        context.append(' '.join(str(value.get(k,'')) for k in ('id','name','description','material','notes','tags','type','results_summary')))
+
+            body=body+'\n'+'\n'.join(context)
             db.execute('INSERT OR IGNORE INTO fts_keys VALUES (?)', (row['id'],))
             search_id = db.execute('SELECT rowid FROM fts_keys WHERE id=?', (row['id'],)).fetchone()[0]
             db.execute('DELETE FROM content_fts WHERE rowid=?', (search_id,))
@@ -181,10 +198,13 @@ class NativeIndex:
             clauses.append('content_fts MATCH ?')
             args.append(expression)
             order = "CASE WHEN lower(m.name)=lower(?) THEN 0 WHEN instr(lower(m.name),lower(?))>0 THEN 1 ELSE 2 END,bm25(content_fts,0,10,8,6,4,2,2,1,3),m.data_origin<>'current',m.id"
+        custom_sort = filters.get('sort')
+        if custom_sort in SORTS:
+            order = SORTS[custom_sort] + ',m.id'
         where = ' AND '.join(clauses)
         with self.connect() as db:
             total = db.execute('SELECT count(*) FROM file_metadata m' + join + ' WHERE ' + where, args).fetchone()[0]
-            rank_args = [query, query] if expression else []
+            rank_args = [query, query] if expression and custom_sort not in SORTS else []
             data = db.execute('SELECT f.payload,m.duplicate_status FROM file_metadata m JOIN files f ON f.id=m.id' + join +
                 ' WHERE ' + where + ' ORDER BY ' + order + ' LIMIT ? OFFSET ?', [*args, *rank_args, min(max(int(limit), 1), 1000), max(int(offset), 0)]).fetchall()
         rows = []
@@ -394,7 +414,7 @@ class NativeIndex:
                         extracted = None
                         if changed or moved or rebuild:
                             row.update(classify_file(relative))
-                            row.update(document_type=row['category'], category=research_category(relative), hash='')
+                            row.update(document_type=row['category'], category=research_category(relative, row['data_origin']), hash='')
                         if process:
                             self.phase = 'Extracting content' if resident else 'Indexing metadata'
                             extracted = extract(path, limits) if resident else {'text': '', 'metadata': {}, 'status': 'Online-only', 'error': ''}
@@ -429,6 +449,14 @@ class NativeIndex:
                                 counts['errors'] += 1
                                 db.execute('INSERT INTO index_errors VALUES (?,?,?,?)', (run_id, identity, relative, 'Hash unavailable; metadata retained'))
                         self.upsert(db, row, update_search=process or moved or rebuild, body=extracted['text'] if extracted else None)
+                        if not prior or changed or moved:
+                            from app.services.research_workspace import ResearchWorkspace
+                            workspace = ResearchWorkspace(self)
+                            db.execute('INSERT OR IGNORE INTO workspace_files VALUES (?,?)', (identity, timestamp()))
+                            workspace.event(db, 'File indexed' if not prior else 'Filesystem file modified',
+                                row['name'] + ' (filesystem observation; not experiment date)',
+                                sample_id=row.get('sample_id',''), experiment_id=row.get('experiment_id',''),
+                                file_id=identity, origin=row['data_origin'])
                         counts['new' if not prior else 'updated' if changed else 'unchanged'] += 1
                         counts['moved'] += int(moved)
                         if row['data_origin'] in ('current', 'legacy'):
@@ -508,13 +536,8 @@ class NativeIndex:
 
     def open_item(self, item, parent=False):
         path = self.safe_path(item)
-        target = path.parent if parent else path
-        if not target.exists() or (not parent and placeholder(target.stat())):
-            raise ValueError('File currently unavailable locally. Download it in OneDrive or reconnect its source.')
-        if not parent and path.suffix.lower() in ('.exe', '.bat', '.cmd', '.ps1', '.py', '.m', '.js', '.vbs', '.lnk', '.url', '.com', '.scr', '.msi'):
-            raise ValueError('Use Open Containing Folder to inspect code; the Hub does not execute indexed scripts.')
-        from app.services.software import open_resource
-        return open_resource(str(target))
+        from app.services.file_launcher import open_file, open_folder
+        return open_folder(path.parent) if parent else open_file(path, self.store.local.get('code_editor'))
 
     def import_current(self, item):
         if item.get('data_origin') != 'legacy':

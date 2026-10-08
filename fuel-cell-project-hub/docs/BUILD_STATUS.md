@@ -1,7 +1,8 @@
-# Current build: native indexing
+# Current build: research workspace 0.2.0
 
 Microsoft authentication and Graph are retired. The current architecture and
-validation are in [native indexing](native_indexing.md). Entries below are a
+validation are in [research workspace](research_workspace.md) and
+[native indexing](native_indexing.md). Entries below are a
 historical development record; old package paths and account screens are obsolete.
 
 # Initial build status

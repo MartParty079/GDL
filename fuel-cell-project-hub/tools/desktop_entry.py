@@ -63,6 +63,36 @@ def self_check(report):
                       research_legacy_files=indexed['legacy'], research_index_errors=indexed['errors'],
                       research_template_present=resource_path('config/research_defaults.json').is_file(),
                       research_sources_unchanged=not (current / '.projecthub').exists() and not (legacy / '.projecthub').exists())
+        from app import __version__
+        from app.services.research_workspace import ResearchWorkspace
+        from app.services import previews
+        import time
+        repository=ResearchWorkspace(catalog)
+        repository.save('sample', {'name':'Packaged sample'}, 'GDL-003')
+        repository.save('experiment', {'name':'Packaged experiment','sample_id':'GDL-003','conditions':[{'name':'Pressure','value':'20','unit':'kPa'}]}, 'EXP-003')
+        row=catalog.query(origin='current')[0][0]
+        repository.annotate([row], {'experiment_id':'EXP-003'})
+        assert catalog.query(sample='GDL-003',experiment='EXP-003',explicit=True)[1]==1
+        workspace=window.research_workspace
+        workspace.show_object('GDL-003')
+        assert workspace.object_tabs.count()==7
+        workspace.show_object('EXP-003')
+        assert workspace.object_tabs.tabText(4)=='Results'
+        rows={r['name']:r for r in catalog.query(origin='current')[0]}
+        assert len(previews.table(catalog,rows['fixture.xlsx']))==1
+        assert Path(previews.thumbnail(catalog,rows['fixture.png'])).is_file()
+        from PySide6.QtPdf import QPdfDocument
+        document=QPdfDocument(window)
+        assert document.load(str(previews.resident_path(catalog,rows['fixture.pdf'])))==QPdfDocument.Error.None_
+        assert document.pageCount()==1
+        assert resource_path('CHANGELOG.md').is_file()
+        result.update(version=__version__, research_objects_available=True, rendered_pdf_available=True,
+                      spreadsheet_preview_available=True, image_thumbnail_available=True, changelog_present=True)
+        deadline=time.monotonic()+30
+        while workspace.busy():
+            app.processEvents();time.sleep(.01)
+            if time.monotonic()>deadline:raise ValueError('Packaged workspace tasks did not finish.')
+        app.processEvents()
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
