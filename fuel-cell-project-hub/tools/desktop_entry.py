@@ -89,12 +89,14 @@ def self_check(report):
         assert resource_path('CHANGELOG.md').is_file()
         from app.services.storage import read_json
         assert read_json(resource_path('version_history.json'),{})['versions'][-1]['version']==__version__
-        from app.services.desktop_oauth import callback_values, CALLBACK, CallbackBroker
-        assert callback_values(CALLBACK+'?code=packaged-check')['code']=='packaged-check'
-        broker=CallbackBroker(Path(temporary)/'callback-profile')
-        assert broker.listen()
-        broker.server.close()
-        result.update(structured_version_history_available=True,protocol_callback_available=True)
+        if '--local-only' not in sys.argv:
+            from app.services.desktop_oauth import callback_values, CALLBACK, CallbackBroker
+            assert callback_values(CALLBACK+'?code=packaged-check')['code']=='packaged-check'
+            broker=CallbackBroker(Path(temporary)/'callback-profile')
+            assert broker.listen()
+            broker.server.close()
+            result.update(protocol_callback_available=True)
+        result.update(structured_version_history_available=True)
         result.update(version=__version__, research_objects_available=True, rendered_pdf_available=True,
                       spreadsheet_preview_available=True, image_thumbnail_available=True, changelog_present=True)
         from app.services.accounts import Accounts, protect

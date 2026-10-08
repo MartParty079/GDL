@@ -159,7 +159,7 @@ class WorkspaceTests(unittest.TestCase):
                 db.execute("SELECT rowid,* FROM content_fts ORDER BY rowid").fetchall(),
                 fts,
             )
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 4)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], NativeIndex.SCHEMA)
         self.assertTrue(
             list(
                 Path(self.locations.value["backups"]).glob("before-migration-*.sqlite3")
@@ -358,7 +358,7 @@ class WorkspaceUITests(unittest.TestCase):
                 hub.navigate("Samples")
                 self.assertEqual(hub.object_list.count(), 1)
                 hub.show_object("GDL-003")
-                self.assertEqual(hub.object_tabs.count(), 7)
+                self.assertEqual(hub.object_tabs.count(), 8)
                 hub.object_tabs.setCurrentIndex(3)
                 self.wait(hub)
                 browser = hub.object_tabs.currentWidget()

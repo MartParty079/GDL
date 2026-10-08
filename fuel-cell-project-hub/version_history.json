@@ -66,6 +66,26 @@
       "breaking_changes": [],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.3.2",
+      "date": "2026-10-08",
+      "work_order": "Legacy sample intelligence and image families",
+      "summary": "Sample relationships, image categories and families, advanced filters and research spacing",
+      "major_features": [
+        "Evidence-based sample aliases and many-to-many file relationships",
+        "Image categories, families and manual classification",
+        "Combined image filters, expanded sorting and sample cards"
+      ],
+      "major_fixes": [
+        "Wrapping controls and shared three-significant-figure file sizes"
+      ],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null,
+      "database_changes": [
+        "Additive local index schema 5 with migration backup"
+      ]
     }
   ]
 }

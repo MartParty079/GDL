@@ -272,7 +272,24 @@ class PreviewPanel(QWidget):
         self.metadata.setTextFormat(Qt.PlainText)
         self.metadata.setWordWrap(True)
         self.metadata.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.layout_.addWidget(self.metadata)
+        from PySide6.QtWidgets import QScrollArea,QListWidget
+        metadata_scroll=QScrollArea()
+        metadata_scroll.setWidgetResizable(True)
+        metadata_scroll.setWidget(self.metadata)
+        metadata_scroll.setMaximumHeight(200)
+        self.layout_.addWidget(metadata_scroll)
+        self.sample_links=QLabel()
+        self.sample_links.setWordWrap(True)
+        self.sample_links.linkActivated.connect(lambda identity:self.actions('sample',{'id':identity}))
+        self.layout_.addWidget(self.sample_links)
+        self.family_list=QListWidget()
+        self.family_list.setMaximumHeight(100)
+        self.family_list.itemClicked.connect(lambda item:self.actions('family_member',item.data(Qt.UserRole)))
+        self.layout_.addWidget(self.family_list)
+        edit=QPushButton('Sample / image relationships')
+        edit.setToolTip('Assign or confirm samples, classify images, and link an original')
+        edit.clicked.connect(lambda:self.actions('relationships',self.row) if self.row else None)
+        self.layout_.addWidget(edit)
         toolbar = QHBoxLayout()
         self.layout_.addLayout(toolbar)
         for title, key in [("Open", "open"), ("Show", "show"), ("Copy path", "copy")]:
@@ -315,12 +332,28 @@ class PreviewPanel(QWidget):
         request = self.request
         self.clear_content()
         self.heading.setText(row["name"])
+        from app.services.sample_intelligence import SampleIntelligence
+        from app.services.formatting import format_file_size
+        from html import escape
+        service=SampleIntelligence(self.catalog)
+        samples=service.related_samples(row['id'])
+        self.sample_links.setText('Related Samples: '+(' · '.join('<a href="'+escape(s['id'],quote=True)+'">'+escape(s['name'])+'</a>' for s in samples) or 'Unassigned'))
+        self.sample_links.setToolTip('\n'.join(s['confidence']+' · '+s['explanation'] for s in samples))
+        self.family_list.clear()
+        from PySide6.QtWidgets import QListWidgetItem
+        members=service.family_members(row['id'])
+        for member in members:
+            item=QListWidgetItem((member.get('image_subcategory') or member.get('image_category',''))+' · '+member['name'])
+            item.setData(Qt.UserRole,member);self.family_list.addItem(item)
+        self.family_list.setVisible(bool(members))
         with self.catalog.connect() as db:
             links = db.execute(
                 "SELECT sample_id,experiment_id FROM research_file_links WHERE file_id=?",
                 (row["id"],),
             ).fetchone() or ("", "")
         display = dict(row)
+        display['size']=format_file_size(row.get('size',0))
+        display['sample_id']=', '.join(s['name'] for s in samples) or row.get('sample_id','')
         for key, confirmed in zip(("sample_id", "experiment_id"), links):
             if row.get(key) and row[key] != confirmed:
                 display[key] = row[key] + " (inferred; unconfirmed)"
@@ -331,6 +364,11 @@ class PreviewPanel(QWidget):
                 for k in (
                     "data_origin",
                     "category",
+                    'image_category',
+                    'image_subcategory',
+                    'image_family',
+                    'image_family_status',
+                    'image_explanation',
                     "title",
                     "report_version",
                     "report_status",

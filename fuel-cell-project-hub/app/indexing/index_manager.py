@@ -26,7 +26,7 @@ SCALARS = ('source_id', 'relative_path', 'name', 'name_key', 'parent_folder', 'e
 
 
 class NativeIndex:
-    SCHEMA = 4
+    SCHEMA = 5
 
     def __init__(self, store, locations=None):
         self.phase = 'Idle'
@@ -109,6 +109,7 @@ class NativeIndex:
             db.execute('CREATE INDEX IF NOT EXISTS native_hash ON file_metadata(hash)')
             db.execute('CREATE INDEX IF NOT EXISTS native_name ON file_metadata(name_key,size,modified)')
             db.execute('CREATE INDEX IF NOT EXISTS native_source ON file_metadata(source_id,data_origin,category)')
+            db.execute('CREATE INDEX IF NOT EXISTS native_sample ON file_metadata(sample_id,id)')
             db.execute('CREATE TABLE IF NOT EXISTS content_index(id TEXT PRIMARY KEY,text TEXT,metadata TEXT,status TEXT,signature TEXT)')
             db.execute('CREATE TABLE IF NOT EXISTS fts_keys(id TEXT PRIMARY KEY)')
             db.execute('CREATE VIRTUAL TABLE IF NOT EXISTS content_fts USING fts5(file_id UNINDEXED,name,title,tags,category,project,source,path,body,tokenize="unicode61")')
@@ -117,13 +118,15 @@ class NativeIndex:
             db.execute('CREATE TABLE IF NOT EXISTS relationships(from_id TEXT,to_id TEXT,type TEXT,PRIMARY KEY(from_id,to_id,type))')
             from app.services.research_workspace import create_schema
             create_schema(db)
+            from app.services.sample_intelligence import create_schema as intelligence_schema
+            intelligence_schema(db)
             if version < 3:
                 cursor = db.execute('SELECT payload FROM files')
                 while batch := cursor.fetchmany(250):
                     for (payload,) in batch:
                         row = json.loads(payload)
                         self.upsert(db, row, update_search=True)
-            db.execute('PRAGMA user_version=4')
+            db.execute('PRAGMA user_version=5')
         if version != self.SCHEMA:
             self.log('migration', previous=version, current=self.SCHEMA)
 
@@ -163,6 +166,11 @@ class NativeIndex:
             if 'sample_id' in manual or 'experiment_id' in manual:
                 db.execute('INSERT INTO research_file_links VALUES (?,?,?) ON CONFLICT(file_id) DO UPDATE SET sample_id=excluded.sample_id,experiment_id=excluded.experiment_id',
                     (row['id'],manual.get('sample_id',''),manual.get('experiment_id','')))
+                if 'sample_id' in manual and not db.execute('SELECT 1 FROM sample_decisions WHERE file_id=?',(row['id'],)).fetchone():
+                    db.execute('DELETE FROM file_sample_links WHERE file_id=?',(row['id'],))
+                    if manual['sample_id']:
+                        db.execute('INSERT INTO file_sample_links VALUES (?,?,?,?,?,1,?)',
+                            (row['id'],manual['sample_id'],'primary','HIGH','manual','Explicit primary assignment'))
         if update_search:
             if body is None:
                 content = db.execute('SELECT text FROM content_index WHERE id=?', (row['id'],)).fetchone()
@@ -196,8 +204,19 @@ class NativeIndex:
         join = ''
         order = 'm.data_origin<>\'current\',m.relative_path COLLATE NOCASE,m.id'
         if expression:
-            clauses.append("(m.id IN (SELECT file_id FROM content_fts WHERE content_fts MATCH ?) OR instr(replace(replace(replace(lower(m.relative_path),' ',''),'_',''),'-',''),?)>0)")
-            args.extend([expression, re.sub(r'[\s_-]+','',query.casefold())])
+            clauses.append("""(m.id IN (SELECT file_id FROM content_fts WHERE content_fts MATCH ?)
+                OR instr(replace(replace(replace(lower(m.relative_path),' ',''),'_',''),'-',''),?)>0
+                OR EXISTS (SELECT 1 FROM file_sample_links l JOIN sample_aliases a ON a.sample_id=l.sample_id
+                  WHERE l.file_id=m.id AND instr(a.normalized_alias,?)>0)
+                OR EXISTS (SELECT 1 FROM image_assets a WHERE a.file_id=m.id AND
+                  instr(lower(a.image_category||' '||a.image_subcategory),lower(?))>0))""")
+            from app.services.sample_intelligence import normalize
+            args.extend([expression, re.sub(r'[\s_-]+','',query.casefold()), normalize(query), query])
+            with self.connect() as db:
+                known=[r[0] for r in db.execute('SELECT sample_id FROM sample_aliases WHERE normalized_alias=?',(normalize(query),))]
+            if known:
+                clauses.append('m.id IN (SELECT file_id FROM file_sample_links WHERE sample_id IN ('+','.join('?' for _ in known)+'))')
+                args.extend(known)
             order = "CASE WHEN lower(m.name)=lower(?) THEN 0 WHEN instr(lower(m.name),lower(?))>0 THEN 1 ELSE 2 END,m.data_origin<>'current',m.id"
         custom_sort = filters.get('sort')
         if custom_sort in SORTS:
@@ -209,10 +228,24 @@ class NativeIndex:
             data = db.execute('SELECT f.payload,m.duplicate_status FROM file_metadata m JOIN files f ON f.id=m.id' + join +
                 ' WHERE ' + where + ' ORDER BY ' + order + ' LIMIT ? OFFSET ?', [*args, *rank_args, min(max(int(limit), 1), 1000), max(int(offset), 0)]).fetchall()
         rows = []
-        for payload, duplicate in data:
-            row = json.loads(payload)
-            row['duplicate_status'] = duplicate
-            rows.append(row)
+        if data:
+            ids=[json.loads(p)['id'] for p,d in data]
+            marks=','.join('?' for _ in ids)
+            samples_by_file=defaultdict(list)
+            with self.connect() as db:
+                for file_id,i,p,c,s,e,r,confirmed in db.execute('''SELECT l.file_id,l.sample_id,o.payload,l.confidence,l.source,l.explanation,l.relationship_type,l.manually_confirmed
+                    FROM file_sample_links l JOIN research_objects o ON o.id=l.sample_id WHERE l.file_id IN ('''+marks+')',ids):
+                    samples_by_file[file_id].append(dict(id=i,name=json.loads(p)['name'],confidence=c,source=s,explanation=e,relationship_type=r,manually_confirmed=bool(confirmed)))
+                assets={r[0]:r[1:] for r in db.execute("SELECT a.file_id,a.image_category,a.image_subcategory,a.family_id,a.original_id,a.confidence,a.explanation,coalesce(f.status,'Original Not Located') FROM image_assets a LEFT JOIN image_families f ON f.id=a.family_id WHERE a.file_id IN ("+marks+')',ids)}
+            for payload, duplicate in data:
+                row = json.loads(payload)
+                row['duplicate_status'] = duplicate
+                samples=samples_by_file[row['id']]
+                row['related_samples'] = samples
+                row['sample_names'] = ', '.join(s['name'] for s in samples)
+                if row['id'] in assets:
+                    row.update(zip(('image_category','image_subcategory','image_family','original_id','image_confidence','image_explanation','image_family_status'),assets[row['id']]))
+                rows.append(row)
         return rows, total
 
     def rows(self, all_sources=False):
@@ -491,6 +524,9 @@ class NativeIndex:
                 counts['duplicates'] = db.execute("SELECT count(*) FROM file_metadata WHERE duplicate_status<>''").fetchone()[0]
                 db.execute('INSERT OR REPLACE INTO metadata VALUES (?,?)', ('last_indexed', timestamp()))
                 db.execute('INSERT OR REPLACE INTO metadata VALUES (?,?)', ('last_summary', json.dumps(counts)))
+            self.phase = 'Classifying samples and image families'
+            from app.services.sample_intelligence import SampleIntelligence
+            counts['intelligence'] = SampleIntelligence(self).reconcile(cancel, progress)
             result = 'Completed with Errors' if counts['errors'] else 'Complete'
             self.phase = result
             self.log('index_complete', **counts)

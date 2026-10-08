@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QMessageBox,
     QCheckBox,
+    QInputDialog,
     QScrollArea,
     QSizePolicy,
 )
@@ -46,6 +47,9 @@ from app.services.resources import resource_path
 from app import __version__
 from app.ui.research_viewers import Tasks, PreviewPanel, ImageViewer, ImageComparison
 from app.ui.components import icon
+from app.ui.flow_layout import FlowLayout
+from app.services.formatting import format_file_size
+from app.services.sample_intelligence import SampleIntelligence
 
 COLORS = {
     "Overview": "#0071e3",
@@ -259,6 +263,7 @@ class FileBrowser(QWidget):
         self.family = ""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(16)
         bar = QHBoxLayout()
         layout.addLayout(bar)
         self.search = QLineEdit()
@@ -283,7 +288,7 @@ class FileBrowser(QWidget):
         self.sort.addItems(list(SORTS))
         self.sort.setCurrentText("Modified newest")
         bar.addWidget(self.sort)
-        filterbar = QHBoxLayout()
+        filterbar = FlowLayout()
         layout.addLayout(filterbar)
         self.origin = QComboBox()
         self.origin.addItem("Current", "current")
@@ -304,8 +309,29 @@ class FileBrowser(QWidget):
         self.date_to.setPlaceholderText("to YYYY-MM-DD")
         filterbar.addWidget(self.date_from)
         filterbar.addWidget(self.date_to)
+        self.image_category = QComboBox()
+        self.image_subcategory = QComboBox()
+        self.extension = QComboBox()
+        self.grouping = QComboBox()
+        self.grouping.addItems(['All Images', 'Image Families'])
+        with self.catalog.connect() as db:
+            categories = list(db.execute('SELECT name,parent_id FROM asset_categories WHERE active=1 ORDER BY sort_order'))
+            extensions = list(db.execute('SELECT DISTINCT extension FROM file_metadata ORDER BY extension'))
+        for combo, caption, entries in (
+            (self.image_category, 'All image categories', [n for n,p in categories if not p]),
+            (self.image_subcategory, 'All subcategories', [n for n,p in categories if p]),
+            (self.extension, 'All file types', [e for (e,) in extensions if e]),
+        ):
+            combo.addItem(caption, '')
+            for entry in entries:
+                combo.addItem(entry, entry)
+            filterbar.addWidget(combo)
+            combo.currentIndexChanged.connect(self.reset_reload)
+        filterbar.addWidget(self.grouping)
+        self.grouping.currentIndexChanged.connect(self.reset_reload)
+        control('Clear Filters', self.clear_filters, filterbar)
         self.quick = {}
-        quickbar = QHBoxLayout()
+        quickbar = FlowLayout()
         layout.addLayout(quickbar)
         for title in (
             "All",
@@ -390,6 +416,7 @@ class FileBrowser(QWidget):
         self.grid.setMovement(QListWidget.Static)
         self.grid.setIconSize(QSize(180, 180))
         self.grid.setGridSize(QSize(210, 235))
+        self.grid.setSpacing(16)
         self.grid.setWordWrap(True)
         self.grid.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.grid.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -400,7 +427,7 @@ class FileBrowser(QWidget):
         self.grid.itemDoubleClicked.connect(lambda item: self.action("preview"))
         self.grid.verticalScrollBar().valueChanged.connect(self.lazy_thumbnails)
         self.stack.addWidget(self.grid)
-        bottom = QHBoxLayout()
+        bottom = FlowLayout()
         layout.addLayout(bottom)
         control("Previous", lambda: self.page(-1), bottom)
         control("Next", lambda: self.page(1), bottom)
@@ -455,8 +482,9 @@ class FileBrowser(QWidget):
             combo.addItem("All " + kind + "s", "")
             for obj in self.repository.objects(kind, origin=""):
                 combo.addItem(
-                    obj["id"] + " | " + obj["name"] + " | " + obj["origin"], obj["id"]
+                    obj["name"] + " | " + obj["origin"], obj["id"]
                 )
+                combo.setItemData(combo.count()-1,obj['id'],Qt.ToolTipRole)
             combo.setCurrentIndex(max(0, combo.findData(old)))
             combo.blockSignals(False)
         self.folder_sources.clear()
@@ -472,7 +500,7 @@ class FileBrowser(QWidget):
         self.search.blockSignals(True)
         self.search.clear()
         self.search.blockSignals(False)
-        for combo in (self.sample, self.experiment, self.category, self.scope):
+        for combo in (self.sample, self.experiment, self.category, self.scope, self.image_category, self.image_subcategory, self.extension, self.grouping):
             combo.blockSignals(True)
             combo.setCurrentIndex(0)
             combo.blockSignals(False)
@@ -483,6 +511,12 @@ class FileBrowser(QWidget):
         self.origin.blockSignals(False)
         self.quick_filter("All", reload=False)
         self.reload()
+
+    def clear_filters(self):
+        self.date_from.clear()
+        self.date_to.clear()
+        family = self.base.get('family')
+        self.configure(origin='', **({'family':family} if family else {}))
 
     def filters(self):
         result = dict(self.base)
@@ -515,6 +549,9 @@ class FileBrowser(QWidget):
             ("sample", self.sample),
             ("experiment", self.experiment),
             ("category", self.category),
+            ('image_category', self.image_category),
+            ('image_subcategory', self.image_subcategory),
+            ('extension', self.extension),
         ):
             if field.currentData():
                 result[key] = field.currentData()
@@ -527,6 +564,9 @@ class FileBrowser(QWidget):
         )
         if self.family in FAMILIES:
             result["family"] = self.family
+        if self.grouping.currentText()=='Image Families':
+            result['family']='Images'
+            result['group_families']=True
         if self.family == "Favorites":
             result["favorite"] = True
         if self.family == "Recent":
@@ -667,7 +707,7 @@ class FileBrowser(QWidget):
                     "Origin",
                 ]
             self.table.setHorizontalHeaderLabels(headers)
-            values = [row.get(k, "") for k in fields]
+            values = [format_file_size(row.get(k,0)) if k=='size' else row.get('sample_names') or row.get(k,'') if k=='sample_id' else row.get(k, "") for k in fields]
             for j, value in enumerate(values):
                 item = QTableWidgetItem(str(value))
                 item.setData(Qt.UserRole, row["id"])
@@ -694,7 +734,8 @@ class FileBrowser(QWidget):
                 + "\n"
                 + row["data_origin"]
                 + " | "
-                + row.get("sample_id", "")
+                + (row.get('sample_names') or row.get("sample_id", ""))
+                + '\n' + row.get('image_subcategory', row.get('image_category',''))
             )
             tile.setData(Qt.UserRole, row["id"])
             tile.setForeground(QColor('#976000' if row['data_origin']=='legacy' else '#0F766E'))
@@ -1041,6 +1082,7 @@ class ResearchHub(QWidget):
         self.browsers = []
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(16)
         header = QHBoxLayout()
         layout.addLayout(header)
         self.title = QLabel("Research workspace")
@@ -1076,6 +1118,7 @@ class ResearchHub(QWidget):
             layout.addStretch()
             return
         self.splitter = QSplitter()
+        self.splitter.setHandleWidth(12)
         layout.addWidget(self.splitter, 1)
         self.nav = QListWidget()
         self.nav.setMinimumWidth(125)
@@ -1108,7 +1151,13 @@ class ResearchHub(QWidget):
         self.object_search.textChanged.connect(self.show_objects)
         objectbar.addWidget(self.object_search, 1)
         self.object_list = QListWidget()
-        self.object_list.itemDoubleClicked.connect(
+        self.object_list.setViewMode(QListWidget.IconMode)
+        self.object_list.setResizeMode(QListWidget.Adjust)
+        self.object_list.setMovement(QListWidget.Static)
+        self.object_list.setGridSize(QSize(320, 140))
+        self.object_list.setSpacing(16)
+        self.object_list.setWordWrap(True)
+        self.object_list.itemClicked.connect(
             lambda item: self.show_object(item.data(Qt.UserRole))
         )
         objects_layout.addWidget(self.object_list, 1)
@@ -1349,6 +1398,7 @@ class ResearchHub(QWidget):
             _, files = self.catalog.query(limit=1, **filters)
             _, images = self.catalog.query(limit=1, family="Images", **filters)
             _, reports = self.catalog.query(limit=1, family="Reports", **filters)
+            _, data = self.catalog.query(limit=1, family='Data', **filters)
             label = (
                 obj["id"]
                 + " | "
@@ -1357,7 +1407,7 @@ class ResearchHub(QWidget):
                 + obj["origin"]
                 + (" | Favorite" if obj["favorite"] else "")
                 + "\n"
-                + f"{files} files | {images} images | {reports} reports | "
+                + f"{files} files | {images} images\n{reports} reports | {data} data files | "
                 + obj.get("status", "")
                 + "\nLast activity: "
                 + obj.get("updated_at", "")
@@ -1371,7 +1421,7 @@ class ResearchHub(QWidget):
                     else "#7c3aed" if kind == "experiment" else "#0f766e"
                 )
             )
-            item.setSizeHint(QSize(300, 92))
+            item.setSizeHint(QSize(300, 120))
             self.object_list.addItem(item)
         if not self.object_list.count():
             self.message.setText(
@@ -1447,7 +1497,7 @@ class ResearchHub(QWidget):
         )
         self.object_tabs.addTab(overview, "Overview")
         pages = (
-            ("Images", "Experiments", "Data", "Reports", "Timeline", "Notes")
+            ("Images", "Experiments", "Data", "Reports", "Files", "Timeline", "Notes")
             if obj["kind"] == "sample"
             else ("Files", "Images", "Data", "Results", "Notes", "Timeline")
         )
@@ -1654,15 +1704,37 @@ class ResearchHub(QWidget):
         self.navigate("Files")
         self.browser.scope.setCurrentText("All indexed")
         self.browser.search.setText(text)
+        self.favorites_objects.clear()
+        from app.services.sample_intelligence import normalize
+        with self.catalog.connect() as db:
+            matches=list(db.execute('''SELECT DISTINCT o.id,o.payload,o.origin FROM sample_aliases a
+              JOIN research_objects o ON o.id=a.sample_id WHERE o.project_id=? AND instr(a.normalized_alias,?)>0''',
+                (self.repository.project_id,normalize(text)))) if normalize(text) else []
+        for identity,payload,origin in matches:
+            item=QListWidgetItem('Sample · '+json.loads(payload)['name']+' · '+origin)
+            item.setData(Qt.UserRole,identity);self.favorites_objects.addItem(item)
+        self.favorites_objects.setVisible(bool(matches))
 
     def file_action(self, key, row, rows=None, browser=None):
         if not row:
             return
         rows = rows or [row]
         browser = browser or self.browser
+        if key=='sample':
+            self.show_object(row['id'])
+            return
         try:
             path = self.catalog.safe_path(row)
-            if key == "open":
+            if key == 'relationships':
+                from app.ui.sample_intelligence import RelationshipEditor
+                editor=RelationshipEditor(self.catalog,row,self)
+                if editor.exec()==QDialog.Accepted:
+                    self.audit('METADATA_UPDATED','file',row['id'],row['name'],{'source':row.get('data_origin',''),'fields':'sample relationships, image classification'})
+                    browser.reload()
+                    self.select_file(row)
+            elif key == 'family_member':
+                self.select_file(row)
+            elif key == "open":
                 file_launcher.open_file(
                     path, self.window.store.local.get("code_editor")
                 )

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2 — 2026-10-08
+
+- Sample relationships, image categories and families, advanced filters and research spacing
+
 ## 0.3.1 — 2026-10-08
 
 - Added Tarleton Microsoft desktop sign-in, structured version history and administration version status.

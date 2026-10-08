@@ -23,11 +23,7 @@ def action(caption, callback):
     return Button(caption, callback)
 
 
-def size_text(size):
-    for unit in ("B", "KB", "MB", "GB", "TB"):
-        if size < 1024 or unit == "TB":
-            return f"{size:,.1f} {unit}"
-        size /= 1024
+from app.services.formatting import format_file_size as size_text
 
 
 class IndexWorker(QThread):
