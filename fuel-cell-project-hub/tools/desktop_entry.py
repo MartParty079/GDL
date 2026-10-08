@@ -76,7 +76,7 @@ def self_check(report):
         assert catalog.query(sample='GDL-003',experiment='EXP-003',explicit=True)[1]==1
         workspace=window.research_workspace
         workspace.show_object('GDL-003')
-        assert workspace.object_tabs.count()==7
+        assert {'Overview','Images','Experiments','Data','Reports','Files','Timeline','Notes'} <= {workspace.object_tabs.tabText(i) for i in range(workspace.object_tabs.count())}
         workspace.show_object('EXP-003')
         assert workspace.object_tabs.tabText(4)=='Results'
         rows={r['name']:r for r in catalog.query(origin='current')[0]}
