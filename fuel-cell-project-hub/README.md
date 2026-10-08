@@ -2,9 +2,9 @@
 
 A native Windows research management app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
 
-## Team accounts and Windows distribution 0.3.0
+## Team accounts and Windows distribution
 
-The application now uses invitation-based email/password accounts. Saved
+The application supports approved Tarleton Microsoft and email/password accounts. Saved
 sessions are encrypted for the Windows user. Administrators receive users,
 activity, installations and system views; privileged changes are checked by
 the hosted backend. Local SQLite and OneDrive remain the research backbone.
@@ -12,7 +12,10 @@ the hosted backend. Local SQLite and OneDrive remain the research backbone.
 Windows users install `GDLResearchHub-Setup.exe`; Python, Git and developer
 configuration are unnecessary. Updates use verified stable GitHub release
 installers. See [accounts and distribution](docs/accounts_and_distribution.md)
-for setup, security, acceptance results and current limits.
+for setup, security, acceptance results and current limits. See
+[production integration](docs/production_integration.md) for the latest work order,
+desktop callback, version history and release acceptance status. The canonical
+version is in app/version.py; version_history.json retains prior work orders.
 
 ## Research workspace
 
@@ -27,7 +30,7 @@ and [CHANGELOG.md](CHANGELOG.md) for behavior, verification and current limits.
 
 A previously validated account can use local research offline for up to
 24 hours, with an OFFLINE indicator and queued activity. First login requires
-connectivity. Microsoft login, Graph and Entra remain removed. OneDrive handles synchronization; Windows provides the folders;
+connectivity. Microsoft provides identity through Supabase; Graph is not used for storage. OneDrive handles synchronization; Windows provides the folders;
 the Hub owns its local catalog, content search and research metadata.
 
 Use **Settings > Storage > Project** to configure **GDL Research** (current)

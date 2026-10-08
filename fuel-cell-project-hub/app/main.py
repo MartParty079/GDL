@@ -18,16 +18,42 @@ def main():
         from app.ui.accounts import LoginDialog, attach_account_ui
 
         store = Store()
+        from app.services.desktop_oauth import CallbackBroker
+
+        broker = CallbackBroker(store.local_dir, app)
+        callback = next(
+            (value for value in sys.argv[1:] if value.startswith("gdlresearchhub:")),
+            None,
+        )
+        if callback and broker.forward(callback):
+            return 0
+        if not broker.listen():
+            QMessageBox.information(
+                None,
+                "GDL Research Hub",
+                "GDL Research Hub is already open. Return to its window to sign in.",
+            )
+            return 0
         from app.services.diagnostics import configure
 
         configure(store.local_dir)
         accounts = Accounts(store)
         app.setQuitOnLastWindowClosed(False)
         windows = []
+        active_login = [None]
+
+        def receive_callback(uri):
+            if active_login[0] is not None and active_login[0].isVisible():
+                active_login[0].microsoft_return(uri)
+
+        broker.received.connect(receive_callback)
 
         def login():
             dialog = LoginDialog(accounts)
+            active_login[0] = dialog
             windows.append(dialog)
+            if callback:
+                QTimer.singleShot(100, lambda: receive_callback(callback))
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 app.quit()
                 return
@@ -51,9 +77,14 @@ def main():
             try:
                 window = HubWindow(store)
             except Exception:
-                QMessageBox.critical(dialog,'Workspace Unavailable','The research workspace could not open. Your index and research files were preserved. Check the local log folder.')
+                QMessageBox.critical(
+                    dialog,
+                    "Workspace Unavailable",
+                    "The research workspace could not open. Your index and research files were preserved. Check the local log folder.",
+                )
                 app.exit(1)
                 return
+            active_login[0] = None
             windows.append(window)
 
             def sign_out():
@@ -104,12 +135,24 @@ def main():
             attach_account_ui(window, accounts, sign_out)
             store.accounts = accounts
             window.show()
+            window.research_workspace.navigate("Overview")
+            # Reconcile changes after showing the workspace, using its existing
+            # cancellable worker. Never block login on a full content rebuild.
+            window.startup_reconciliation = QTimer(window)
+            window.startup_reconciliation.setSingleShot(True)
+            window.startup_reconciliation.timeout.connect(
+                lambda: window.research_panel.start_index(quick=True)
+                if window.storage_settings.catalog and window.isVisible()
+                else None
+            )
+            window.startup_reconciliation.start(300)
 
         from PySide6.QtCore import QTimer
 
         app.aboutToQuit.connect(
             lambda: accounts.executor.shutdown(wait=False, cancel_futures=True)
         )
+        app.aboutToQuit.connect(broker.server.close)
         QTimer.singleShot(0, login)
     except Exception as exc:
         box = QMessageBox(

@@ -340,6 +340,8 @@ class WorkspaceUITests(unittest.TestCase):
             )
             row = index.query()[0][0]
             repo.annotate([row], {"experiment_id": "EXP-003"})
+            store.local.update(research_workspace_sizes=[0,1280,0],
+                               research_navigation_visible=True,research_details_visible=True)
             with patch("app.ui.window.QTimer.singleShot"):
                 window = HubWindow(store)
             hub = window.research_workspace
@@ -347,7 +349,10 @@ class WorkspaceUITests(unittest.TestCase):
             window.show()
             self.app.processEvents()
             try:
-                self.assertEqual(__version__, "0.3.0")
+                from PySide6.QtWidgets import QPushButton
+                self.assertIn("v"+__version__, [control.text() for control in window.findChildren(QPushButton)])
+                self.assertGreater(hub.splitter.sizes()[0],0)
+                self.assertGreaterEqual(hub.splitter.sizes()[2],260)
                 self.assertEqual(window.project_tabs.currentIndex(), 1)
                 self.assertEqual(window.tabs.currentIndex(), 3)
                 hub.navigate("Samples")

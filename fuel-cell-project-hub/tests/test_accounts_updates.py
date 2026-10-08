@@ -16,7 +16,7 @@ class AccountTests(unittest.TestCase):
     def setUp(self):
         self.temporary=tempfile.TemporaryDirectory(); self.root=Path(self.temporary.name)
         self.store=Store(local_dir=self.root)
-        self.profile={'id':'9f020e44-7f50-4aef-a716-655a647c2498','email':'research@example.test','role':'user','active':True}
+        self.profile={'id':'9f020e44-7f50-4aef-a716-655a647c2498','email':'research@tarleton.edu','role':'user','active':True}
         self.calls=[]
         self.rows=[self.profile]
         def transport(method,path,data):
@@ -34,7 +34,7 @@ class AccountTests(unittest.TestCase):
 
     @unittest.skipUnless(os.name=='nt','Windows session encryption')
     def test_dpapi_restore_refresh_and_signout(self):
-        self.accounts.sign_in('research@example.test','not-saved-password')
+        self.accounts.sign_in('research@tarleton.edu','not-saved-password')
         text=self.accounts.session_path.read_text()
         self.assertNotIn('fake-short-token',text); self.assertNotIn('not-saved-password',text)
         self.accounts.session=None
@@ -44,7 +44,7 @@ class AccountTests(unittest.TestCase):
 
     @unittest.skipUnless(os.name=='nt','Windows session encryption')
     def test_self_provision_only_user_and_disabled_denied(self):
-        self.rows=[]; self.accounts.sign_in('research@example.test','not-saved-password')
+        self.rows=[]; self.accounts.sign_in('research@tarleton.edu','not-saved-password')
         inserts=[d for m,p,d in self.calls if m=='POST' and p=='/rest/v1/profiles']
         self.assertEqual(inserts[0]['role'],'user')
         self.rows=[dict(self.profile,active=False)]
@@ -53,7 +53,7 @@ class AccountTests(unittest.TestCase):
 
     @unittest.skipUnless(os.name=='nt','Windows session encryption')
     def test_offline_grace_is_bounded_and_role_not_admin_authority(self):
-        self.accounts.sign_in('research@example.test','not-saved-password')
+        self.accounts.sign_in('research@tarleton.edu','not-saved-password')
         def offline(*args):raise ConnectionUnavailable('Offline')
         self.accounts.transport=offline
         self.assertTrue(self.accounts.restore()); self.assertTrue(self.accounts.offline)

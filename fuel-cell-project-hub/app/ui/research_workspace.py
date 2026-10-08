@@ -86,6 +86,7 @@ def version_dialog(parent):
     layout = QVBoxLayout(dialog)
     layout.addWidget(QLabel("GDL Research Hub " + __version__))
     from app.services.storage import read_json
+    history = read_json(resource_path("version_history.json"), {"versions": []})
     build = read_json(resource_path('config/build_metadata.json'),{})
     detail = 'Build: ' + build.get('commit','Source checkout')[:12] + ' · ' + build.get('built_at','')[:10]
     if hasattr(parent,'store'):
@@ -94,7 +95,10 @@ def version_dialog(parent):
     view = QTextEdit()
     view.setReadOnly(True)
     try:
-        view.setMarkdown(resource_path("CHANGELOG.md").read_text(encoding="utf-8"))
+        entries = []
+        for row in reversed(history["versions"]):
+            entries.append("## " + row["version"] + " · " + row["date"] + "\n\n" + row["work_order"] + "\n\n" + row["summary"] + "\n\n" + "\n".join("- " + item for item in row["major_features"] + row["major_fixes"]) + "\n\nCommit: " + (row.get("git_commit") or (build.get("commit", "Pending source commit") if row["version"] == __version__ else "Not recorded")) + "\n\nRelease tag: " + (row.get("git_release_tag") or "Not published"))
+        view.setMarkdown("\n\n".join(entries) + "\n\n" + resource_path("CHANGELOG.md").read_text(encoding="utf-8"))
     except OSError:
         view.setPlainText("Version history is unavailable in this installation.")
     layout.addWidget(view)
@@ -1178,9 +1182,16 @@ class ResearchHub(QWidget):
         )
         self.preview.setMinimumWidth(260)
         self.splitter.addWidget(self.preview)
-        self.splitter.setSizes(
-            window.store.local.get("research_workspace_sizes", [170, 780, 330])
-        )
+        sizes = list(window.store.local.get("research_workspace_sizes", [170, 780, 330]))
+        if len(sizes) != 3:
+            sizes = [170, 780, 330]
+        if window.store.local.get("research_navigation_visible", True):
+            sizes[0] = max(sizes[0], 170)
+        if window.store.local.get("research_details_visible", True):
+            sizes[2] = max(sizes[2], 260)
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setCollapsible(2, False)
+        self.splitter.setSizes(sizes)
         self.splitter.setStretchFactor(1, 1)
         self.splitter.setCollapsible(1, False)
         self.nav.currentTextChanged.connect(self.navigate)
@@ -1661,10 +1672,10 @@ class ResearchHub(QWidget):
                 if row.get("data_origin")=="legacy": self.audit("LEGACY_FILE_VIEWED", "file", row["id"], row["name"], {"source":"legacy"})
             elif key == "folder":
                 file_launcher.open_folder(path.parent)
-                self.audit("FILE_LOCATION_OPENED", "file", row["id"], row["name"])
+                self.audit("FILE_LOCATION_OPENED", "file", row["id"], row["name"], {"source":row.get("data_origin", "")})
             elif key == "show":
                 file_launcher.show_in_folder(path)
-                self.audit("FILE_LOCATION_OPENED", "file", row["id"], row["name"])
+                self.audit("FILE_LOCATION_OPENED", "file", row["id"], row["name"], {"source":row.get("data_origin", "")})
             elif key == "copy_id":
                 QApplication.clipboard().setText(row["id"])
                 self.message.setText("File identity copied.")

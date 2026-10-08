@@ -57,7 +57,8 @@ def self_check(report):
         assert catalog.query(query='water intrusion')[1] == 1
         assert catalog.query(query='compression')[1] == 1
         assert not hasattr(window, 'auth')
-        result.update(native_content_search=True, local_parsers_present=True, microsoft_auth_removed=True)
+        result.update(native_content_search=True, local_parsers_present=True, graph_storage_removed=True,
+                      microsoft_identity_supported=True)
         window.files_panel.reload()
         result.update(research_catalog_available=True, research_current_files=indexed['current'],
                       research_legacy_files=indexed['legacy'], research_index_errors=indexed['errors'],
@@ -86,6 +87,14 @@ def self_check(report):
         assert document.load(str(previews.resident_path(catalog,rows['fixture.pdf'])))==QPdfDocument.Error.None_
         assert document.pageCount()==1
         assert resource_path('CHANGELOG.md').is_file()
+        from app.services.storage import read_json
+        assert read_json(resource_path('version_history.json'),{})['versions'][-1]['version']==__version__
+        from app.services.desktop_oauth import callback_values, CALLBACK, CallbackBroker
+        assert callback_values(CALLBACK+'?code=packaged-check')['code']=='packaged-check'
+        broker=CallbackBroker(Path(temporary)/'callback-profile')
+        assert broker.listen()
+        broker.server.close()
+        result.update(structured_version_history_available=True,protocol_callback_available=True)
         result.update(version=__version__, research_objects_available=True, rendered_pdf_available=True,
                       spreadsheet_preview_available=True, image_thumbnail_available=True, changelog_present=True)
         from app.services.accounts import Accounts, protect

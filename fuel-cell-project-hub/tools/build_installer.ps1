@@ -1,7 +1,10 @@
-param([string]$PackageDirectory = 'dist/windows-gdl-hub-0.3.0/FuelCellProjectHub',
-      [string]$OutputDirectory = 'dist/installer-0.3.0', [string]$Compiler = '')
+param([string]$PackageDirectory = '', [string]$OutputDirectory = '', [string]$Compiler = '')
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
+$appVersion = & (Join-Path $projectDirectory '.venv/Scripts/python.exe') -c 'from app.version import VERSION; print(VERSION)'
+if ($appVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Installer needs a stable semantic version.' }
+if (-not $PackageDirectory) { $PackageDirectory = "dist/windows-gdl-hub-$appVersion/FuelCellProjectHub" }
+if (-not $OutputDirectory) { $OutputDirectory = "dist/installer-$appVersion" }
 $packageRoot = [IO.Path]::GetFullPath((Join-Path $projectDirectory $PackageDirectory))
 $outputRoot = [IO.Path]::GetFullPath((Join-Path $projectDirectory $OutputDirectory))
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $projectDirectory 'dist')) + [IO.Path]::DirectorySeparatorChar
@@ -13,8 +16,6 @@ if (-not $Compiler) {
     if ($candidate) { $Compiler = $candidate.Source }
     else { $Compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe' }
 }
-$appVersion = & (Join-Path $projectDirectory '.venv/Scripts/python.exe') -c 'from app.version import VERSION; print(VERSION)'
-if ($appVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Installer needs a stable semantic version.' }
 & $Compiler "/DAppVersion=$appVersion" "/DPackageRoot=$packageRoot" "/DOutputRoot=$outputRoot" (Join-Path $PSScriptRoot 'GDLResearchHub.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Installer build failed.' }
 $installer = Join-Path $outputRoot 'GDLResearchHub-Setup.exe'

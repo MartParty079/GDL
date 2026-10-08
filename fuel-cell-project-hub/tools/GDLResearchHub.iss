@@ -35,6 +35,11 @@ Source: "{#PackageRoot}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdir
 [Icons]
 Name: "{group}\GDL Research Hub"; Filename: "{app}\FuelCellProjectHub.exe"
 Name: "{autodesktop}\GDL Research Hub"; Filename: "{app}\FuelCellProjectHub.exe"; Tasks: desktopicon
+[Registry]
+Root: HKCU; Subkey: "Software\Classes\gdlresearchhub"; ValueType: string; ValueName: ""; ValueData: "URL:GDL Research Hub Sign In"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\gdlresearchhub"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\gdlresearchhub\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\FuelCellProjectHub.exe,0"
+Root: HKCU; Subkey: "Software\Classes\gdlresearchhub\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\FuelCellProjectHub.exe"" ""%1"""
 [Run]
 Filename: "{app}\FuelCellProjectHub.exe"; Description: "Open GDL Research Hub"; Flags: nowait postinstall skipifsilent
 ; LocalAppData/FuelCellProjectHub remains untouched on upgrade and uninstall.

@@ -14,6 +14,22 @@ inspect divergence and reconcile intentionally while preserving all work.
 Never force push. Never automatically reset, clean, stash away or delete
 unexpected uncommitted work. Stage unrelated changes only when the user asks.
 
+## Work order version policy
+
+Every implemented work order must produce a new traceable application version.
+Read app/version.py, the latest version_history.json entry and CHANGELOG first;
+confirm they agree, then record the target version before implementation.
+Default to a PATCH increment. Never reuse a completed work-order version or
+downgrade the application to an older version mentioned in a work order.
+Use tools/bump_version.py patch --work-order "Name" --summary "Completed changes"
+(minor/major require a justified milestone). History is append-only; correct
+historical factual errors explicitly. Include features, fixes and breaking
+changes. Unpublished tags and unavailable commit IDs remain null, not invented.
+Verify tools/bump_version.py check, header, login, About/history, installer
+metadata and release tag alignment before completion. Packaging derives build
+date and commit from Git; an entry cannot contain its own future commit SHA.
+Version inconsistency is a release failure. Source commits alone are not releases.
+
 ## Complete every work order
 
 1. Implement the authorized changes.
@@ -40,7 +56,8 @@ GitHub stores app source, portable managed GDL source, config templates, tests,
 docs, assets, packaging .spec source and release metadata. OneDrive/SharePoint
 stores images, videos, sensor data, processed datasets, reports and old test data.
 Local profiles, caches, tokens and machine paths remain in Local AppData.
-The native app has no Microsoft authentication or Graph dependency.
+Microsoft login provides identity through Supabase; native indexing and file
+access have no Microsoft Graph dependency.
 
 The preserved original GDL baseline stays ignored on this development computer
 because its historical defaults contain named user paths. The portable managed

@@ -23,6 +23,8 @@ jobs:
           ./.venv/Scripts/python.exe -m pip install -r requirements.txt PyInstaller==6.22.3
       - name: Check tag and test
         run: |
+          & ./.venv/Scripts/python.exe tools/bump_version.py check
+          if ($LASTEXITCODE -ne 0) { throw 'Version history mismatch' }
           $version = & ./.venv/Scripts/python.exe -c 'from app.version import VERSION; print(VERSION)'
           if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag/version mismatch' }
           $env:QT_QPA_PLATFORM = 'offscreen'

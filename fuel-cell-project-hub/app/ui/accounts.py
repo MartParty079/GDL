@@ -46,8 +46,17 @@ class LoginDialog(QDialog):
         title.setStyleSheet("font-size:24px;font-weight:600;")
         layout.addWidget(title)
         layout.addWidget(QLabel("Sign in with your research team account."))
+        from app.services.desktop_oauth import MicrosoftLogin
+
+        self.microsoft_login = MicrosoftLogin(accounts)
+        self.microsoft = QPushButton("Continue with Tarleton Microsoft")
+        self.microsoft.clicked.connect(self.start_microsoft)
+        layout.addWidget(self.microsoft)
+        separator = QLabel("or use your Tarleton email and password")
+        separator.setAlignment(Qt.AlignCenter)
+        layout.addWidget(separator)
         self.email = QLineEdit()
-        self.email.setPlaceholderText("Email")
+        self.email.setPlaceholderText("Tarleton Email")
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
         self.password.setPlaceholderText("Password")
@@ -68,7 +77,7 @@ class LoginDialog(QDialog):
         invite = QPushButton("Use Invitation / Reset Link")
         invite.clicked.connect(self.redeem)
         layout.addWidget(invite)
-        self.controls = [self.signin, reset, invite]
+        self.controls = [self.signin, reset, invite, self.microsoft]
         layout.addWidget(QLabel("v" + __version__))
         apply_theme(self)
         QTimer.singleShot(0, self.restore)
@@ -103,12 +112,41 @@ class LoginDialog(QDialog):
             "Use a password",
             "Connect to the account",
             "Saved sign-in",
+            "Microsoft sign-in",
+            "This sign-in",
+            "Use your approved",
         )
         self.status.setText(
             message
             if message.startswith(safe)
             else "Unable to sign in. Check your email and password, then try again."
         )
+
+    def start_microsoft(self):
+        from PySide6.QtGui import QDesktopServices
+        from PySide6.QtCore import QUrl
+
+        def opened(url):
+            if not QDesktopServices.openUrl(QUrl(url)):
+                self.microsoft_login.cancel()
+                self.status.setText(
+                    "Microsoft sign-in could not open the browser. Use email and password."
+                )
+                return
+            self.status.setText(
+                "Complete Tarleton sign-in in your browser. Return here to use email and password instead."
+            )
+
+        self.run(self.microsoft_login.begin, opened)
+
+    def microsoft_return(self, uri):
+        if self.tasks.busy():
+            QTimer.singleShot(50, lambda: self.microsoft_return(uri))
+            return
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        self.run(lambda: self.microsoft_login.complete(uri), lambda _: self.accept())
 
     def restore(self):
         self.run(
@@ -119,6 +157,7 @@ class LoginDialog(QDialog):
         if not self.signin.isEnabled():
             return
         email, password = self.email.text(), self.password.text()
+        self.microsoft_login.cancel()
         self.password.clear()
         self.run(
             lambda: self.accounts.sign_in(email, password), lambda _: self.accept()
@@ -199,7 +238,14 @@ class AdminWorkspace(QWidget):
         layout.addWidget(self.tabs)
         self.tables = {}
         self.statuses = {}
-        for title in ("Overview", "Users", "Activity", "Installations", "System"):
+        for title in (
+            "Overview",
+            "Users",
+            "Activity",
+            "Versions",
+            "Installations",
+            "System",
+        ):
             page = QWidget()
             column = QVBoxLayout(page)
             status = QLabel("")
@@ -219,7 +265,9 @@ class AdminWorkspace(QWidget):
             ("user_id", "User ID"),
             ("event_type", "Event"),
             ("date_from", "Date from (YYYY-MM-DD)"),
+            ("date_to", "Date to (YYYY-MM-DD)"),
             ("entity_type", "Entity type"),
+            ("source", "Source (current/legacy)"),
             ("app_version", "Version"),
         ]:
             edit = QLineEdit()
@@ -275,7 +323,7 @@ class AdminWorkspace(QWidget):
             )
             return
         self.statuses[title].setText("Loading…")
-        action = title.lower()
+        action = "installations" if title == "Versions" else title.lower()
         filters = (
             {k: v.text().strip() for k, v in self.filters.items() if v.text().strip()}
             if title == "Activity"
@@ -314,10 +362,12 @@ class AdminWorkspace(QWidget):
                 ],
                 "Activity": [
                     "created_at",
-                    "user_id",
+                    "user_name",
                     "event_type",
                     "entity_name",
                     "entity_type",
+                    "source",
+                    "auth_method",
                     "app_version",
                     "install_id",
                 ],
@@ -329,7 +379,37 @@ class AdminWorkspace(QWidget):
                     "last_seen_at",
                     "install_id",
                 ],
+                "Versions": [
+                    "label",
+                    "user_name",
+                    "app_version",
+                    "version_status",
+                    "last_seen_at",
+                    "install_id",
+                ],
             }[title]
+        if title in ("Installations", "Versions"):
+            from app.services.updates import newer, version
+
+            latest = getattr(self.window, "latest_release_info", {}).get(
+                "tag", __version__
+            )
+            reference = latest if newer(latest, __version__) else __version__
+            for row in rows:
+                installed = row.get("app_version", "")
+                row["version_status"] = (
+                    "UNKNOWN"
+                    if not version(installed)
+                    else (
+                        "UPDATE AVAILABLE"
+                        if newer(reference, installed)
+                        else (
+                            "CURRENT"
+                            if version(installed) == version(reference)
+                            else "NEWER BUILD"
+                        )
+                    )
+                )
         table = self.tables[title]
         table.setColumnCount(len(keys))
         table.setHorizontalHeaderLabels([x.replace("_", " ").title() for x in keys])
@@ -345,7 +425,7 @@ class AdminWorkspace(QWidget):
                 item.setData(Qt.UserRole, row)
                 table.setItem(i, j, item)
         table.resizeColumnsToContents()
-        if title == "Installations":
+        if title in ("Installations", "Versions"):
             latest = (
                 getattr(self.window, "latest_release_info", {})
                 .get("tag", __version__)

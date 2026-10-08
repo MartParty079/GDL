@@ -16,6 +16,7 @@ datas.append((str(project_directory / 'analysis/gdl/manifest.json'), 'analysis/g
 datas.append((str(project_directory / 'analysis/gdl/hub_runtime.py'), 'analysis/gdl'))
 datas.append((str(project_directory / 'assets'), 'assets'))
 datas.append((str(project_directory / 'CHANGELOG.md'), '.'))
+datas.append((str(project_directory / 'version_history.json'), '.'))
 app_version = runpy.run_path(str(project_directory / 'app/version.py'))['VERSION']
 try:
     commit = subprocess.check_output(['git','rev-parse','HEAD'],cwd=project_directory,text=True).strip()

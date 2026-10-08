@@ -39,6 +39,8 @@ Deno.serve(async (req: Request) => {
           if (body[field]) query = query.eq(field,String(body[field]).slice(0,120));
         }
         if (body.date_from && /^\d{4}-\d{2}-\d{2}$/.test(body.date_from)) query=query.gte('created_at',body.date_from);
+        if (body.date_to && /^\d{4}-\d{2}-\d{2}$/.test(body.date_to)) query=query.lte('created_at',body.date_to+'T23:59:59.999999Z');
+        if (['current','legacy'].includes(body.source)) query=query.contains('details',{source:body.source});
       }
       const { data, error, count } = await query;
       if (error) throw error;
@@ -49,14 +51,24 @@ Deno.serve(async (req: Request) => {
         if(installError) throw installError;
         for(const row of data) {
           const owned=(installs||[]).filter(x=>x.user_id===row.id);
-          row.installations=owned.length; row.last_app_version=owned[0]?.app_version||''; row.last_activity=owned[0]?.last_seen_at||row.last_login||'';
+          row.installations=owned.length; row.last_app_version=owned[0]?.app_version||'';
+        }
+      }
+      if ((action==='activity' || action==='installations') && data?.length) {
+        const ids=[...new Set(data.map(x=>x.user_id))];
+        const {data: users,error: userError}=await service.from('profiles').select('id,email,display_name').in('id',ids);
+        if(userError) throw userError;
+        for(const row of data) {
+          const profile=users?.find(x=>x.id===row.user_id);
+          row.user_name=profile?.display_name||profile?.email||row.user_id;
+          if(action==='activity') {row.source=row.details?.source||'';row.auth_method=row.details?.auth_method||'';}
         }
       }
       return reply({ rows: data, count });
     }
     if (action==='invite') {
       const email=String(body.email||'').trim();
-      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply({message:'Enter a valid email'},400);
+      if(!/^[^\s@]+@tarleton\.edu$/i.test(email)) return reply({message:'Enter an approved Tarleton email'},400);
       const name=String(body.display_name||'').slice(0,120);
       const {data,error}=await service.auth.admin.inviteUserByEmail(email,{data:{display_name:name}});
       if(error || !data.user) return reply({message:'Invitation unavailable. Check the address or existing account.'},400);

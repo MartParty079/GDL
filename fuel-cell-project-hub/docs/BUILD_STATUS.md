@@ -1,4 +1,9 @@
-# Current build: accounts and Windows distribution 0.3.0
+# Current build
+
+See [production integration](production_integration.md) for the current
+work order, canonical version, OAuth callback, history and acceptance status.
+
+# Previous build: accounts and Windows distribution 0.3.0
 
 See [accounts and distribution](accounts_and_distribution.md) for current
 verification, live backend deployment, installer checks and remaining limits.

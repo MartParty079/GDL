@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 — 2026-10-08
+
+- Added Tarleton Microsoft desktop sign-in, structured version history and administration version status.
+- Browser PKCE sign-in with per-user desktop callback and password fallback.
+- Append-only version history, bump utility and release consistency checks.
+- Improved installation status and activity authentication context.
+- Fixed restored navigation/details widths when older saved layouts contained zero-width panels.
+
 ## 0.3.0 — 2026-10-08
 
 - Added email/password team login with Windows-encrypted saved sessions, invitations and password recovery.

@@ -84,6 +84,7 @@ class Accounts:
         self.profile = None
         self.offline = False
         self.validated_at = 0
+        self.auth_method = "email_password"
         self.lock = threading.RLock()
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="activity")
         self.session_path = store.local_dir / "tokens.bin"
@@ -149,6 +150,8 @@ class Accounts:
                     "session": self.session,
                     "profile": self.profile,
                     "validated_at": self.validated_at,
+                    "auth_method": self.auth_method,
+                    "url": self.url,
                 }
             ).encode()
             write_json(
@@ -156,11 +159,15 @@ class Accounts:
                 {"protected": base64.b64encode(protect(payload)).decode()},
             )
 
-    def load_profile(self):
-        user = self.request("GET", "/auth/v1/user")
+    def load_profile(self, user=None, allow_provision=True):
+        user = user or self.request("GET", "/auth/v1/user")
         identity = str(uuid.UUID(user["id"]))
         rows = self.request("GET", "/rest/v1/profiles?id=eq." + identity + "&select=*")
         if not rows:
+            if not allow_provision:
+                raise AccountError(
+                    "This account needs an invitation. Contact the project administrator."
+                )
             try:
                 self.request(
                     "POST",
@@ -197,7 +204,10 @@ class Accounts:
         return profile
 
     def sign_in(self, email, password):
+        if email.strip().casefold().split("@")[-1] != "tarleton.edu":
+            raise AccountError("Use your approved Tarleton email address.")
         with self.lock:
+            self.auth_method = "email_password"
             self.session = self.request(
                 "POST",
                 "/auth/v1/token?grant_type=password",
@@ -212,6 +222,34 @@ class Accounts:
             except AccountError:
                 self.session = None
                 self.profile = None
+                self.session_path.unlink(missing_ok=True)
+                raise
+
+    def microsoft_session(self, session):
+        with self.lock:
+            self.session = {
+                k: session[k]
+                for k in ("access_token", "refresh_token", "expires_at", "token_type")
+                if k in session
+            }
+            try:
+                user = self.request("GET", "/auth/v1/user")
+                if (
+                    not any(
+                        i.get("provider") == "azure" for i in user.get("identities", [])
+                    )
+                    or user.get("email", "").casefold().split("@")[-1] != "tarleton.edu"
+                ):
+                    raise AccountError(
+                        "This account is not an approved Tarleton Microsoft identity."
+                    )
+                self.auth_method = "microsoft_entra"
+                self.load_profile(user=user, allow_provision=False)
+                self.register()
+                self.event("LOGIN")
+                return self.profile
+            except (AccountError, KeyError):
+                self.session = self.profile = None
                 self.session_path.unlink(missing_ok=True)
                 raise
 
@@ -237,8 +275,11 @@ class Accounts:
                 )
             )
             self.session = saved["session"]
+            if saved.get("url", self.url) != self.url:
+                raise AccountError("Saved sign-in belongs to another account service.")
             self.profile = saved["profile"]
             self.validated_at = saved["validated_at"]
+            self.auth_method = saved.get("auth_method", "email_password")
             try:
                 self.refresh()
                 self.register()
@@ -288,8 +329,18 @@ class Accounts:
         safe = {
             k: str(v)[:120]
             for k, v in (details or {}).items()
-            if k in ("source", "previous_version", "count", "status", "fields")
+            if k
+            in (
+                "source",
+                "previous_version",
+                "count",
+                "status",
+                "fields",
+                "auth_method",
+            )
         }
+        if kind in ("LOGIN", "LOGOUT", "APP_STARTED"):
+            safe["auth_method"] = self.auth_method
         entity_name = str(entity_name)
         if "/" in entity_name or "\\" in entity_name:
             entity_name = entity_name.replace("\\", "/").rsplit("/", 1)[-1]
@@ -338,6 +389,7 @@ class Accounts:
                 pass
             self.session = self.profile = None
             self.session_path.unlink(missing_ok=True)
+            (self.store.local_dir / "oauth-pending.bin").unlink(missing_ok=True)
 
     def reset_password(self, email):
         self.request("POST", "/auth/v1/recover", {"email": email.strip()}, False)

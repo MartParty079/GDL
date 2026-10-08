@@ -1,0 +1,71 @@
+{
+  "versions": [
+    {
+      "version": "0.1.0-dev",
+      "date": "2026-10-07",
+      "work_order": "Native research indexing",
+      "summary": "Native incremental SQLite indexing and Files On-Demand research storage.",
+      "major_features": [
+        "Read-only native scanner",
+        "FTS search",
+        "Managed analysis engine"
+      ],
+      "major_fixes": [],
+      "breaking_changes": [
+        "Retired Graph storage and Microsoft login from that development build"
+      ],
+      "git_commit": "df5bf6d",
+      "git_release_tag": null
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-10-08",
+      "work_order": "Research workspace",
+      "summary": "Samples, experiments, associations, galleries and native previews.",
+      "major_features": [
+        "Research navigation",
+        "Resident-only previews",
+        "Explicit metadata associations"
+      ],
+      "major_fixes": [],
+      "breaking_changes": [],
+      "git_commit": "8c98e4aa061d08e4b596a89968449844394aaf82",
+      "git_release_tag": null
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-10-08",
+      "work_order": "Secure team accounts and Windows distribution",
+      "summary": "Password login, admin controls, activity and per-user installer/update infrastructure.",
+      "major_features": [
+        "Encrypted sessions",
+        "Secure admin backend",
+        "Installer and release updates"
+      ],
+      "major_fixes": [
+        "Login acceptance transition",
+        "HolyGDL compact-path searches"
+      ],
+      "breaking_changes": [],
+      "git_commit": "a58d96883082dfb13143aac68eabfbc3e0c0328f",
+      "git_release_tag": null
+    },
+    {
+      "version": "0.3.1",
+      "date": "2026-10-08",
+      "work_order": "Production integration and version management (work order 0.2.1)",
+      "summary": "Added Tarleton Microsoft desktop sign-in, structured version history and administration version status.",
+      "major_features": [
+        "Browser PKCE sign-in with per-user desktop callback and password fallback.",
+        "Append-only version history, bump utility and release consistency checks."
+      ],
+      "major_fixes": [
+        "Improved installation status and activity authentication context.",
+        "Restore usable navigation/details widths from older zero-width saved layouts."
+      ],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
+    }
+  ]
+}
