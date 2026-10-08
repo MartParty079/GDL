@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.3 — 2026-10-08
+
+- Measurable active sessions, shared meetings and per-person weekly contribution reports
+- Added Meetings with explicit profile/guest attendance, shared recording links, transcript imports and revision history, notes, action items and research relationships.
+- Added My Weekly Activity and administrator team reports with PDF/CSV exports and Generate All Team Reports.
+- Added measured Hub-only sessions with a 15-minute idle cutoff, focus exclusion and durable idempotent sync; merged overlapping intervals in reports.
+- Added protected Supabase meeting/session tables and transactional meeting saves with conflict detection. File attribution comes from explicit app actions, never automatic scanner discovery.
+- Local speech model generation is not bundled; editable TXT/MD/DOCX/extractable PDF transcript import is available.
+
 ## 0.3.2 — 2026-10-08
 
 - Sample relationships, image categories and families, advanced filters and research spacing

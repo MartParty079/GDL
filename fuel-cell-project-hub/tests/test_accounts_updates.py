@@ -10,6 +10,7 @@ from unittest.mock import patch
 from app.services.storage import Store, write_json
 from app.services.accounts import Accounts, AccountError, ConnectionUnavailable, protect
 from app.services import updates
+QT_APPLICATION = None
 
 
 class AccountTests(unittest.TestCase):
@@ -40,7 +41,7 @@ class AccountTests(unittest.TestCase):
         self.accounts.session=None
         self.assertEqual(self.accounts.restore()['role'],'user')
         self.accounts.sign_out(); self.assertFalse(self.accounts.session_path.exists())
-        self.assertIn('LOGIN',[e['event_type'] for _,path,data in self.calls if path=='/rest/v1/activity_events' for e in data])
+        self.assertIn('LOGIN',[e['event_type'] for _,path,data in self.calls if path.startswith('/rest/v1/activity_events') for e in data])
 
     @unittest.skipUnless(os.name=='nt','Windows session encryption')
     def test_self_provision_only_user_and_disabled_denied(self):
@@ -72,6 +73,7 @@ class AccountTests(unittest.TestCase):
         with self.assertRaises(AccountError):self.accounts.admin('set_role',role='admin')
 
     def test_main_restored_login_opens_visible_workspace(self):
+        global QT_APPLICATION
         import sys
         from PySide6.QtWidgets import QApplication
         from PySide6.QtCore import QTimer
@@ -79,6 +81,7 @@ class AccountTests(unittest.TestCase):
         from app.ui.window import HubWindow
         from app.services.project_locations import ProjectLocations
         app=QApplication.instance() or QApplication([])
+        QT_APPLICATION=app
         current=self.root/'current'; legacy=self.root/'legacy'; current.mkdir();legacy.mkdir()
         locations=ProjectLocations(self.store); value=locations.value
         value['active']['root_path']=str(current);value['legacy'][0]['root_path']=str(legacy)
@@ -100,7 +103,7 @@ class AccountTests(unittest.TestCase):
         try:
             with patch('app.main.Store',return_value=self.store),patch('app.services.accounts.Accounts',return_value=self.accounts),patch.object(self.accounts,'restore',restore),patch.object(HubWindow,'scan',lambda _:None),patch.object(HubWindow,'check_updates_on_startup',lambda _:None):
                 self.assertEqual(main(),0)
-            self.assertTrue(observed);self.assertEqual(observed[0],6)
+            self.assertTrue(observed);self.assertEqual(observed[0],8)
         finally:
             timer.stop();sys.excepthook=old_hook
             import logging

@@ -1,0 +1,22 @@
+{
+  "work_orders": [
+    {
+      "work_order_id": "legacy-sample-intelligence",
+      "title": "Legacy sample intelligence and image families",
+      "version": "0.3.2",
+      "started_at": "2026-10-08",
+      "completed_at": "2026-10-08",
+      "summary": "Sample aliases, many-to-many relationships and image-family classification. Verified against the configured legacy archive.",
+      "status": "complete"
+    },
+    {
+      "work_order_id": "meetings-weekly-contributions",
+      "title": "Weekly contributions and Meetings workspace",
+      "version": "0.3.3",
+      "started_at": "2026-10-08",
+      "completed_at": "2026-10-08T15:21:31.354200+00:00",
+      "summary": "Measurable active sessions, shared meetings and per-person weekly contribution reports",
+      "status": "complete"
+    }
+  ]
+}

@@ -97,6 +97,18 @@ def self_check(report):
             broker.server.close()
             result.update(protocol_callback_available=True)
         result.update(structured_version_history_available=True)
+        from app.services.contributions import aggregate, export_pdf
+        from app.services.meetings import Meetings, TranscriptionService
+        from datetime import datetime, timezone, timedelta
+        begin=datetime(2026,10,5,tzinfo=timezone.utc)
+        participation_report=aggregate({'id':'isolated-fixture','display_name':'Packaged report fixture'},begin,begin+timedelta(days=7),[],[],[],[])
+        weekly_pdf=Path(temporary)/'weekly-fixture.pdf'
+        export_pdf(participation_report,weekly_pdf)
+        from pypdf import PdfReader
+        assert 'Packaged report fixture' in PdfReader(weekly_pdf).pages[0].extract_text()
+        assert read_json(resource_path('work_order_history.json'),{})['work_orders'][-1]['version']==__version__
+        result.update(weekly_pdf_export_available=True,meetings_service_available=True,
+                      work_order_history_available=True,local_transcription_bundled=TranscriptionService.available)
         result.update(version=__version__, research_objects_available=True, rendered_pdf_available=True,
                       spreadsheet_preview_available=True, image_thumbnail_available=True, changelog_present=True)
         from app.services.accounts import Accounts, protect

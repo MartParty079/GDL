@@ -95,6 +95,7 @@ def main():
                 window.signout_pending = True
                 window.setEnabled(False)
                 window.account_timer.stop()
+                window.session_presence.stop()
                 window.storage_panel.cancel_index()
                 window.research_panel.cancel_index()
 
@@ -105,6 +106,8 @@ def main():
                         or window.storage_panel.indexing
                         or window.research_workspace.busy()
                         or window.account_tasks.busy()
+                        or window.meetings_panel.busy()
+                        or window.weekly_panel.tasks.busy()
                         or (
                             hasattr(window, "admin_workspace")
                             and window.admin_workspace.tasks.busy()

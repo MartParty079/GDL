@@ -90,6 +90,10 @@ class Accounts:
         self.session_path = store.local_dir / "tokens.bin"
         self.outbox_path = store.local_dir / "pending_activity.local.json"
         self.pending = read_json(self.outbox_path, [])[-500:]
+        for event in self.pending:
+            event.setdefault('client_event_id',str(uuid.uuid4()))
+        if self.pending:
+            write_json(self.outbox_path,self.pending)
         self.install_id = store.local.setdefault("install_id", str(uuid.uuid4()))
         store.local.setdefault("install_created_at", timestamp())
         store.save_local()
@@ -337,6 +341,8 @@ class Accounts:
                 "status",
                 "fields",
                 "auth_method",
+                "sample_id", "sample_name", "experiment_id", "file_category", "image_category",
+                "image_subcategory", "attribution", "meeting_id",
             )
         }
         if kind in ("LOGIN", "LOGOUT", "APP_STARTED"):
@@ -348,6 +354,7 @@ class Accounts:
             self.pending.append(
                 {
                     "user_id": self.profile["id"],
+                    "client_event_id": str(uuid.uuid4()),
                     "install_id": self.install_id,
                     "event_type": kind,
                     "entity_type": entity_type[:60],
@@ -371,7 +378,8 @@ class Accounts:
                 return
             try:
                 self.request(
-                    "POST", "/rest/v1/activity_events", batch, prefer="return=minimal"
+                    "POST", "/rest/v1/activity_events?on_conflict=client_event_id", batch,
+                    prefer="resolution=ignore-duplicates,return=minimal"
                 )
                 self.pending = [e for e in self.pending if e not in batch]
                 write_json(self.outbox_path, self.pending)
@@ -380,6 +388,12 @@ class Accounts:
 
     def sign_out(self):
         with self.lock:
+            if getattr(self, 'participation', None):
+                self.participation.persist(close=True)
+                try:
+                    self.participation.flush()
+                except AccountError:
+                    pass
             self.event("LOGOUT")
             self.flush()
             try:

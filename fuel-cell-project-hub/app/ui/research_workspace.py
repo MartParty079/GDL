@@ -58,6 +58,8 @@ COLORS = {
     "Images": "#0071e3",
     "Data": "#4338ca",
     "Reports": "#0f766e",
+    "Meetings": "#0f766e",
+    "Weekly Contributions": "#4338ca",
     "Timeline": "#7c3aed",
     "Files": "#0071e3",
     "Legacy": "#a16207",
@@ -102,7 +104,11 @@ def version_dialog(parent):
         entries = []
         for row in reversed(history["versions"]):
             entries.append("## " + row["version"] + " · " + row["date"] + "\n\n" + row["work_order"] + "\n\n" + row["summary"] + "\n\n" + "\n".join("- " + item for item in row["major_features"] + row["major_fixes"]) + "\n\nCommit: " + (row.get("git_commit") or (build.get("commit", "Pending source commit") if row["version"] == __version__ else "Not recorded")) + "\n\nRelease tag: " + (row.get("git_release_tag") or "Not published"))
-        view.setMarkdown("\n\n".join(entries) + "\n\n" + resource_path("CHANGELOG.md").read_text(encoding="utf-8"))
+        current=history['versions'][-1]
+        database='\n\n### Database changes\n\n'+'\n'.join('- '+v for v in current.get('database_changes',[]))
+        orders=read_json(resource_path('work_order_history.json'),{'work_orders':[]})
+        work_orders='\n\n### Work orders\n\n'+'\n\n'.join(r['version']+' · '+r['title']+' · '+r['status'] for r in orders['work_orders'])
+        view.setMarkdown("\n\n".join(entries) + database + work_orders + "\n\n" + resource_path("CHANGELOG.md").read_text(encoding="utf-8"))
     except OSError:
         view.setPlainText("Version history is unavailable in this installation.")
     layout.addWidget(view)
@@ -1291,6 +1297,16 @@ class ResearchHub(QWidget):
             self.navigate(self.current_page)
 
     def navigate(self, page):
+        participation = getattr(getattr(self.window.store, 'accounts', None), 'participation', None)
+        if participation:
+            participation.session.touch()
+        if page in ('Meetings', 'Weekly Contributions'):
+            panel = getattr(self.window, 'meetings_panel' if page=='Meetings' else 'weekly_panel', None)
+            if panel:
+                self.window.tabs.setCurrentWidget(panel)
+            else:
+                self.message.setText('Sign in to use shared meetings and weekly reports.')
+            return
         if not hasattr(self, "view_modes"):
             self.view_modes = {}
         self.view_modes[self.current_page] = self.browser.view.currentText()
@@ -1444,6 +1460,12 @@ class ResearchHub(QWidget):
             self.show_object(dialog.saved["id"])
 
     def show_object(self, identity):
+        if identity.startswith('meeting:'):
+            panel=getattr(self.window,'meetings_panel',None)
+            if panel:
+                row=panel.service.get(identity.split(':',1)[1])
+                if row:panel.edit(row)
+            return
         obj = self.repository.get(identity)
         if not obj:
             return
@@ -1660,6 +1682,17 @@ class ResearchHub(QWidget):
                 )
             )
             listing.addItem(item)
+        meetings=getattr(self.window,'meetings_panel',None)
+        if meetings:
+            for meeting in meetings.service.list():
+                if filters.get('origin') and filters['origin']!=meeting['source_type']:
+                    continue
+                related=meeting['content'].get('related',[])
+                scoped=[(k,filters.get(k)) for k in ('sample','experiment') if filters.get(k)]
+                if scoped and not all(any(r['kind']==k and r['id']==identity for r in related) for k,identity in scoped):
+                    continue
+                item=QListWidgetItem(meeting['meeting_date']+' | Meeting | '+meeting['title'])
+                item.setData(Qt.UserRole,{'meeting_id':meeting['id']});listing.addItem(item)
         if not listing.count():
             listing.addItem(
                 "No recorded research activity yet. Filesystem timestamps do not imply experiment dates."
@@ -1671,6 +1704,9 @@ class ResearchHub(QWidget):
     def timeline_open(self, item):
         event = item.data(Qt.UserRole)
         if not event:
+            return
+        if event.get('meeting_id'):
+            self.show_object('meeting:'+event['meeting_id'])
             return
         if event["file_id"]:
             with self.catalog.connect() as db:
@@ -1685,6 +1721,9 @@ class ResearchHub(QWidget):
     def audit(self, kind, entity_type='', identity='', name='', details=None):
         accounts = getattr(self.window.store, 'accounts', None)
         if accounts:
+            participation = getattr(accounts, 'participation', None)
+            if participation:
+                participation.session.touch()
             try: accounts.event(kind, entity_type, identity, name, details)
             except OSError: pass
 
@@ -1692,11 +1731,19 @@ class ResearchHub(QWidget):
         if getattr(self, '_last_audited_file', None) != row['id']:
             self._last_audited_file = row['id']
             if row.get('extension') in FAMILIES['Images']:
-                self.audit('IMAGE_VIEWED','image',row['id'],row['name'],{'source':row.get('data_origin','')})
+                self.audit('IMAGE_VIEWED','image',row['id'],row['name'],self.activity_context(row))
             if row.get('data_origin') == 'legacy':
                 self.audit('LEGACY_FILE_VIEWED','file',row['id'],row['name'],{'source':'legacy'})
         self.preview.select(row)
         self.repository.viewed(row)
+
+    def activity_context(self,row):
+        family=next((family for family,extensions in FAMILIES.items() if row.get('extension') in extensions),'Files')
+        sample=self.repository.get(row.get('sample_id','')) if row.get('sample_id') else None
+        return {'source':row.get('data_origin',''),'sample_id':row.get('sample_id',''),
+                'sample_name':(sample or {}).get('name',''),
+                'experiment_id':row.get('experiment_id',''),'file_category':family,
+                'image_category':row.get('image_category',''),'image_subcategory':row.get('image_subcategory','')}
 
     def global_search(self, text):
         if not self.catalog:
@@ -1714,6 +1761,12 @@ class ResearchHub(QWidget):
             item=QListWidgetItem('Sample · '+json.loads(payload)['name']+' · '+origin)
             item.setData(Qt.UserRole,identity);self.favorites_objects.addItem(item)
         self.favorites_objects.setVisible(bool(matches))
+        meetings = getattr(self.window, 'meetings_panel', None)
+        if meetings:
+            for meeting in meetings.service.list(text)[:30]:
+                item=QListWidgetItem('Meeting · '+meeting['title']+' · '+meeting['meeting_date'])
+                item.setData(Qt.UserRole, 'meeting:'+meeting['id']);self.favorites_objects.addItem(item)
+            self.favorites_objects.setVisible(self.favorites_objects.count()>0)
 
     def file_action(self, key, row, rows=None, browser=None):
         if not row:
@@ -1739,7 +1792,7 @@ class ResearchHub(QWidget):
                     path, self.window.store.local.get("code_editor")
                 )
                 self.repository.viewed(row)
-                self.audit("FILE_OPENED", "file", row["id"], row["name"], {"source":row.get("data_origin", "")})
+                self.audit("FILE_OPENED", "file", row["id"], row["name"], self.activity_context(row))
                 if row.get("extension") in FAMILIES["Reports"]: self.audit("REPORT_OPENED", "report", row["id"], row["name"])
                 if row.get("data_origin")=="legacy": self.audit("LEGACY_FILE_VIEWED", "file", row["id"], row["name"], {"source":"legacy"})
             elif key == "folder":

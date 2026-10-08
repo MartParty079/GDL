@@ -285,6 +285,7 @@ class AdminWorkspace(QWidget):
             ("Invite User", self.invite),
             ("Enable / Disable", self.active),
             ("Change Role", self.role),
+            ("Weekly Reports", lambda: self.window.tabs.setCurrentWidget(self.window.weekly_panel)),
         ]:
             button = QPushButton(title)
             button.clicked.connect(callback)
@@ -519,6 +520,13 @@ class AdminWorkspace(QWidget):
 def attach_account_ui(window, accounts, sign_out):
     window.account_service = accounts
     window.account_tasks = Tasks(window)
+    from app.ui.participation import SessionPresence, MeetingsPanel, WeeklyPanel
+    window.session_presence = SessionPresence(window, accounts)
+    window.meetings_panel = MeetingsPanel(window, accounts)
+    window.weekly_panel = WeeklyPanel(window, accounts)
+    window.tabs.addTab(window.meetings_panel, 'Meetings')
+    window.tabs.addTab(window.weekly_panel, 'Weekly Contributions' if accounts.profile['role']=='admin' else 'My Weekly Activity')
+    window.global_search.setPlaceholderText('Search files, samples or meetings…')
     button = QPushButton(window)
     window.centralWidget().layout().itemAt(0).layout().addWidget(button)
     menu = QMenu(button)
@@ -584,6 +592,7 @@ def attach_account_ui(window, accounts, sign_out):
             try:
                 accounts.refresh()
                 accounts.flush()
+                accounts.participation.flush()
                 return True
             except ConnectionUnavailable:
                 if time.time() - accounts.validated_at > 86400:

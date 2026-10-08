@@ -594,4 +594,9 @@ class NativeIndex:
         with source.open('rb') as incoming, destination.open('xb') as outgoing:
             shutil.copyfileobj(incoming, outgoing)
         self.log('legacy_copied_to_current', file_id=item['id'])
+        accounts=getattr(self.store,'accounts',None)
+        if accounts:
+            from app.indexing.search import FAMILIES
+            family=next((name for name,extensions in FAMILIES.items() if destination.suffix.lower() in extensions),'Files')
+            accounts.event('FILE_ADDED','file','',destination.name,{'source':'current','attribution':'app_user_action','file_category':family})
         return destination

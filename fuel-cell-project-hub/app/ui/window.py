@@ -544,6 +544,8 @@ class HubWindow(QMainWindow):
             self.files_panel.search.setText(self.global_search.text())
 
     def storage_changed(self):
+        if hasattr(self,'meetings_panel'):
+            self.meetings_panel.service.catalog=self.storage_settings.catalog
         self.index_status.setText('Index available' if self.storage_settings.catalog else 'Storage not configured')
         if hasattr(self, 'research_workspace'):
             if self.research_workspace.catalog is not self.storage_settings.catalog:
@@ -925,13 +927,15 @@ class HubWindow(QMainWindow):
         QTimer.singleShot(0, ready)
 
     def closeEvent(self, event):
-        if self.workers or self.storage_panel.indexing or self.research_panel.indexing or self.research_workspace.busy() or (hasattr(self, "account_tasks") and self.account_tasks.busy()) or (hasattr(self, "admin_workspace") and self.admin_workspace.tasks.busy()):
+        if self.workers or self.storage_panel.indexing or self.research_panel.indexing or self.research_workspace.busy() or (hasattr(self, "account_tasks") and self.account_tasks.busy()) or (hasattr(self, "admin_workspace") and self.admin_workspace.tasks.busy()) or (hasattr(self, 'meetings_panel') and self.meetings_panel.busy()) or (hasattr(self,'weekly_panel') and self.weekly_panel.tasks.busy()):
             self.storage_panel.cancel_index()
             self.research_panel.cancel_index()
             self.banner.setText("Finishing a background check. Please close the app again in a moment.")
             event.ignore()
         else:
             self.closing = True
+            if hasattr(self, 'session_presence'):
+                self.session_presence.stop()
             self.research_panel.watcher.stop()
             self.research_workspace.save_layout()
             event.accept()

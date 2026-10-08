@@ -86,6 +86,32 @@
       "database_changes": [
         "Additive local index schema 5 with migration backup"
       ]
+    },
+    {
+      "version": "0.3.3",
+      "date": "2026-10-08",
+      "work_order": "Weekly contributions and Meetings workspace",
+      "summary": "Measurable active sessions, shared meetings and per-person weekly contribution reports",
+      "major_features": [
+        "Idle-aware active sessions with durable retryable snapshots",
+        "Shared Meetings workspace with explicit attendance, notes, actions and portable research file links",
+        "Editable/importable transcripts and revision history",
+        "Self and admin team weekly reports with PDF and CSV exports"
+      ],
+      "major_fixes": [
+        "Idempotent activity-event retries",
+        "Known-user file attribution excludes automatic scanner discoveries",
+        "Report totals isolate users and merge overlapping active intervals"
+      ],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null,
+      "database_changes": [
+        "Additive Supabase user_sessions, meetings, meeting_attendees and meeting_actions tables with RLS",
+        "Meeting save transaction, revision conflicts and retry idempotency",
+        "Database-checked admin activity reporting and minimal team roster RPC"
+      ],
+      "github_release": null
     }
   ]
 }
