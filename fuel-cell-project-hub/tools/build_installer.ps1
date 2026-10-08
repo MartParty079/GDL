@@ -17,13 +17,16 @@ $exeName = if ($Channel -eq 'beta') { 'GDLResearchHubBeta' } else { 'FuelCellPro
 $assetName = if ($Channel -eq 'beta') { 'GDLResearchHubBeta-Setup.exe' } else { 'GDLResearchHub-Setup.exe' }
 $displayVersion = $metadata.version
 $numericVersion = if ($Channel -eq 'beta') { "$appVersion.$($edition.beta_sequence)" } else { "$appVersion.0" }
+$versionParts = $numericVersion.Split('.') | ForEach-Object { [long]$_ }
+$versionMS = ($versionParts[0] -shl 16) -bor $versionParts[1]
+$versionLS = ($versionParts[2] -shl 16) -bor $versionParts[3]
 if (-not (Test-Path -LiteralPath (Join-Path $packageRoot "$exeName.exe"))) { throw 'Build the application package first.' }
 if (-not $Compiler) {
     $candidate = Get-Command ISCC.exe -ErrorAction SilentlyContinue
     if ($candidate) { $Compiler = $candidate.Source }
     else { $Compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe' }
 }
-& $Compiler "/DAppVersion=$displayVersion" "/DNumericVersion=$numericVersion" "/DChannel=$Channel" "/DPackageRoot=$packageRoot" "/DOutputRoot=$outputRoot" (Join-Path $PSScriptRoot 'GDLResearchHub.iss')
+& $Compiler "/DAppVersion=$displayVersion" "/DNumericVersion=$numericVersion" "/DVersionMS=$versionMS" "/DVersionLS=$versionLS" "/DChannel=$Channel" "/DPackageRoot=$packageRoot" "/DOutputRoot=$outputRoot" (Join-Path $PSScriptRoot 'GDLResearchHub.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Installer build failed.' }
 $installer = Join-Path $outputRoot $assetName
 if ($env:GDL_SIGNTOOL -and $env:GDL_SIGN_CERT_SHA1) {

@@ -68,14 +68,14 @@ Filename: "{app}\{#ExeName}.exe"; Description: "Open {#AppName}"; Flags: nowait 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
-  ExistingVersion: String;
+  ExistingMS, ExistingLS: Cardinal;
 begin
   Result := '';
   if FileExists(ExpandConstant('{app}\{#OtherExe}')) then
     Result := 'Choose a separate installation folder for this edition.'
-  else if GetVersionNumbersString(ExpandConstant('{app}\{#ExeName}.exe'), ExistingVersion) then
+  else if GetVersionNumbers(ExpandConstant('{app}\{#ExeName}.exe'), ExistingMS, ExistingLS) then
   begin
-    if ComparePackedVersion(StrToVersion(ExistingVersion), StrToVersion('{#NumericVersion}')) > 0 then
+    if (ExistingMS > {#VersionMS}) or ((ExistingMS = {#VersionMS}) and (ExistingLS > {#VersionLS})) then
       Result := 'A newer build is already installed. This installer will not downgrade it.';
   end;
 end;
