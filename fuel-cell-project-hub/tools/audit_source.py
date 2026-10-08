@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import PurePosixPath
 
-BLOCKED_DIRECTORIES = {'.venv', 'venv', 'env', '__pycache__', 'build', 'dist', 'runtime',
+BLOCKED_DIRECTORIES = {'.project_hub', '.venv', 'venv', 'env', '__pycache__', 'build', 'dist', 'runtime',
                        'logs', 'auth', 'tokens', 'secrets', '.projecthub', '.test-state', 'cache', 'backups', 'generated'}
 DATA_EXTENSIONS = {'.tif', '.tiff', '.mp4', '.avi', '.mov', '.csv', '.xls', '.xlsx', '.parquet', '.h5', '.hdf5'}
 SECRET_PATTERNS = [re.compile(r'gh[pousr]_[A-Za-z0-9]{30,}'), re.compile(r'github_pat_[A-Za-z0-9_]{30,}'),

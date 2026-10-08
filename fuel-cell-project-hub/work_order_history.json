@@ -36,6 +36,16 @@
       "summary": "Independent Beta and Stable editions with isolated storage, channel-specific updates and approved production promotion; includes safe update options.",
       "status": "complete",
       "channel": "beta"
+    },
+    {
+      "work_order_id": "fixed-shared-onedrive-root",
+      "title": "Fixed shared OneDrive root and per-user configuration",
+      "version": "0.4.2",
+      "started_at": "2026-10-08",
+      "completed_at": null,
+      "summary": "Shared native-index snapshots, explicit authority and approved catalog-only migration; archive files untouched",
+      "status": "implemented",
+      "channel": "beta"
     }
   ]
 }

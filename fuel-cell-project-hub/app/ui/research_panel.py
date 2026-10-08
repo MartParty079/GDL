@@ -28,7 +28,7 @@ class CatalogWorker(QThread):
                                 progress=self.progress.emit, **self.options))
         except IndexCancelled:
             self.catalog.log('index_cancelled', action='previous index preserved')
-            self.failed.emit('Index cancelled. Completed batches are saved; unfinished sources will be reconciled on the next refresh.')
+            self.failed.emit('Index cancelled. The previous published index is preserved; pending work will be reconciled on the next refresh.' if self.catalog.shared else 'Index cancelled. Completed batches are saved; unfinished sources will be reconciled on the next refresh.')
         except Exception:
             self.catalog.log('index_failed', action='existing index preserved')
             self.failed.emit('Index unavailable. Your existing catalog and source files were preserved. Check storage access and retry.')
@@ -45,7 +45,9 @@ class ResearchPanel(QWidget):
         self.controls = []
         layout = QVBoxLayout(self)
         layout.addWidget(label('Research storage · Current Project and Legacy Data'))
-        layout.addWidget(label('Index and reference existing folders. Sources stay in place; no project marker is created.', 'muted'))
+        layout.addWidget(label('Sources stay in place. Shared project clients read verified published revisions.', 'muted'))
+        if settings.store.shared_index:
+            layout.addWidget(Button('Choose synchronized copy for next launch', self.remap_shared))
         tabs = QTabWidget()
         layout.addWidget(tabs)
         project = QWidget()
@@ -164,8 +166,14 @@ class ResearchPanel(QWidget):
         self.refresh_status()
         from app.indexing.watcher import IndexWatcher
         self.watcher = IndexWatcher(self)
-        self.watcher.refresh_requested.connect(self.automatic_refresh)
+        self.watcher.refresh_requested.connect(self.request_reconciliation)
         self.configure_watcher()
+        if settings.store.shared_index:
+            for field in [self.name, self.active, self.legacy, self.additional, *self.paths.values()]:
+                field.setReadOnly(True)
+            self.shared_poll = QTimer(self)
+            self.shared_poll.timeout.connect(self.poll_shared)
+            self.shared_poll.start(30000)
         if options.get('automatic', False):
             QTimer.singleShot(1500, self.automatic_refresh)
 
@@ -175,6 +183,22 @@ class ResearchPanel(QWidget):
         row.addWidget(Button('Browse', lambda: self.browse(field)))
         row.addWidget(Button('Open', lambda: self.open_path(field)))
         form.addRow(name, row)
+
+    def remap_shared(self):
+        if self.indexing:
+            self.status.set_message('Finish indexing before changing the next-launch mapping.', 'warning')
+            return
+        root = QFileDialog.getExistingDirectory(self, 'Select a synchronized copy of this shared project')
+        if not root:
+            return
+        try:
+            from app.services.shared_index import SharedIndex
+            candidate = SharedIndex(self.settings.store, root, self.settings.store.shared_index.identity['project_id'])
+            self.settings.store.local.update(shared_root=str(candidate.root), project_locations=candidate.locations())
+            self.settings.store.save_local()
+            self.status.set_message('Verified mapping saved. Reopen Beta to use this synchronized copy. Current operations can finish normally.')
+        except (OSError, ValueError):
+            self.status.set_message('Select an accessible synchronized copy with this project identity.', 'warning')
 
     def browse(self, field):
         value = QFileDialog.getExistingDirectory(self, 'Select storage folder', field.text())
@@ -242,7 +266,7 @@ class ResearchPanel(QWidget):
         if self.indexing:
             return False
         try:
-            self.settings.save_locations(self.values())
+            self.settings.save_locations(self.settings.locations.value if self.settings.store.shared_index else self.values())
             from app.indexing.extractor import DEFAULT_LIMITS
             limits = dict(DEFAULT_LIMITS)
             limits['enabled'] = self.extraction.isChecked()
@@ -290,6 +314,10 @@ class ResearchPanel(QWidget):
     def refresh_status(self):
         value = self.settings.locations.value
         message = '\n'.join(s['name'] + ': ' + s['status'] for s in self.settings.locations.status())
+        shared = self.settings.store.shared_index
+        if shared:
+            message += '\n' + ('Configured indexing authority' if shared.authority else 'Published index reader')
+            message += ' · Revision ' + (shared.revision or 'not published')
         if self.settings.catalog:
             summary = self.settings.catalog.summary()
             message += f"\nCurrent: {summary['current']:,} · Legacy: {summary['legacy']:,} · Last indexed: {local_datetime(summary['last_indexed']) if summary['last_indexed'] else 'Not indexed'}"
@@ -298,6 +326,11 @@ class ResearchPanel(QWidget):
         self.status.set_message(message)
 
     def start_index(self, tier=None, choose=False, apply_settings=True, **options):
+        shared = self.settings.store.shared_index
+        if shared and not shared.authority:
+            shared.submit('refresh', {})
+            self.status.set_message('Index request queued. The configured authority will publish the update; no local rebuild is required.')
+            return
         if self.indexing or (apply_settings and not self.save()):
             return
         if not self.settings.catalog:
@@ -361,8 +394,30 @@ class ResearchPanel(QWidget):
         self.watcher.configure(roots, settings.get('watching', False), settings.get('automatic', False), settings.get('minutes', 10))
 
     def automatic_refresh(self):
+        if self.settings.store.shared_index and not self.settings.store.shared_index.authority:
+            self.poll_shared()
+            return
         if not self.indexing and self.settings.catalog:
             self.start_index(tier='active', quick=True, apply_settings=False)
+
+    def request_reconciliation(self):
+        shared = self.settings.store.shared_index
+        if shared and not shared.authority:
+            shared.submit('refresh', {})
+            self.poll_shared()
+        else:
+            self.automatic_refresh()
+
+    def poll_shared(self):
+        shared = self.settings.store.shared_index
+        previous = shared.revision
+        shared.load()
+        if shared.path and not self.settings.catalog:
+            self.settings.connect_catalog()
+            self.changed.emit()
+        elif previous != shared.revision:
+            self.changed.emit()
+        self.status.set_message(shared.status)
 
     def backup(self):
         if self.indexing or not self.settings.catalog:

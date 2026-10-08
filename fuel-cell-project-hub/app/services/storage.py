@@ -39,6 +39,8 @@ class Store:
         self.root = Path(root)
         self.config_dir = self.root / "config"
         self.sandbox_required = BETA and local_dir is None
+        self.shared_required = self.sandbox_required
+        self.shared_index = None
         override = os.environ.get('GDL_HUB_BETA_DATA_DIR' if BETA else 'FUEL_HUB_DATA_DIR')
         self.local_dir = Path(local_dir or (Path(override) / PROFILE_NAME if BETA and override else override) or
                               Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local/share")) / PROFILE_NAME)
@@ -86,9 +88,51 @@ class Store:
     def save_local(self):
         write_json(self.local_dir / "local.json", self.local)
 
+    def attach_shared(self, root):
+        from app.services.shared_index import SharedIndex
+        expected = self.local.get('shared_project_id')
+        if self.shared_required:
+            configured = read_json(self.config_dir / 'shared_project_public.json', {}).get('project_id')
+            if configured and expected and expected != configured:
+                raise ValueError('The saved mapping belongs to a different configured project.')
+            expected = configured or expected
+        shared = SharedIndex(self, root, expected)
+        self.shared_index = shared
+        self.sandbox_required = False
+        self.local.update(shared_root=str(shared.root), shared_project_id=shared.identity['project_id'],
+                          project_locations=shared.locations())
+        self.project = read_json(shared.control / 'settings/project_settings.json', self.defaults)
+        self.events = []
+        self.save_local()
+        return shared
+
+    def project_data(self, relative):
+        if self.shared_index:
+            from app.services.project_storage import normalized_relative
+            path = self.shared_index.control / normalized_relative(relative)
+            if not path.resolve().is_relative_to(self.shared_index.control):
+                raise ValueError('Project data must remain inside shared control storage.')
+            return path
+        if self.shared_required:
+            raise ValueError('Connect the verified shared project before saving research data.')
+        return self.local_dir / relative
+
+    def validate_project_output(self, path):
+        path = Path(path).resolve()
+        if self.shared_index:
+            if not path.is_relative_to(self.shared_index.root) or path.is_relative_to(self.shared_index.control):
+                raise ValueError('Save research exports inside the shared project, outside its control folder.')
+        elif self.shared_required:
+            raise ValueError('Connect the shared project before exporting research data.')
+        return path
+
     def cache_project(self):
         from app.services.project_storage import validate_shared_settings
         validate_shared_settings(self.project)
+        if self.shared_index:
+            return
+        if self.shared_required:
+            raise ValueError('Connect shared project storage first.')
         write_json(self.local_dir / "project_snapshot.json", self.project)
         self.local['project_snapshot_enabled'] = True
         self.save_local()
@@ -96,7 +140,10 @@ class Store:
     def record(self, area, message):
         self.events.append({"id": uuid.uuid4().hex, "timestamp": timestamp(),
                             "person": getpass.getuser(), "type": "Update", "area": area, "message": message})
-        write_json(self.local_dir / "activity.json", self.events)
+        if self.shared_index:
+            write_json(self.project_data('logs') / (self.events[-1]['id'] + '.json'), self.events[-1])
+        elif not self.shared_required:
+            write_json(self.local_dir / "activity.json", self.events)
         if area == "Settings" and getattr(self, "accounts", None):
             self.accounts.event("SETTINGS_CHANGED")
 
@@ -109,7 +156,14 @@ class Store:
         revision = {"id": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8],
                     "timestamp": timestamp(), "person": getpass.getuser(), "reason": reason,
                     "previous": copy.deepcopy(self.project), "next": copy.deepcopy(value)}
-        if self.provider:
+        if self.shared_index:
+            if not self.shared_index.authority:
+                raise ValueError('Shared settings changes require the configured project authority.')
+            write_json(self.project_data('settings/history') / (revision['id'] + '.json'), revision)
+            write_json(self.project_data('settings/project_settings.json'), value)
+        elif self.shared_required:
+            raise ValueError('Connect shared project storage first.')
+        elif self.provider:
             self.provider.save_project(value, revision)
         elif self.local.get("local_project_root") and not self.local.get('project_locations', {}).get('enabled'):
             raise ValueError("Shared storage unavailable. Reconnect it before changing project settings.")
@@ -121,12 +175,16 @@ class Store:
         self.record("Settings", reason)
 
     def history(self):
+        if self.shared_index:
+            return [read_json(p, {}) for p in sorted(self.project_data('settings/history').glob('*.json'), reverse=True)]
         if self.provider:
             return self.provider.history()
         paths = [*(self.local_dir / 'history').glob('*.json'), *(self.config_dir / 'history').glob('*.json')]
         return [read_json(p, {}) for p in sorted(paths, reverse=True)]
 
     def connect_storage(self, root, persist=True):
+        if self.shared_required:
+            return self.attach_shared(root)
         if self.sandbox_required and not Path(root).resolve().is_relative_to(self.local_dir.resolve()):
             raise ValueError('Beta can connect only to its isolated research sandbox.')
         from app.services.project_storage import LocalOneDriveProvider
@@ -170,6 +228,9 @@ class Store:
                "status": "Open", "timestamp": timestamp(), "person": getpass.getuser(),
                "version": version, "context": context, "expected": expected, "steps": steps}
         self.bugs.append(bug)
-        write_json(self.local_dir / "bugs.json", self.bugs)
+        if self.shared_index:
+            write_json(self.project_data('metadata/bugs') / (bug['id'] + '.json'), bug)
+        elif not self.shared_required:
+            write_json(self.local_dir / "bugs.json", self.bugs)
         self.record("Bugs", f"Reported {bug['id']}: {title}")
         return bug

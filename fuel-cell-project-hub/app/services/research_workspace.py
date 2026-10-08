@@ -1,4 +1,5 @@
 """Research objects and events in the existing catalog; source files stay untouched."""
+from app.indexing.shared_operation import shared_write
 
 import json
 import uuid
@@ -119,6 +120,7 @@ class ResearchWorkspace:
             else None
         )
 
+    @shared_write
     def save(self, kind, values, identity=None, origin="current"):
         if kind not in ("sample", "experiment") or origin not in ("current", "legacy"):
             raise ValueError("Choose a research object and its origin.")
@@ -313,6 +315,7 @@ class ResearchWorkspace:
             for r in rows
         ]
 
+    @shared_write
     def annotate(self, rows, values, append_tags=False):
         # Validate the whole batch before modifying anything, and commit all associations atomically.
         allowed = {
@@ -438,6 +441,7 @@ class ResearchWorkspace:
                     origin=row["data_origin"],
                 )
 
+    @shared_write
     def record_event(self, kind, detail, sample="", experiment="", origin="current"):
         allowed = (
             "Note added",
@@ -467,6 +471,12 @@ class ResearchWorkspace:
             )
 
     def viewed(self, row):
+        if self.catalog.shared:
+            recent = self.catalog.store.local.setdefault('recent_files', {})
+            recent[row['id']] = timestamp()
+            self.catalog.store.local['recent_files'] = dict(sorted(recent.items(), key=lambda p: p[1], reverse=True)[:100])
+            self.catalog.store.save_local()
+            return
         with self.catalog.connect() as db:
             db.execute(
                 "INSERT OR REPLACE INTO workspace_recent VALUES (?,?)",
@@ -474,6 +484,12 @@ class ResearchWorkspace:
             )
 
     def hide(self, row):
+        if self.catalog.shared:
+            hidden = set(self.catalog.store.local.get('hidden_files', []))
+            hidden.add(row['id'])
+            self.catalog.store.local['hidden_files'] = sorted(hidden)
+            self.catalog.store.save_local()
+            return
         with self.catalog.connect() as db:
             db.execute(
                 "INSERT OR IGNORE INTO workspace_hidden VALUES (?)", (row["id"],)
@@ -487,6 +503,10 @@ class ResearchWorkspace:
             )
 
     def restore_hidden(self):
+        if self.catalog.shared:
+            self.catalog.store.local['hidden_files'] = []
+            self.catalog.store.save_local()
+            return
         with self.catalog.connect() as db:
             db.execute("DELETE FROM workspace_hidden")
 
@@ -510,6 +530,7 @@ class ResearchWorkspace:
                 )
             ]
 
+    @shared_write
     def locate(self, row, path):
         from pathlib import Path
         from app.services.project_storage import normalized_relative
@@ -538,7 +559,7 @@ class ResearchWorkspace:
             stat = safe.stat()
             candidate.update(
                 name=safe.name,
-                full_path=str(safe),
+                full_path=relative if self.catalog.shared else str(safe),
                 extension=safe.suffix.lower(),
                 parent_folder=str(Path(relative).parent).replace("\\", "/"),
                 size=stat.st_size,

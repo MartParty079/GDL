@@ -1,4 +1,5 @@
 """Evidence-based, logical sample and image relationships. Never writes source files."""
+from app.indexing.shared_operation import shared_write
 
 import hashlib
 import json
@@ -190,6 +191,7 @@ class SampleIntelligence:
           confidence=excluded.confidence,explanation=excluded.explanation,signature=excluded.signature,rules_version=excluded.rules_version''',
                    (identity, category, subtype, base, '', '', confidence, why, signature, RULE_VERSION))
 
+    @shared_write
     def reconcile(self, cancel=None, progress=None):
         with self.catalog.connect() as db:
             self.discover(db)
@@ -243,6 +245,7 @@ class SampleIntelligence:
                     for i,p,c,s,e,r,m in db.execute('''SELECT l.sample_id,o.payload,l.confidence,l.source,l.explanation,l.relationship_type,l.manually_confirmed
                       FROM file_sample_links l JOIN research_objects o ON o.id=l.sample_id WHERE l.file_id=? ORDER BY l.manually_confirmed DESC''', (identity,))]
 
+    @shared_write
     def assign(self, file_id, sample_ids, relationship='primary'):
         if relationship not in ('primary','contains','compares','derived_from','references'):
             raise ValueError('Choose a supported relationship.')
@@ -260,6 +263,7 @@ class SampleIntelligence:
                 db.execute('INSERT INTO file_sample_links VALUES (?,?,?,?,?,1,?)',
                            (file_id, identity, relationship, 'HIGH', 'manual', 'User confirmed sample relationship'))
 
+    @shared_write
     def edit_image(self, file_id, category, subtype='', original_id=''):
         with self.catalog.connect() as db:
             valid = {n for (n,) in db.execute('SELECT name FROM asset_categories WHERE active=1')}
@@ -280,6 +284,7 @@ class SampleIntelligence:
                 db.execute('INSERT OR REPLACE INTO image_families VALUES (?,?,?)', (family,original_id,'Original located'))
                 db.execute('INSERT OR REPLACE INTO image_relationships VALUES (?,?,?,?)', (original_id,file_id,'derived_from','manual'))
 
+    @shared_write
     def reset(self, file_id):
         with self.catalog.connect() as db:
             row=db.execute('SELECT payload FROM files WHERE id=?',(file_id,)).fetchone()

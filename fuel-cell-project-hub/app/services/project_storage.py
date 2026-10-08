@@ -14,7 +14,7 @@ from app.services.storage import read_json, write_json, timestamp
 STANDARD_FOLDERS = ("00_Project_Admin", "01_Procedures", "02_Samples", "03_Experiments",
                     "04_Raw_Data", "05_Processed_Data", "06_Analysis", "07_Reports",
                     "08_Reference", "09_Exports", "99_Archive", ".projecthub")
-EXCLUDED = {".projecthub", ".git", "__pycache__", ".venv", "venv", "node_modules",
+EXCLUDED = {".project_hub", ".projecthub", ".git", "__pycache__", ".venv", "venv", "node_modules",
             ".cache", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".sites-runtime"}
 RELATION_KEYS = ("experiment_id", "run_id", "sample_id", "procedure_id", "procedure_version")
 PLACEHOLDER_FLAGS = 0x1000 | 0x40000 | 0x400000

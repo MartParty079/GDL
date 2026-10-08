@@ -78,3 +78,4 @@ project_settings.json
 Thumbs.db
 .DS_Store
 supabase/.temp/
+.project_hub/

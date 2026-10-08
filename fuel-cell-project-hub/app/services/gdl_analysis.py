@@ -22,7 +22,8 @@ class GDLAnalysisService:
     def __init__(self, store):
         self.store = store
         self.registry = PathRegistry(store)
-        self.directory = store.local_dir / "gdl"
+        install_id = store.local.setdefault('install_id', str(uuid.uuid4()))
+        self.directory = store.project_data('analysis/gdl/' + install_id) if store.shared_index else store.local_dir / "gdl"
         self.last_path = self.directory / "last_session.json"
         try:
             self.session = read_json(self.last_path, {})
@@ -122,7 +123,13 @@ class GDLAnalysisService:
             raise ValueError("A GDL watchdog is already active. Finish that session before starting another.")
         self.preserve_quick_runs()
         session = self.build_session_config(results, input_folder, output_folder)
-        if self.store.sandbox_required:
+        if self.store.shared_index:
+            base = self.store.shared_index.root
+            if any(not Path(session[key]).resolve().is_relative_to(base) for key in ('input_folder','output_folder','report_output_folder')):
+                raise ValueError('Research input and generated results must remain inside the configured shared project.')
+            if not Path(session['temp_work_folder']).resolve().is_relative_to(base) and not Path(session['temp_work_folder']).resolve().is_relative_to(self.store.local_dir / 'cache'):
+                raise ValueError('Use shared storage or disposable local cache for temporary analysis work.')
+        elif self.store.sandbox_required:
             base=self.store.local_dir.resolve()
             if any(not Path(session[key]).resolve().is_relative_to(base) for key in ('input_folder','output_folder','report_output_folder','temp_work_folder')):
                 raise ValueError('Beta analysis input and output must remain inside its isolated research sandbox.')

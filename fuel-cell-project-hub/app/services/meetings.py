@@ -5,7 +5,7 @@ import sqlite3
 import uuid
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-from app.services.storage import timestamp
+from app.services.storage import timestamp, read_json, write_json
 from app.services.accounts import AccountError
 from app.services.contributions import fetch_pages
 
@@ -17,11 +17,22 @@ ATTENDANCE = ('Present', 'Absent', 'Remote', 'Excused', 'Partial')
 class Meetings:
     def __init__(self, accounts, catalog):
         self.accounts, self.catalog = accounts, catalog
-        self.path = accounts.store.local_dir / 'meetings.local.sqlite3'
+        store = accounts.store
+        self.shared = store.shared_index
+        self.path = store.local_dir / ('cache/meetings.sqlite3' if self.shared else 'meetings.local.sqlite3')
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         self.user = accounts.profile['id']
         self.conflicts = []
         with self.connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS meeting_cache(user_id TEXT,id TEXT,payload TEXT,pending INTEGER DEFAULT 0,PRIMARY KEY(user_id,id))')
+            if self.shared:
+                folder = store.project_data('metadata/meetings/' + accounts.install_id)
+                rows = [read_json(p, {}) for p in folder.glob('*.json')]
+                for entry in sorted(rows, key=lambda r: r.get('updated_at', '')):
+                    row = entry.get('record', {})
+                    if entry.get('user_id') == self.user and row.get('created_by') and row.get('id'):
+                        db.execute('INSERT OR REPLACE INTO meeting_cache VALUES(?,?,?,?)',
+                            (self.user, row['id'], json.dumps(row), int(entry.get('pending', True))))
 
     @contextmanager
     def connect(self):
@@ -73,6 +84,9 @@ class Meetings:
         if row['content'].get('transcript') != (previous or {}).get('content',{}).get('transcript',''):
             row['content']['transcript_edited_at'] = row['updated_at']
             row['content']['transcript_edited_by'] = self.user
+        if self.shared:
+            write_json(self.accounts.store.project_data('metadata/meetings/' + self.accounts.install_id) /
+                       (row['client_mutation_id'] + '.json'), {'user_id': self.user, 'updated_at': row['updated_at'], 'record': row, 'pending': True})
         with self.connect() as db:
             db.execute('INSERT INTO meeting_cache VALUES(?,?,?,1) ON CONFLICT(user_id,id) DO UPDATE SET payload=excluded.payload,pending=1',
                        (self.user, row['id'], json.dumps(row)))
@@ -101,6 +115,9 @@ class Meetings:
             if isinstance(saved, dict) and saved.get('conflict'):
                 self.conflicts.append(identity)
                 continue
+            if self.shared:
+                write_json(self.accounts.store.project_data('metadata/meetings/' + self.accounts.install_id) /
+                           (str(uuid.uuid4()) + '.json'), {'user_id': self.user, 'updated_at': timestamp(), 'record': saved, 'pending': False})
             with self.connect() as db:
                 current = db.execute('SELECT payload FROM meeting_cache WHERE user_id=? AND id=?', (self.user, identity)).fetchone()
                 if current and json.loads(current[0]) == row:

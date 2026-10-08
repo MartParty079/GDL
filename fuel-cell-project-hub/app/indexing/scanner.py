@@ -4,7 +4,7 @@ from pathlib import Path
 from app.services.project_storage import EXCLUDED, redirects, IndexCancelled
 
 
-def discover(root, cancel=None):
+def discover(root, cancel=None, exclude_roots=()):
     root = Path(root)
     def walk(folder):
         if cancel and cancel():
@@ -19,6 +19,8 @@ def discover(root, cancel=None):
                     if cancel and cancel():
                         raise IndexCancelled('Index cancelled; completed batches are preserved.')
                     path = Path(entry.path)
+                    if any(path == excluded for excluded in exclude_roots):
+                        continue
                     try:
                         info = path.lstat()
                         if redirects(info):

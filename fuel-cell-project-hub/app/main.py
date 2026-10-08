@@ -37,19 +37,30 @@ def main():
             return 0
         from app.services.diagnostics import configure
 
-        configure(store.local_dir)
+        configure(store.local_dir / 'cache' if BETA else store.local_dir)
         from app.ui.update_installation import pending_update_at_startup
         if pending_update_at_startup(store):return 0
+        if store.shared_required:
+            from app.ui.shared_project_setup import connect_shared_project
+            if not connect_shared_project(store):
+                broker.server.close()
+                return 0
+            from PySide6.QtWidgets import QProgressDialog
+            progress = QProgressDialog('Verifying the shared project index. Research files will not be scanned.', '', 0, 0)
+            progress.setCancelButton(None)
+            progress.show()
+            app.processEvents()
+            try:
+                store.shared_index.load()
+            finally:
+                progress.close()
         try:accounts = Accounts(store)
         except ValueError:
             if not BETA:raise
-            # No production endpoint or role is inherited in the local sandbox.
-            from app.services.project_locations import ProjectLocations
-            locations=ProjectLocations(store)
-            for path in (locations.value['active']['root_path'],locations.value['shared_storage']):Path(path).mkdir(parents=True,exist_ok=True)
-            locations.value['enabled']=True;locations.save(locations.value)
+            # No production endpoint or role is inherited by offline Beta.
             window=HubWindow(store)
-            window.banner.setText('BETA · Isolated local workspace · Beta backend unconfigured · No administrator privileges')
+            authority = 'Configured indexing authority' if store.shared_index.authority else 'Published index reader'
+            window.banner.setText('BETA · Shared OneDrive project · ' + authority + ' · Backend unconfigured · No backend administrator privileges')
             window.show();app.aboutToQuit.connect(broker.server.close)
             return app.exec()
         app.setQuitOnLastWindowClosed(False)

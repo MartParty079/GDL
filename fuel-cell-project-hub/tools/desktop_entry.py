@@ -86,6 +86,7 @@ def self_check(report):
         document=QPdfDocument(window)
         assert document.load(str(previews.resident_path(catalog,rows['fixture.pdf'])))==QPdfDocument.Error.None_
         assert document.pageCount()==1
+        document.close()
         assert resource_path('CHANGELOG.md').is_file()
         from app.services.storage import read_json
         from app.version import VERSION
@@ -112,6 +113,20 @@ def self_check(report):
                       work_order_history_available=True,local_transcription_bundled=TranscriptionService.available)
         result.update(version=__version__, research_objects_available=True, rendered_pdf_available=True,
                       spreadsheet_preview_available=True, image_thumbnail_available=True, changelog_present=True)
+        from app.services.shared_index import SharedIndex
+        from app.indexing.index_manager import NativeIndex
+        shared_root = Path(temporary) / 'GDL research - General'
+        shared_root.mkdir()
+        (shared_root / 'shared.txt').write_text('Shared fixture', encoding='utf-8')
+        owner = Store(ROOT, Path(temporary) / 'shared-owner')
+        SharedIndex.enroll(owner, shared_root, confirmed=True)
+        owner.attach_shared(shared_root)
+        NativeIndex(owner).refresh()
+        reader = Store(ROOT, Path(temporary) / 'shared-reader')
+        reader.attach_shared(shared_root)
+        assert NativeIndex(reader).summary()['current'] == 1
+        assert not reader.shared_index.authority
+        result.update(shared_snapshot_reader_available=True)
         from app.services.accounts import Accounts, protect
         from app.ui.accounts import LoginDialog
         import os

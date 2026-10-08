@@ -50,7 +50,7 @@ def thumbnail(catalog, row, size=240):
             [row["id"], row.get("signature"), path.stat().st_mtime_ns, size]
         ).encode()
     ).hexdigest()
-    folder = Path(catalog.locations.value["cache"]) / "thumbnails"
+    folder = Path(catalog.locations.value["generated"]) / "Thumbnails" if catalog.shared else Path(catalog.locations.value["cache"]) / "thumbnails"
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / (key + ".png")
     if target.is_file():

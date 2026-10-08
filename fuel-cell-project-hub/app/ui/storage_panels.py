@@ -121,6 +121,8 @@ class RootWizard(QWizard):
 
     def accept(self):
         try:
+            if self.store.shared_required:
+                raise ValueError('Use verified shared project setup; independent library initialization is disabled.')
             settings = copy.deepcopy(self.store.project)
             settings.setdefault('storage', {}).update(project_name=self.project_name.text().strip(), online_url=self.online_field.text().strip())
             self.provider.accept_root(self.project_name.text(), settings, self.allow_unmarked)

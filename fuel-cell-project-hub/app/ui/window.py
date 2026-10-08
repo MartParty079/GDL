@@ -624,7 +624,10 @@ class HubWindow(QMainWindow):
 
     def set_bug_status(self, bug, status):
         bug["status"] = status
-        write_json(self.store.local_dir / "bugs.json", self.store.bugs)
+        if self.store.shared_index:
+            write_json(self.store.project_data('metadata/bugs') / (bug['id'] + '.json'), bug)
+        else:
+            write_json(self.store.local_dir / "bugs.json", self.store.bugs)
         self.store.record("Bugs", f"{bug['id']} marked {status}")
         self.render_activity()
 
@@ -676,7 +679,7 @@ class HubWindow(QMainWindow):
     def export_bug(self, bug):
         path, _ = QFileDialog.getSaveFileName(self, "Export bug report", bug["id"] + ".json", "JSON (*.json)")
         if path:
-            self.guard(lambda: write_json(Path(path), bug))
+            self.guard(lambda: write_json(self.store.validate_project_output(path), bug))
 
     def render_settings(self):
         selected = self.settings_tabs.currentIndex() if hasattr(self, "settings_tabs") else 0

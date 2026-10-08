@@ -143,6 +143,21 @@
       "breaking_changes": [],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.4.2",
+      "date": "2026-10-08",
+      "work_order": "Fixed shared OneDrive root and per-user configuration",
+      "summary": "Identity-bound shared project mapping and immutable authority-published native index",
+      "major_features": [
+        "Shared snapshot checksums and queued indexing requests",
+        "Once-only catalog migration preserves research records without moving files",
+        "Verified shared revisions and offline pending jobs across per-user mappings"
+      ],
+      "major_fixes": [],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }

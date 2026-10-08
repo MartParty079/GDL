@@ -78,7 +78,8 @@ class Participation:
     """Durable absolute session snapshots; retry never adds duplicate duration."""
     def __init__(self, accounts):
         self.accounts = accounts
-        self.path = accounts.store.local_dir / 'pending_sessions.local.json'
+        store = accounts.store
+        self.path = store.project_data('logs/outboxes/' + accounts.install_id + '/sessions.json') if store.shared_index else store.local_dir / 'pending_sessions.local.json'
         self.pending = read_json(self.path, {})
         self.session = ActiveSession(accounts.profile['id'], accounts.install_id)
         self.persist()
@@ -88,6 +89,8 @@ class Participation:
         with self.accounts.lock:
             self.pending[row['id']] = row
             write_json(self.path, self.pending)
+            if self.accounts.store.shared_index:
+                write_json(self.accounts.store.project_data('logs/sessions') / (row['id'] + '.json'), row)
         return row
 
     def flush(self):
@@ -241,7 +244,9 @@ def report_html(report):
     return '<html><head><style>body{font-family:Arial;font-size:10pt;color:#173044}h1{font-size:20pt}h2{margin-top:20px;color:#12665e}td{padding:4px 14px 4px 0}li{margin:4px}</style></head><body><h1>GDL Research Hub</h1><h2>Weekly Contribution Report</h2><p><b>' + esc(report['person']) + '</b><br>' + esc(report['begin'][:10]) + ' through ' + esc(report['end'][:10]) + ' (end exclusive)</p><p>' + esc(report['summary']) + '</p><h2>Usage, research and meetings</h2><table>' + metrics + '</table><h2>Top samples</h2><ul>' + samples + '</ul><h2>Recorded attendance</h2><ul>' + meetings + '</ul><h2>Activity timeline</h2><ul>' + items + '</ul><p>' + esc(report['limitations']) + '</p></body></html>'
 
 
-def export_pdf(report, path):
+def export_pdf(report, path, store=None):
+    if store:
+        path = store.validate_project_output(path)
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet
@@ -285,7 +290,9 @@ def export_pdf(report, path):
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 
-def export_csv(report, path):
+def export_csv(report, path, store=None):
+    if store:
+        path = store.validate_project_output(path)
     with open(path, 'w', newline='', encoding='utf-8-sig') as stream:
         writer = csv.writer(stream)
         writer.writerow(['Person', 'Period start', 'Period end (exclusive)', 'Metric', 'Value'])

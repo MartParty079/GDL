@@ -25,7 +25,11 @@ tests and tree status. Fix new regressions before pushing.
 
 Beta and Stable require separate installer IDs, folders, profiles, caches,
 protocols, research data, update channels and backend endpoints. Beta currently
-uses an isolated local sandbox. Never reuse production Supabase credentials or
+maps the explicitly authorized existing shared OneDrive project using verified
+identity and authority-published snapshots. Read
+fuel-cell-project-hub/docs/SHARED_ONEDRIVE_INDEX.md
+for the catalog-only migration; never move archive files without a separate
+validated plan. Never reuse production Supabase credentials or
 apply migrations to production for Beta. Roles remain database-authorized; Beta
 never grants admin. Do not launch Fiji or test the deferred Microsoft identity
 flow without new human authorization.

@@ -404,8 +404,8 @@ class MeetingsPanel(QWidget):
         if not item:return
         path,_=QFileDialog.getSaveFileName(self,'Export meeting draft','','Meeting (*.json)')
         if path:
-            try:Path(path).write_text(json.dumps(self.service.get(item.data(Qt.UserRole)),indent=2),encoding='utf-8')
-            except OSError:self.status.setText('Draft export unavailable. Choose a writable folder.')
+            try:self.service.accounts.store.validate_project_output(path).write_text(json.dumps(self.service.get(item.data(Qt.UserRole)),indent=2),encoding='utf-8')
+            except (OSError,ValueError):self.status.setText('Choose a writable folder inside the shared project.')
 
     def reload_shared(self):
         item=self.list.currentItem()
@@ -477,8 +477,8 @@ class WeeklyPanel(QWidget):
         index=max(0,self.team.currentRow());report=self.reports[index]
         path,_=QFileDialog.getSaveFileName(self,'Export weekly report','Weekly-Contributions.'+kind,kind.upper()+' (*.'+kind+')')
         if path:
-            try:(export_pdf if kind=='pdf' else export_csv)(report,path);self.status.setText('Report exported.')
-            except OSError:self.status.setText('Unable to export. Choose a writable folder.')
+            try:(export_pdf if kind=='pdf' else export_csv)(report,path,self.accounts.store);self.status.setText('Report exported.')
+            except (OSError,ValueError):self.status.setText('Choose a writable folder inside the shared project.')
 
     def export_all(self):
         if self.accounts.profile['role']!='admin':return
@@ -489,7 +489,7 @@ class WeeklyPanel(QWidget):
             try:
                 for r in reports:
                     name=re.sub(r'[^\w .-]','_',r['person'])[:70]
-                    export_pdf(r,Path(folder)/(name+'-'+r['user_id'][:8]+'-'+r['begin'][:10]+'.pdf'))
+                    export_pdf(r,Path(folder)/(name+'-'+r['user_id'][:8]+'-'+r['begin'][:10]+'.pdf'),self.accounts.store)
                 self.status.setText(f'{len(reports)} individual team reports exported.')
-            except OSError:self.status.setText('Some reports could not be exported. Check the selected folder.')
+            except (OSError,ValueError):self.status.setText('Choose a writable folder inside the shared project.')
         self.generate(exported)

@@ -105,6 +105,8 @@ class PathRegistry:
                 return research_defaults[key]
         shared = self.store.project.get("gdl_analysis", {}).get("paths", {}).get(key)
         if shared:
+            if self.store.shared_index:
+                return str(self.store.shared_index.root / normalized_relative(shared))
             if not self.store.provider or self.store.provider.status() == "Unavailable":
                 raise ValueError("Project storage is unavailable. Reconnect OneDrive or choose a local folder.")
             return str(self.store.provider.path(shared))
@@ -116,6 +118,13 @@ class PathRegistry:
                     "quick_run_folder": str(self.store.local_dir / "gdl/quick_runs") if (self.store.local_dir / "gdl/quick_runs").is_dir() else str(Path(engine) / manifest.get("quick_run_folder", "Quick Runs")),
                     "swift_magnification_folder": str(Path(engine) / manifest.get("swift_folder", "Swift Magnification Tables")),
                     "temp_work_folder": str(self.store.local_dir / "gdl/runtime/work")}
+        if self.store.shared_index:
+            base = self.store.shared_index.root
+            defaults.update(default_input_folder=str(base / 'Images'),
+                            default_output_folder=str(base / 'Generated Outputs'),
+                            report_output_folder=str(base / 'Reports'),
+                            temp_work_folder=str(self.store.local_dir / 'cache/gdl/work'),
+                            quick_run_folder=str(self.store.project_data('analysis/gdl/quick_runs')) if self.store.project_data('analysis/gdl/quick_runs').is_dir() else defaults['quick_run_folder'])
         if key in ("default_input_folder", "default_output_folder", "report_output_folder") and self.store.provider:
             from app.services.storage_settings import FOLDERS
             name = {'default_input_folder': 'Raw Data', 'default_output_folder': 'Processed Data', 'report_output_folder': 'Reports'}[key]

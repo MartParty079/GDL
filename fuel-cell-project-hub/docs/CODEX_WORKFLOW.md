@@ -43,9 +43,12 @@ Stable retains its existing installer ID, LocalAppData/FuelCellProjectHub profil
 and gdlresearchhub protocol. No migration copies or deletes Stable data.
 Beta has its own installer ID, executable, icon, folder, profile and protocol.
 Source development defaults to Beta; packaged edition metadata is immutable.
-Beta defaults to a local sandbox inside its profile and never auto-connects the
-university OneDrive tree. Writable/index storage and scientific analysis data
-must stay inside the sandbox. Beta contains no production account configuration.
+The shared OneDrive amendment explicitly authorizes Beta mapping the existing
+GDL research - General project. Identity verification is mandatory, indexing
+is restricted to the explicitly enrolled authority, and SQLite publication uses
+closed immutable snapshots. Persistent research stays in the shared root; local
+verified copies are disposable cache. See SHARED_ONEDRIVE_INDEX.md for migration
+and authority recovery. Beta contains no production account configuration.
 Its optional URL/publishable key must target a separate Supabase project.
 Roles stay database-authorized. Local Beta has no administrator privileges.
 Beta migrations are source only until applied to a verified separate project;

@@ -26,6 +26,8 @@ datas.append((str(project_directory / 'assets'), 'assets'))
 datas.append((str(project_directory / 'CHANGELOG.md'), '.'))
 datas.append((str(project_directory / 'version_history.json'), '.'))
 datas.append((str(project_directory / 'work_order_history.json'), '.'))
+if beta:
+    datas.append((str(project_directory / 'config/shared_project_public.json'), 'config'))
 app_version = runpy.run_path(str(project_directory / 'app/version.py'))['VERSION']
 sequence=int(os.environ.get('GDL_BETA_SEQUENCE') or json.loads((project_directory/'config/edition.json').read_text()).get('beta_sequence',1))
 display_version=app_version+(f'-beta.{sequence}' if beta else '')

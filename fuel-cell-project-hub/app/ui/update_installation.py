@@ -32,6 +32,9 @@ class SafeUpdate(QObject):
         if presence and presence.timer.isActive():
             self.paused.append((presence.timer,presence.timer.interval()));presence.timer.stop()
         self.window.research_panel.watcher.stop()
+        shared_poll = getattr(self.window.research_panel, 'shared_poll', None)
+        if shared_poll and shared_poll.isActive():
+            self.paused.append((shared_poll, shared_poll.interval())); shared_poll.stop()
         try:
             self.window.storage_panel.cancel_index();self.window.research_panel.cancel_index()
             analysis=getattr(self.window,'gdl_service',None)

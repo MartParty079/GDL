@@ -10,7 +10,7 @@
 | Profile under LocalAppData | FuelCellProjectHubBeta | FuelCellProjectHub |
 | Protocol | gdlresearchhubbeta | gdlresearchhub |
 | Updates | vX.Y.Z-beta.N prereleases only | vX.Y.Z stable releases only |
-| Backend | Local sandbox; optional separate Beta Supabase | Existing production Supabase |
+| Backend | Offline shared project; optional separate Beta Supabase | Existing production Supabase |
 
 Stable installation/data stay untouched. Beta never migrates Stable settings or
 tokens. Both editions can run simultaneously. Beta has a blue B icon with gold
@@ -23,9 +23,12 @@ before an approved Beta build. Use only a publishable key from a separate projec
 The production endpoint is explicitly refused. Apply migrations only to that
 verified Beta project. Production database/storage are unchanged by this order.
 
-Copy test research into the Beta profile's research-sandbox folder. Writable
-storage, indexes, generated files, backups and scientific analysis inputs/outputs
-stay inside the Beta profile. Do not configure a production research folder there.
+The fixed-root amendment authorizes the existing shared OneDrive project for
+Beta research. Persistent data lives there; the Beta profile holds mappings,
+secure sessions, preferences and disposable cache. Only the explicitly enrolled
+authority indexes; clients read verified immutable snapshots. Stable installations
+and backend writes remain isolated. See SHARED_ONEDRIVE_INDEX.md for the approved
+catalog-only migration, pending legacy file links and authority transfer procedure.
 
 ## Update choices
 

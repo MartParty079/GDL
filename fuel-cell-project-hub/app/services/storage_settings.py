@@ -39,9 +39,15 @@ class StorageSettings:
             self.catalog.log('startup', project_id=self.locations.value['active']['id'])
         except (OSError, ValueError, sqlite3.Error):
             self.catalog = None
-            self.catalog_error = 'Research index unavailable. The existing database was preserved. Check the Index / Database location or restore a backup; Other application tools remain available.'
+            self.catalog_error = ('Waiting for a verified shared revision from the indexing authority. Other tools remain available.'
+                if self.store.shared_index else 'Research index unavailable. The existing database was preserved. Check the Index / Database location or restore a backup; Other application tools remain available.')
 
     def save_locations(self, value):
+        if self.store.shared_index:
+            self.locations.save(value)
+            if not self.catalog:
+                self.connect_catalog()
+            return
         import sqlite3
         from app.services.research_catalog import ProjectLocations
         ProjectLocations.validate(value)
@@ -96,6 +102,8 @@ class StorageSettings:
         return self.store.provider
 
     def protect_research_source(self, value):
+        if self.store.shared_required:
+            raise ValueError('Use verified shared project setup. The previous library initializer is disabled for shared-index Beta.')
         if not self.locations.value.get('enabled'):
             return
         target = Path(value).expanduser().resolve()

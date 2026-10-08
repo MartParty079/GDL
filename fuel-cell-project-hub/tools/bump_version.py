@@ -62,6 +62,13 @@ def bump(root, kind, work_order, summary, features=(), fixes=(), breaking=()):
     (root / "version_history.json").write_text(
         json.dumps(history, indent=2) + "\n", encoding="utf-8"
     )
+    orders = root / 'work_order_history.json'
+    if orders.exists():
+        value = json.loads(orders.read_text(encoding='utf-8'))
+        value['work_orders'].append({'work_order_id': re.sub(r'[^a-z0-9]+', '-', work_order.lower()).strip('-'),
+            'title': work_order, 'version': version, 'started_at': stamp, 'completed_at': None,
+            'summary': summary, 'status': 'implemented', 'channel': 'beta'})
+        orders.write_text(json.dumps(value, indent=2) + '\n', encoding='utf-8')
     changelog = root / "CHANGELOG.md"
     notes = f"## {version} — {stamp}\n\n- {summary}\n" + "".join(
         f"- {item}\n" for item in (*features, *fixes, *breaking)

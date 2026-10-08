@@ -45,6 +45,9 @@ def research_category(relative, origin=None):
 class ProjectLocations:
     def __init__(self, store):
         self.store = store
+        if getattr(store, 'shared_index', None):
+            self.value = store.shared_index.locations()
+            return
         self.value = copy.deepcopy(store.local.get('project_locations') or self.defaults())
         self.value.setdefault('additional', [])
         self.validate(self.value)
@@ -76,6 +79,14 @@ class ProjectLocations:
 
     @staticmethod
     def validate(value):
+        if value.get('shared_project'):
+            root = Path(value['shared_storage']).resolve()
+            if value['active']['id'] != value['shared_project'] or Path(value['active']['root_path']).resolve() != root:
+                raise ValueError('Keep the identity-bound shared project root.')
+            for key in ('database', 'generated', 'backups'):
+                if not Path(value[key]).resolve().is_relative_to(root):
+                    raise ValueError('Persistent project data must stay in shared storage.')
+            return
         roots = []
         identities = set()
         for source in [value['active'], *value['legacy'], *value.get('additional', [])]:
@@ -107,6 +118,12 @@ class ProjectLocations:
 
     def save(self, value):
         value = copy.deepcopy(value)
+        if getattr(self.store, 'shared_index', None):
+            expected = self.store.shared_index.locations()
+            if value != expected:
+                raise ValueError('Shared project paths are identity-bound. Reconnect a synchronized copy using shared project setup.')
+            self.value = expected
+            return
         if self.store.sandbox_required:
             base=self.store.local_dir.resolve()
             paths=[s['root_path'] for s in [value['active'],*value['legacy'],*value.get('additional',[])]]+[value[k] for k in PATH_LABELS]

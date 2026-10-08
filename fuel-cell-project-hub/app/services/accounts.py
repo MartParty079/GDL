@@ -96,7 +96,8 @@ class Accounts:
         self.lock = threading.RLock()
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="activity")
         self.session_path = store.local_dir / "tokens.bin"
-        self.outbox_path = store.local_dir / "pending_activity.local.json"
+        install_id = store.local.setdefault('install_id', str(uuid.uuid4()))
+        self.outbox_path = store.project_data('logs/outboxes/' + install_id + '/activity.json') if store.shared_index else store.local_dir / "pending_activity.local.json"
         self.pending = read_json(self.outbox_path, [])[-500:]
         for event in self.pending:
             event.setdefault('client_event_id',str(uuid.uuid4()))
@@ -374,6 +375,11 @@ class Accounts:
                 }
             )
             self.pending = self.pending[-500:]
+            if self.store.shared_index:
+                event = self.pending[-1]
+                write_json(self.store.project_data('logs/activity') / (event['client_event_id'] + '.json'), event)
+                if kind == 'FILE_ADDED':
+                    self.store.shared_index.submit('refresh', {'event':event['client_event_id']}, event['client_event_id'])
             write_json(self.outbox_path, self.pending)
         self.executor.submit(self.flush)
 

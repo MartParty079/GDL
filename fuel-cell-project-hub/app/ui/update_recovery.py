@@ -1,5 +1,6 @@
 """Local recovery of unapplied settings and editor drafts during an update."""
 import json
+import uuid
 from PySide6.QtCore import QObject, QEvent, QDate
 from PySide6.QtWidgets import QDialog, QLineEdit, QTextEdit, QComboBox, QCheckBox, QSpinBox, QDateEdit, QTableWidget, QTableWidgetItem
 from app.services.storage import read_json, write_json
@@ -55,7 +56,9 @@ class UpdateRecovery(QObject):
     def __init__(self, window):
         super().__init__(window)
         self.window = window
-        self.path = window.store.local_dir / 'update-drafts.local.json'
+        store = window.store
+        install_id = store.local.setdefault('install_id', uuid.uuid4().hex)
+        self.path = store.project_data('metadata/drafts/' + install_id + '.json') if store.shared_index else store.local_dir / 'update-drafts.local.json'
         try: self.rows = read_json(self.path, {})
         except ValueError: self.rows = {}
         window.installEventFilter(self)

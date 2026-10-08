@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2 — 2026-10-08
+
+- Identity-bound shared OneDrive mapping with a pinned project identifier.
+- Single authority publishes verified closed native-index snapshots; readers never rebuild.
+- Idempotent pending jobs, cancellation recovery and retained revisions.
+- Preserve catalog records without moving the legacy archive; portable references show migration pending.
+- Persistent research records and generated outputs stay in the shared project.
+
 ## 0.4.1 — 2026-10-08
 
 - Development/Beta work order only: separate app/installer/profile/protocol and prerelease update channels; Stable 0.4.0 remains unchanged.

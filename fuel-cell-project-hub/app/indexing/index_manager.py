@@ -6,6 +6,8 @@ import os
 import shutil
 import sqlite3
 import uuid
+import threading
+from app.indexing.shared_operation import shared_write
 from contextlib import contextmanager, closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +35,23 @@ class NativeIndex:
         self.logging_unavailable = False
         self.store = store
         self.locations = locations or ProjectLocations(store)
+        self.shared = getattr(store, 'shared_index', None)
+        self._editing = threading.local()
+        if self.shared:
+            self.path = self.shared.load()
+            if self.path is None:
+                if not self.shared.authority:
+                    raise ValueError('Waiting for the authority to publish the first index.')
+                with self.shared.working() as (path, base):
+                    self.path = self._editing.path = path
+                    try:
+                        self.migrate()
+                        self.sync_sources()
+                        self.shared.publish(path, base)
+                    finally:
+                        self._editing.path = None
+                self.path = self.shared.path
+            return
         self.path = Path(self.locations.value['database']) / 'research.sqlite3'
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.migrate()
@@ -40,9 +59,23 @@ class NativeIndex:
 
     @contextmanager
     def connect(self):
-        db = sqlite3.connect(self.path, timeout=30)
+        working = getattr(self._editing, 'path', None)
+        if self.shared and not working:
+            self.path = self.shared.load()
+            if self.path is None:
+                raise ValueError('Waiting for a verified shared index.')
+            db = sqlite3.connect(self.path.as_uri() + '?mode=ro&immutable=1', uri=True, timeout=30)
+        else:
+            db = sqlite3.connect(working or self.path, timeout=30)
         try:
             db.execute('PRAGMA busy_timeout=30000')
+            if self.shared and not working:
+                db.execute('CREATE TEMP TABLE workspace_recent(file_id TEXT PRIMARY KEY,viewed_at TEXT)')
+                db.executemany('INSERT INTO temp.workspace_recent VALUES (?,?)', self.store.local.get('recent_files', {}).items())
+                db.execute('CREATE TEMP TABLE workspace_hidden(file_id TEXT PRIMARY KEY)')
+                db.execute('INSERT INTO temp.workspace_hidden SELECT file_id FROM main.workspace_hidden')
+                db.executemany('INSERT OR IGNORE INTO temp.workspace_hidden VALUES (?)',
+                               [(i,) for i in self.store.local.get('hidden_files', [])])
             with db:
                 yield db
         finally:
@@ -52,11 +85,22 @@ class NativeIndex:
         target = Path(self.locations.value['backups'])
         target.mkdir(parents=True, exist_ok=True)
         destination = target / (label + '-' + uuid.uuid4().hex + '.sqlite3')
+        if self.shared:
+            import tempfile
+            with tempfile.TemporaryDirectory(dir=self.shared.cache) as temporary:
+                working = Path(temporary) / 'backup.sqlite3'
+                with self.connect() as source, closing(sqlite3.connect(working)) as copy_db:
+                    source.backup(copy_db)
+                self.shared.validate(working)
+                shutil.copyfile(working, destination)
+            destination.with_suffix('.sqlite3.sha256').write_text(self.shared.digest(destination), encoding='ascii')
+            return destination
         with self.connect() as source, closing(sqlite3.connect(destination)) as copy_db:
             source.backup(copy_db)
         self.log('backup_complete', label=label)
         return destination
 
+    @shared_write
     def restore(self, backup_path):
         path = Path(backup_path).resolve()
         path.relative_to(Path(self.locations.value['backups']).resolve())
@@ -76,13 +120,14 @@ class NativeIndex:
     def log(self, event, **values):
         # Database job/error records remain authoritative if a log location is offline.
         try:
-            folder = Path(self.locations.value['cache']) / 'logs'
+            folder = self.shared.control / 'logs' if self.shared else Path(self.locations.value['cache']) / 'logs'
             folder.mkdir(parents=True, exist_ok=True)
-            with (folder / 'native-index.jsonl').open('a', encoding='utf-8') as output:
+            with (folder / ('event-' + uuid.uuid4().hex + '.json') if self.shared else folder / 'native-index.jsonl').open('a', encoding='utf-8') as output:
                 output.write(json.dumps({'time': timestamp(), 'event': event, **values}) + '\n')
         except OSError:
             self.logging_unavailable = True
 
+    @shared_write
     def migrate(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
@@ -130,6 +175,7 @@ class NativeIndex:
         if version != self.SCHEMA:
             self.log('migration', previous=version, current=self.SCHEMA)
 
+    @shared_write
     def sync_sources(self):
         value = self.locations.value
         project = value['active']
@@ -137,10 +183,10 @@ class NativeIndex:
             db.execute('UPDATE projects SET active=0')
             for p in [project, *value.get('projects', [])]:
                 db.execute('INSERT OR REPLACE INTO projects VALUES (?,?,?,?,?)',
-                    (p['id'], p['name'], p['root_path'], p.get('created_date', timestamp()), int(p['id'] == project['id'])))
+                    (p['id'], p['name'], '.' if self.shared else p['root_path'], p.get('created_date', timestamp()), int(p['id'] == project['id'])))
             for source in self.locations.sources():
                 db.execute('INSERT OR REPLACE INTO sources VALUES (?,?,?,?,?,?)',
-                    (source['id'], project['id'], source.get('source_label', source['name']), source['root_path'], source['source_type'], int(source['read_only'])))
+                    (source['id'], project['id'], source.get('source_label', source['name']), Path(source['root_path']).relative_to(self.shared.root).as_posix() if self.shared else source['root_path'], source['source_type'], int(source['read_only'])))
 
     def upsert(self, db, row, update_search=False, body=None):
         row = dict(row)
@@ -282,6 +328,7 @@ class NativeIndex:
             content_indexed=content_count, metadata_only=sum(totals.values()) - content_count, online_only=online,
             duplicates=duplicates, content_statuses=statuses)
 
+    @shared_write
     def set_override(self, item, values):
         allowed = {'category', 'subcategory', 'experiment_id', 'run_id', 'sample_id', 'procedure_id', 'legacy_note', 'tags', 'title', 'notes', 'description', 'favorite'}
         if ('favorite' in values and not isinstance(values['favorite'], bool)) or set(values) - allowed or any(not isinstance(v, str) for k, v in values.items() if k != 'favorite'):
@@ -297,6 +344,7 @@ class NativeIndex:
                 self.upsert(db, json.loads(row[0]), update_search=True)
         self.log('manual_metadata', file_id=item['id'])
 
+    @shared_write
     def relate(self, from_id, to_id, kind='related_to'):
         if kind not in ('derived_from', 'related_to', 'supersedes', 'previous_version', 'references') or from_id == to_id:
             raise ValueError('Choose two different files and a supported relationship.')
@@ -348,6 +396,7 @@ class NativeIndex:
             for row in group:
                 row['duplicate_status'] = 'Exact duplicate' if same else 'Same filename / different contents' if different else 'Likely duplicate'
 
+    @shared_write
     def rebuild_search(self, cancel=None, progress=None):
         self.phase = 'Rebuilding search index'
         self.backup('before-search-rebuild')
@@ -380,7 +429,11 @@ class NativeIndex:
                 db.execute('UPDATE index_runs SET ended=?,result=?,summary=? WHERE id=?',
                     (timestamp(), result, json.dumps({'scanned': count, 'errors': int(result == 'Failed')}), run_id))
 
+    @shared_write
     def refresh(self, rebuild=False, cancel=None, progress=None, source_ids=None, selected=None, quick=False, mode=None):
+        if self.shared:
+            self.sync_sources()
+            self.shared.process_pending(self)
         if mode == 'search':
             return self.rebuild_search(cancel, progress)
         if rebuild:
@@ -404,7 +457,9 @@ class NativeIndex:
                 root = Path(source['root_path'])
                 uncertain = []
                 with self.connect() as db:
-                    for path, info, problem in discover(root / selected if selected else root, cancel):
+                    excluded = [Path(other['root_path']) for other in self.locations.sources()
+                                if self.shared and source['source_type'] == 'active' and other['id'] != source['id']]
+                    for path, info, problem in discover(root / selected if selected else root, cancel, excluded):
                         relative = path.relative_to(root).as_posix()
                         if info is None:
                             uncertain.append(relative)
@@ -433,7 +488,7 @@ class NativeIndex:
                         row = dict(prior or {})
                         row.update(id=identity, source_id=source['id'], source_type=source['source_type'],
                             source_name=source.get('source_label', source['name']), project_name=source['name'],
-                            dataset_status=source['dataset_status'], read_only=source['read_only'], full_path=str(path),
+                            dataset_status=source.get('dataset_status', 'current'), read_only=source['read_only'], full_path=relative if self.shared else str(path),
                             name=path.name, relative_path=relative, parent_folder=path.parent.relative_to(root).as_posix(),
                             extension=path.suffix.lower(), size=info.st_size, signature=signature, inode=inode,
                             created=datetime.fromtimestamp(getattr(info, 'st_birthtime', info.st_ctime), timezone.utc).isoformat(),
@@ -550,6 +605,7 @@ class NativeIndex:
         # abandoned remote snapshots into the native filesystem catalog.
         return None
 
+    @shared_write
     def ingest(self, records):
         with self.connect() as db:
             for row in records:
@@ -593,6 +649,8 @@ class NativeIndex:
         # Exclusive creation prevents overwriting a file arriving during a sync.
         with source.open('rb') as incoming, destination.open('xb') as outgoing:
             shutil.copyfileobj(incoming, outgoing)
+        if self.shared:
+            self.shared.submit('refresh', {'relative_path': destination.relative_to(root).as_posix()})
         self.log('legacy_copied_to_current', file_id=item['id'])
         accounts=getattr(self.store,'accounts',None)
         if accounts:
