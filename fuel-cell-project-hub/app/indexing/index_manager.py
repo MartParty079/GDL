@@ -1,3 +1,4 @@
+import re
 """Single local SQLite index: streaming scans, bounded extraction and FTS5."""
 import copy
 import json
@@ -192,12 +193,12 @@ class NativeIndex:
         sources = [s['id'] for s in self.locations.sources()]
         clauses, args = predicates(filters, sources)
         expression = match_expression(query)
-        join = ' JOIN content_fts ON content_fts.file_id=m.id' if expression else ''
+        join = ''
         order = 'm.data_origin<>\'current\',m.relative_path COLLATE NOCASE,m.id'
         if expression:
-            clauses.append('content_fts MATCH ?')
-            args.append(expression)
-            order = "CASE WHEN lower(m.name)=lower(?) THEN 0 WHEN instr(lower(m.name),lower(?))>0 THEN 1 ELSE 2 END,bm25(content_fts,0,10,8,6,4,2,2,1,3),m.data_origin<>'current',m.id"
+            clauses.append("(m.id IN (SELECT file_id FROM content_fts WHERE content_fts MATCH ?) OR instr(replace(replace(replace(lower(m.relative_path),' ',''),'_',''),'-',''),?)>0)")
+            args.extend([expression, re.sub(r'[\s_-]+','',query.casefold())])
+            order = "CASE WHEN lower(m.name)=lower(?) THEN 0 WHEN instr(lower(m.name),lower(?))>0 THEN 1 ELSE 2 END,m.data_origin<>'current',m.id"
         custom_sort = filters.get('sort')
         if custom_sort in SORTS:
             order = SORTS[custom_sort] + ',m.id'

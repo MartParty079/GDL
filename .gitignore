@@ -5,3 +5,8 @@
 !/AGENTS.md
 !/README.md
 !/fuel-cell-project-hub/
+!/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/windows-release.yml

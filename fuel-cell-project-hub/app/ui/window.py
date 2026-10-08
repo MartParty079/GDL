@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, Q
 from app import __version__
 from app.services.storage import write_json
 from app.services.software import detect, valid_executable, launch, open_resource, LaunchType, launch_type
-from app.services.updates import latest_release
+from app.services.updates import latest_release, cached_release, newer, verified_download, launch_installer
 from app.ui.storage_panels import StoragePanel, FilesPanel
 from app.ui.components import (label, button, card, Button, StatusPill, InlineMessage, EmptyState,
     SectionHeader, SkeletonCard, ErrorBanner, ToastManager, ResponsiveCards, icon, local_datetime,
@@ -82,6 +82,8 @@ class HubWindow(QMainWindow):
         top.addWidget(self.index_status)
         from app.ui.research_workspace import version_dialog
         top.addWidget(button("v" + __version__, lambda: version_dialog(self)))
+        self.header_update = button("Updates", self.show_update_dialog)
+        top.addWidget(self.header_update)
         outer.addLayout(top)
         self.banner = InlineMessage("Checking your system…", "info")
         outer.addWidget(self.banner)
@@ -763,8 +765,9 @@ class HubWindow(QMainWindow):
         software.addWidget(frame)
 
         updates = sections["Updates"]
-        frame = card("App updates", "Check approved GitHub releases. Downloads and rollback are part of a later release.", "history")
-        repository = QLineEdit(self.store.project["release_repository"])
+        frame = card("App updates", "Updates use verified Windows installers from the official GitHub releases.", "history")
+        repository = QLineEdit("MartParty079/GDL")
+        repository.setReadOnly(True)
         repository.setPlaceholderText("owner/repository")
         self.fields["release_repository"] = repository
         form = QFormLayout()
@@ -850,33 +853,36 @@ class HubWindow(QMainWindow):
         self.scan_done(self.results)
 
     def check_updates_on_startup(self):
-        if self.store.project.get("release_repository") and self.store.local.get("check_updates_at_startup", True):
-            self.check_updates()
+        if self.store.local.get("check_updates_at_startup", True):
+            self.check_updates(manual=False)
 
-    def check_updates(self):
+    def check_updates(self, checked=False, manual=True):
         if self.update_checking:
             return
-        repository = self.store.project.get("release_repository", "")
+        repository = "MartParty079/GDL"
         if not repository:
             self.update_status.setText("Add and apply a release repository first.")
             return
         self.update_checking = True
+        self.manual_update_check = manual
         self.update_status.set_message("Checking approved GitHub releases…")
         self.update_button.set_loading(True, "Checking…")
         self.update_skeleton.show()
-        self.work(lambda: latest_release(repository), self.update_done, self.update_failed)
+        self.work(lambda: latest_release(repository) if manual else cached_release(self.store.local_dir), self.update_done, self.update_failed)
 
     def update_done(self, release):
         self.update_checking = False
         self.update_button.set_loading(False)
         self.update_skeleton.hide()
+        self.latest_release_info = release
         self.latest_release_url = release["url"]
         self.release_button.show()
         self.release_status_text = "Latest release: " + release["tag"] + " · current: " + __version__
         self.update_status.set_message(self.release_status_text, "success")
-        if release["tag"].lstrip("v") != __version__:
+        self.header_update.setText("Update " + release["tag"] if newer(release["tag"]) else "Up to date")
+        if newer(release["tag"]) and getattr(self, 'manual_update_check', True):
             notify(self, "Update available. Review it under Settings → Updates.")
-        else:
+        elif getattr(self, 'manual_update_check', True):
             notify(self, "The app is up to date", "success")
 
     def update_failed(self, message):
@@ -885,10 +891,41 @@ class HubWindow(QMainWindow):
         self.update_skeleton.hide()
         self.release_status_text = "GitHub is unavailable. Check your connection and retry. Local project work is still available."
         self.update_status.set_message(self.release_status_text, "warning")
-        notify(self, "GitHub check unavailable. You can retry under Settings → Updates.", "warning")
+        if getattr(self, 'manual_update_check', True):
+            notify(self, "GitHub check unavailable. You can retry under Settings → Updates.", "warning")
+
+    def show_update_dialog(self):
+        release = getattr(self, "latest_release_info", None)
+        if not release:
+            self.check_updates(); return
+        dialog = QDialog(self); dialog.setWindowTitle("GDL Research Hub Updates")
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel("Installed: v" + __version__ + " · Latest stable: " + release["tag"]))
+        notes = QTextEdit(); notes.setReadOnly(True); notes.setPlainText(release.get("notes", "View the release for changes.")); layout.addWidget(notes)
+        update = button("Update", lambda: (dialog.accept(), self.download_update()))
+        update.setEnabled(newer(release["tag"])); layout.addWidget(update)
+        layout.addWidget(button("Later", dialog.reject)); dialog.resize(650,450); dialog.exec()
+
+    def download_update(self):
+        if self.workers or self.research_panel.indexing or self.research_workspace.busy():
+            notify(self, "Finish background work before updating."); return
+        self.setEnabled(False)
+        self.work(lambda: verified_download(self.latest_release_info, self.store.local_dir / 'updates'),
+                  self.install_update, lambda _: (self.setEnabled(True), notify(self, "Update download unavailable or verification failed. Your current app remains usable.")))
+
+    def install_update(self, path):
+        def ready():
+            if self.workers:
+                QTimer.singleShot(50, ready); return
+            try:
+                launch_installer(path)
+                self.setEnabled(True); self.close()
+            except (ValueError, OSError):
+                self.setEnabled(True); notify(self, "Installer could not start. Your current app remains usable.")
+        QTimer.singleShot(0, ready)
 
     def closeEvent(self, event):
-        if self.workers or self.storage_panel.indexing or self.research_panel.indexing or self.research_workspace.busy():
+        if self.workers or self.storage_panel.indexing or self.research_panel.indexing or self.research_workspace.busy() or (hasattr(self, "account_tasks") and self.account_tasks.busy()) or (hasattr(self, "admin_workspace") and self.admin_workspace.tasks.busy()):
             self.storage_panel.cancel_index()
             self.research_panel.cancel_index()
             self.banner.setText("Finishing a background check. Please close the app again in a moment.")
@@ -898,3 +935,6 @@ class HubWindow(QMainWindow):
             self.research_panel.watcher.stop()
             self.research_workspace.save_layout()
             event.accept()
+            if hasattr(self, "account_service") and not getattr(self, "signing_out", False):
+                from PySide6.QtWidgets import QApplication
+                QApplication.instance().quit()

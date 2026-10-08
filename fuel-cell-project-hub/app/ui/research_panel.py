@@ -316,21 +316,27 @@ class ResearchPanel(QWidget):
                 self.error.show_error('Choose a project subfolder', 'The selected folder must be inside the active project.')
                 return
         self.indexing = True
+        if getattr(self.settings.store, "accounts", None): self.settings.store.accounts.event("INDEX_STARTED")
         self.busy_changed.emit(True)
         self.save_button.setEnabled(False)
         for control in self.controls:
             control.setEnabled(False)
         self.worker = CatalogWorker(self.settings.catalog, options, self)
         self.worker.completed.connect(self.completed)
-        self.worker.failed.connect(lambda message: self.status.set_message(message, 'warning'))
+        self.worker.failed.connect(self.index_failed)
         self.worker.progress.connect(lambda count: self.status.set_message(f'{self.settings.catalog.phase}… {count:,} files scanned'))
         self.worker.finished.connect(self.finished)
         self.status.set_message('Indexing research sources…')
         self.worker.start()
 
     def completed(self, summary):
+        if getattr(self.settings.store, "accounts", None): self.settings.store.accounts.event("INDEX_COMPLETED", details={"count":summary.get("current",0)+summary.get("legacy",0)})
         self.status.set_message(' · '.join(f'{k}: {v:,}' for k, v in summary.items()), 'success' if not summary['errors'] else 'warning')
         self.changed.emit()
+
+    def index_failed(self, message):
+        self.status.set_message(message, "warning")
+        if getattr(self.settings.store, "accounts", None): self.settings.store.accounts.event("INDEX_FAILED")
 
     def finished(self):
         self.indexing = False

@@ -85,6 +85,12 @@ def version_dialog(parent):
     dialog.resize(700, 550)
     layout = QVBoxLayout(dialog)
     layout.addWidget(QLabel("GDL Research Hub " + __version__))
+    from app.services.storage import read_json
+    build = read_json(resource_path('config/build_metadata.json'),{})
+    detail = 'Build: ' + build.get('commit','Source checkout')[:12] + ' · ' + build.get('built_at','')[:10]
+    if hasattr(parent,'store'):
+        detail += '\nInstallation: '+parent.store.local.get('install_created_at','')[:10]+' · ID: '+parent.store.local.get('install_id','Not registered')
+    diagnostics = QLabel(detail); diagnostics.setWordWrap(True); layout.addWidget(diagnostics)
     view = QTextEdit()
     view.setReadOnly(True)
     try:
@@ -687,6 +693,7 @@ class FileBrowser(QWidget):
                 + row.get("sample_id", "")
             )
             tile.setData(Qt.UserRole, row["id"])
+            tile.setForeground(QColor('#976000' if row['data_origin']=='legacy' else '#0F766E'))
             tile.setToolTip(row["relative_path"] + " | " + row.get("availability", ""))
             tile.setIcon(icon("files"))
             self.grid.addItem(tile)
@@ -1011,6 +1018,7 @@ class MetadataEditor(QDialog):
             self.repository.annotate(
                 self.rows, values, append_tags=self.add_tags.isChecked()
             )
+            self.changed_fields = list(values)
             self.accept()
         except (ValueError, OSError) as exc:
             self.error.setText(str(exc))
@@ -1037,14 +1045,14 @@ class ResearchHub(QWidget):
         control(
             "Navigation",
             lambda: (
-                self.nav.setVisible(not self.nav.isVisible()) if self.catalog else None
+                self.toggle_panel(self.nav,0,180) if self.catalog else None
             ),
             header,
         )
         control(
             "Details",
             lambda: (
-                self.preview.setVisible(not self.preview.isVisible())
+                self.toggle_panel(self.preview,2,300)
                 if self.catalog
                 else None
             ),
@@ -1181,6 +1189,14 @@ class ResearchHub(QWidget):
         self.preview.setVisible(
             window.store.local.get("research_details_visible", True)
         )
+
+    def toggle_panel(self, panel, index, width):
+        visible = not panel.isVisible()
+        panel.setVisible(visible)
+        if visible:
+            sizes=self.splitter.sizes()
+            sizes[index]=width
+            self.splitter.setSizes(sizes)
 
     def restore_hidden(self):
         if self.repository:
@@ -1363,12 +1379,14 @@ class ResearchHub(QWidget):
         if dialog.exec() == QDialog.Accepted:
             for browser in self.browsers:
                 browser.refresh_objects()
+            self.audit(kind.upper()+ ("_UPDATED" if obj else "_CREATED"), kind, dialog.saved["id"], dialog.saved["name"])
             self.show_object(dialog.saved["id"])
 
     def show_object(self, identity):
         obj = self.repository.get(identity)
         if not obj:
             return
+        self.audit(obj["kind"].upper()+"_VIEWED", obj["kind"], obj["id"], obj["name"])
         self.current_page = "Samples" if obj["kind"] == "sample" else "Experiments"
         self.title.setText(obj["id"] + " / " + obj["name"])
         self.nav.blockSignals(True)
@@ -1603,7 +1621,19 @@ class ResearchHub(QWidget):
         elif event["experiment_id"] or event["sample_id"]:
             self.show_object(event["experiment_id"] or event["sample_id"])
 
+    def audit(self, kind, entity_type='', identity='', name='', details=None):
+        accounts = getattr(self.window.store, 'accounts', None)
+        if accounts:
+            try: accounts.event(kind, entity_type, identity, name, details)
+            except OSError: pass
+
     def select_file(self, row):
+        if getattr(self, '_last_audited_file', None) != row['id']:
+            self._last_audited_file = row['id']
+            if row.get('extension') in FAMILIES['Images']:
+                self.audit('IMAGE_VIEWED','image',row['id'],row['name'],{'source':row.get('data_origin','')})
+            if row.get('data_origin') == 'legacy':
+                self.audit('LEGACY_FILE_VIEWED','file',row['id'],row['name'],{'source':'legacy'})
         self.preview.select(row)
         self.repository.viewed(row)
 
@@ -1626,10 +1656,15 @@ class ResearchHub(QWidget):
                     path, self.window.store.local.get("code_editor")
                 )
                 self.repository.viewed(row)
+                self.audit("FILE_OPENED", "file", row["id"], row["name"], {"source":row.get("data_origin", "")})
+                if row.get("extension") in FAMILIES["Reports"]: self.audit("REPORT_OPENED", "report", row["id"], row["name"])
+                if row.get("data_origin")=="legacy": self.audit("LEGACY_FILE_VIEWED", "file", row["id"], row["name"], {"source":"legacy"})
             elif key == "folder":
                 file_launcher.open_folder(path.parent)
+                self.audit("FILE_LOCATION_OPENED", "file", row["id"], row["name"])
             elif key == "show":
                 file_launcher.show_in_folder(path)
+                self.audit("FILE_LOCATION_OPENED", "file", row["id"], row["name"])
             elif key == "copy_id":
                 QApplication.clipboard().setText(row["id"])
                 self.message.setText("File identity copied.")
@@ -1637,6 +1672,7 @@ class ResearchHub(QWidget):
                 QApplication.clipboard().setText(str(path))
                 self.message.setText("Full file path copied.")
             elif key == "preview":
+                self.audit("IMAGE_VIEWED" if row.get("extension") in FAMILIES["Images"] else "LEGACY_FILE_VIEWED" if row.get("data_origin")=="legacy" else "FILE_OPENED", "file", row["id"], row["name"], {"source":row.get("data_origin", "")})
                 if row.get("extension") in FAMILIES["Images"]:
                     images = [
                         r
@@ -1674,10 +1710,11 @@ class ResearchHub(QWidget):
                     )
                 )
             elif key == "edit":
-                if (
-                    MetadataEditor(self.repository, rows, self).exec()
-                    == QDialog.Accepted
-                ):
+                editor = MetadataEditor(self.repository, rows, self)
+                if editor.exec() == QDialog.Accepted:
+                    self.audit("METADATA_UPDATED", "file", row["id"], row["name"], {"count":len(rows)})
+                    if 'tags' in editor.changed_fields:
+                        self.audit("TAG_CHANGED", "file", row["id"], row["name"])
                     browser.reload()
             elif key == "favorite":
                 self.repository.annotate(

@@ -88,6 +88,24 @@ def self_check(report):
         assert resource_path('CHANGELOG.md').is_file()
         result.update(version=__version__, research_objects_available=True, rendered_pdf_available=True,
                       spreadsheet_preview_available=True, image_thumbnail_available=True, changelog_present=True)
+        from app.services.accounts import Accounts, protect
+        from app.ui.accounts import LoginDialog
+        import os
+        account_store=Store(ROOT,Path(temporary)/'account-profile')
+        accounts=Accounts(account_store,lambda *args: None)
+        login=LoginDialog(accounts)
+        deadline=time.monotonic()+10
+        while login.tasks.busy():
+            app.processEvents(); time.sleep(.01)
+            if time.monotonic()>deadline: raise RuntimeError('Login startup timed out')
+        app.processEvents()
+        while login.tasks.busy(): app.processEvents();time.sleep(.01)
+        assert login.signin.isEnabled()
+        assert account_store.config_dir.joinpath('accounts_public.json').is_file()
+        if os.name=='nt': assert protect(protect(b'isolated-session'),True)==b'isolated-session'
+        login.close(); accounts.executor.shutdown()
+        result.update(login_ui_available=True, client_configuration_bundled=True,
+                      windows_session_encryption_available=os.name=='nt')
         deadline=time.monotonic()+30
         while workspace.busy():
             app.processEvents();time.sleep(.01)

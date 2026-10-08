@@ -347,7 +347,7 @@ class WorkspaceUITests(unittest.TestCase):
             window.show()
             self.app.processEvents()
             try:
-                self.assertEqual(__version__, "0.2.0")
+                self.assertEqual(__version__, "0.3.0")
                 self.assertEqual(window.project_tabs.currentIndex(), 1)
                 self.assertEqual(window.tabs.currentIndex(), 3)
                 hub.navigate("Samples")

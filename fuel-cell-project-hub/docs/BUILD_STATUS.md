@@ -1,4 +1,11 @@
-# Current build: research workspace 0.2.0
+# Current build: accounts and Windows distribution 0.3.0
+
+See [accounts and distribution](accounts_and_distribution.md) for current
+verification, live backend deployment, installer checks and remaining limits.
+Microsoft authentication and Graph remain retired. Supabase handles team
+accounts and activity; local SQLite and OneDrive retain research storage.
+
+# Previous build: research workspace 0.2.0
 
 Microsoft authentication and Graph are retired. The current architecture and
 validation are in [research workspace](research_workspace.md) and

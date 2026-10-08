@@ -77,3 +77,4 @@ project_settings.json
 *.crdownload
 Thumbs.db
 .DS_Store
+supabase/.temp/

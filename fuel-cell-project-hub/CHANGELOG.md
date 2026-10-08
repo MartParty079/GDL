@@ -1,3 +1,14 @@
+# Changelog
+
+## 0.3.0 — 2026-10-08
+
+- Added email/password team login with Windows-encrypted saved sessions, invitations and password recovery.
+- Added server-checked Admin users, activity, installations and system views; protected the last administrator.
+- Added bounded account activity retries; research content and machine paths stay local.
+- Added a per-user Windows installer, stable release build workflow and checksum-verified updates.
+- Fixed spaced searches for legacy filenames such as HolyGDL; preserved the current and legacy index.
+- Audited Teams controls: only production app launch/resource behavior was present; no manual test panel remains.
+
 # GDL Research Hub version history
 
 ## 0.2.0

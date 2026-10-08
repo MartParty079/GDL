@@ -1,0 +1,61 @@
+name: Windows release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: fuel-cell-project-hub
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build dependencies
+        run: |
+          python -m venv .venv
+          ./.venv/Scripts/python.exe -m pip install -r requirements.txt PyInstaller==6.22.3
+      - name: Check tag and test
+        run: |
+          $version = & ./.venv/Scripts/python.exe -c 'from app.version import VERSION; print(VERSION)'
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag/version mismatch' }
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          & ./.venv/Scripts/python.exe -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
+      - name: Build package
+        run: ./tools/build_windows.ps1 -OutputDirectory dist/release
+      - name: Verify packaged startup
+        run: |
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          $report = Join-Path (Get-Location) 'dist/startup-check.json'
+          $process = Start-Process -FilePath './dist/release/FuelCellProjectHub/FuelCellProjectHub.exe' -ArgumentList @('--self-check', ('"'+$report+'"')) -PassThru -Wait -WindowStyle Hidden
+          if ($process.ExitCode -ne 0) { throw 'Packaged startup failed' }
+      - name: Build installer
+        run: ./tools/build_installer.ps1 -PackageDirectory dist/release/FuelCellProjectHub -OutputDirectory dist/installer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GDLResearchHub-Windows
+          path: fuel-cell-project-hub/dist/installer/*
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: GDLResearchHub-Windows
+          path: installer
+      - name: Publish stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" installer/* --verify-tag --generate-notes

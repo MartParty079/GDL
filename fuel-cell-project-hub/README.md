@@ -2,7 +2,19 @@
 
 A native Windows research management app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
 
-## Research workspace 0.2.0
+## Team accounts and Windows distribution 0.3.0
+
+The application now uses invitation-based email/password accounts. Saved
+sessions are encrypted for the Windows user. Administrators receive users,
+activity, installations and system views; privileged changes are checked by
+the hosted backend. Local SQLite and OneDrive remain the research backbone.
+
+Windows users install `GDLResearchHub-Setup.exe`; Python, Git and developer
+configuration are unnecessary. Updates use verified stable GitHub release
+installers. See [accounts and distribution](docs/accounts_and_distribution.md)
+for setup, security, acceptance results and current limits.
+
+## Research workspace
 
 Open the Project workspace for Samples, Experiments, Images, Data, Reports,
 Timeline, Files and Legacy. Resizable navigation and details panes provide
@@ -13,8 +25,9 @@ and [CHANGELOG.md](CHANGELOG.md) for behavior, verification and current limits.
 
 ## Native research indexing
 
-The app works offline without Microsoft login, Graph, Entra configuration or
-permissions. OneDrive handles synchronization; Windows provides the folders;
+A previously validated account can use local research offline for up to
+24 hours, with an OFFLINE indicator and queued activity. First login requires
+connectivity. Microsoft login, Graph and Entra remain removed. OneDrive handles synchronization; Windows provides the folders;
 the Hub owns its local catalog, content search and research metadata.
 
 Use **Settings > Storage > Project** to configure **GDL Research** (current)

@@ -94,6 +94,8 @@ class Store:
         self.events.append({"id": uuid.uuid4().hex, "timestamp": timestamp(),
                             "person": getpass.getuser(), "type": "Update", "area": area, "message": message})
         write_json(self.local_dir / "activity.json", self.events)
+        if area == "Settings" and getattr(self, "accounts", None):
+            self.accounts.event("SETTINGS_CHANGED")
 
     def save_project(self, value, reason="Project settings changed"):
         from app.services.project_storage import validate_shared_settings
