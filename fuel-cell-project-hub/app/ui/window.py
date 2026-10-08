@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, Q
     QLineEdit, QTextEdit, QFormLayout, QComboBox, QDialog, QDialogButtonBox, QLayout)
 
 from app import __version__
+from app.edition import APP_NAME, BETA
 from app.services.storage import write_json
 from app.services.software import detect, valid_executable, launch, open_resource, LaunchType, launch_type
 from app.services.updates import latest_release, cached_release, newer, verified_download, launch_installer
@@ -61,7 +62,7 @@ class HubWindow(QMainWindow):
         self.scanning = False
         self.update_checking = False
         self.workspace_section = "Resources"
-        self.setWindowTitle("GDL Research Hub")
+        self.setWindowTitle(APP_NAME)
         self.resize(1280, 850)
         self.setMinimumSize(1024, 700)
         shell = QWidget()
@@ -69,7 +70,7 @@ class HubWindow(QMainWindow):
         outer.setContentsMargins(26, 22, 26, 20)
         top = QHBoxLayout()
         identity = QVBoxLayout()
-        identity.addWidget(label("GDL Research Hub", "eyebrow"))
+        identity.addWidget(label(APP_NAME, "eyebrow"))
         identity.addWidget(label(self.storage_settings.locations.value["active"]["name"], "title"))
         top.addLayout(identity)
         top.addStretch()
@@ -126,6 +127,11 @@ class HubWindow(QMainWindow):
         self.render_settings()
         QTimer.singleShot(0, self.scan)
         QTimer.singleShot(200, self.check_updates_on_startup)
+        from app.ui.update_recovery import UpdateRecovery
+        from app.ui.update_installation import SafeUpdate
+        self.update_recovery=UpdateRecovery(self)
+        self.update_recovery.restore_settings()
+        self.safe_update=SafeUpdate(self)
 
     def apply_theme(self):
         apply_theme(self)
@@ -900,33 +906,36 @@ class HubWindow(QMainWindow):
         release = getattr(self, "latest_release_info", None)
         if not release:
             self.check_updates(); return
-        dialog = QDialog(self); dialog.setWindowTitle("GDL Research Hub Updates")
+        dialog = QDialog(self); dialog.setWindowTitle(APP_NAME + " Updates")
         layout = QVBoxLayout(dialog)
-        layout.addWidget(QLabel("Installed: v" + __version__ + " · Latest stable: " + release["tag"]))
+        layout.addWidget(QLabel("Installed: v" + __version__ + (" · Latest Beta: " if BETA else " · Latest Stable: ") + release["tag"]))
         notes = QTextEdit(); notes.setReadOnly(True); notes.setPlainText(release.get("notes", "View the release for changes.")); layout.addWidget(notes)
-        update = button("Update", lambda: (dialog.accept(), self.download_update()))
+        update = button("Update Now", lambda: (dialog.accept(), self.download_update()))
         update.setEnabled(newer(release["tag"])); layout.addWidget(update)
-        layout.addWidget(button("Later", dialog.reject)); dialog.resize(650,450); dialog.exec()
+        later=button("Update on Next Open",lambda:(self.schedule_update(),dialog.accept()))
+        later.setEnabled(newer(release['tag']));layout.addWidget(later)
+        layout.addWidget(button("Cancel", dialog.reject)); dialog.resize(650,450); dialog.exec()
 
     def download_update(self):
-        if self.workers or self.research_panel.indexing or self.research_workspace.busy():
-            notify(self, "Finish background work before updating."); return
-        self.setEnabled(False)
-        self.work(lambda: verified_download(self.latest_release_info, self.store.local_dir / 'updates'),
-                  self.install_update, lambda _: (self.setEnabled(True), notify(self, "Update download unavailable or verification failed. Your current app remains usable.")))
+        answer=QMessageBox.question(self,'Update Now?', 'Active indexing will be cancelled gracefully. Other background writes will be allowed to finish safely. Pending settings and editor drafts will be saved before updating. Continue?',QMessageBox.Yes|QMessageBox.Cancel,QMessageBox.Cancel)
+        if answer==QMessageBox.Yes:self.guard(self.safe_update.start)
+
+    def schedule_update(self):
+        if self.guard(self.safe_update.schedule):
+            notify(self,'Update saved for next open. Current background work will continue.','success')
+
+    def offer_deferred_update(self,message):
+        box=QMessageBox(self);box.setWindowTitle('Update safely');box.setText(message)
+        later=box.addButton('Update on Next Open',QMessageBox.AcceptRole)
+        box.addButton(QMessageBox.Cancel);box.exec()
+        if box.clickedButton()==later:self.schedule_update()
 
     def install_update(self, path):
-        def ready():
-            if self.workers:
-                QTimer.singleShot(50, ready); return
-            try:
-                launch_installer(path)
-                self.setEnabled(True); self.close()
-            except (ValueError, OSError):
-                self.setEnabled(True); notify(self, "Installer could not start. Your current app remains usable.")
-        QTimer.singleShot(0, ready)
+        self.safe_update.install(path)
 
     def closeEvent(self, event):
+        if hasattr(self,'safe_update') and self.safe_update.state not in ('idle','installed'):
+            event.ignore();return
         if self.workers or self.storage_panel.indexing or self.research_panel.indexing or self.research_workspace.busy() or (hasattr(self, "account_tasks") and self.account_tasks.busy()) or (hasattr(self, "admin_workspace") and self.admin_workspace.tasks.busy()) or (hasattr(self, 'meetings_panel') and self.meetings_panel.busy()) or (hasattr(self,'weekly_panel') and self.weekly_panel.tasks.busy()):
             self.storage_panel.cancel_index()
             self.research_panel.cancel_index()
@@ -934,7 +943,7 @@ class HubWindow(QMainWindow):
             event.ignore()
         else:
             self.closing = True
-            if hasattr(self, 'session_presence'):
+            if hasattr(self, 'session_presence') and not getattr(self,'update_exit_ready',False):
                 self.session_presence.stop()
             self.research_panel.watcher.stop()
             self.research_workspace.save_layout()

@@ -35,10 +35,13 @@ def write_json(path, value):
 
 class Store:
     def __init__(self, root=ROOT, local_dir=None):
+        from app.edition import BETA, PROFILE_NAME
         self.root = Path(root)
         self.config_dir = self.root / "config"
-        self.local_dir = Path(local_dir or os.environ.get("FUEL_HUB_DATA_DIR") or
-                              Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local/share")) / "FuelCellProjectHub")
+        self.sandbox_required = BETA and local_dir is None
+        override = os.environ.get('GDL_HUB_BETA_DATA_DIR' if BETA else 'FUEL_HUB_DATA_DIR')
+        self.local_dir = Path(local_dir or (Path(override) / PROFILE_NAME if BETA and override else override) or
+                              Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local/share")) / PROFILE_NAME)
         defaults = read_json(self.config_dir / "project_defaults.json", {})
         self.project = read_json(self.local_dir / 'project_settings.json',
                                  read_json(self.config_dir / "project.json", defaults))
@@ -124,6 +127,8 @@ class Store:
         return [read_json(p, {}) for p in sorted(paths, reverse=True)]
 
     def connect_storage(self, root, persist=True):
+        if self.sandbox_required and not Path(root).resolve().is_relative_to(self.local_dir.resolve()):
+            raise ValueError('Beta can connect only to its isolated research sandbox.')
         from app.services.project_storage import LocalOneDriveProvider
         provider = LocalOneDriveProvider(root, self.local_dir / "index")
         marker = provider.read_project()

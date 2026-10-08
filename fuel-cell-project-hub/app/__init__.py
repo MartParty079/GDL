@@ -1,1 +1,1 @@
-from app.version import VERSION as __version__
+from app.edition import DISPLAY_VERSION as __version__

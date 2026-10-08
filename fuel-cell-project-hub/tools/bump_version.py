@@ -54,6 +54,11 @@ def bump(root, kind, work_order, summary, features=(), fixes=(), breaking=()):
         flags=re.M,
     )
     source.write_text(text, encoding="utf-8")
+    edition = root / 'config/edition.json'
+    if edition.exists():
+        settings=json.loads(edition.read_text(encoding='utf-8'))
+        settings.update(channel='beta',beta_sequence=1)
+        edition.write_text(json.dumps(settings,indent=2)+'\n',encoding='utf-8')
     (root / "version_history.json").write_text(
         json.dumps(history, indent=2) + "\n", encoding="utf-8"
     )
@@ -84,6 +89,9 @@ if __name__ == "__main__":
     if args.kind == "check":
         print("Version consistency passed:", check(root)[0])
     else:
+        import subprocess
+        if subprocess.check_output(['git','branch','--show-current'],cwd=root,text=True).strip() != 'develop':
+            parser.error('Work-order version changes belong on develop. Stable promotes an already tested version.')
         if not args.work_order or not args.summary:
             parser.error(
                 "--work-order and --summary are required for a traceable release"

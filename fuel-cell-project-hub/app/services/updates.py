@@ -10,19 +10,20 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from app import __version__
 from app.services.storage import read_json, write_json
+from app.edition import BETA, ASSET_NAME
 
 OFFICIAL_REPOSITORY = "MartParty079/GDL"
-ASSET = "GDLResearchHub-Setup.exe"
+ASSET = ASSET_NAME
 
 
 def version(value):
-    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", value)
-    return tuple(map(int, match.groups())) if match else None
+    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?", value)
+    return tuple(map(int,match.groups()[:3]))+(0 if match[4] else 1,int(match[4] or 0)) if match else None
 
 
 def newer(tag, installed=__version__):
-    candidate, current = version(tag), version(installed.split("-")[0])
-    return bool(candidate and current and candidate > current)
+    candidate, current = version(tag), version(installed)
+    return bool(candidate and current and candidate[3] == current[3] and candidate > current)
 
 
 def latest_release(repository=OFFICIAL_REPOSITORY):
@@ -31,7 +32,7 @@ def latest_release(repository=OFFICIAL_REPOSITORY):
             "Updates use the official GDL Research Hub release repository."
         )
     request = Request(
-        f"https://api.github.com/repos/{repository}/releases/latest",
+        f"https://api.github.com/repos/{repository}/releases" + ("?per_page=100" if BETA else "/latest"),
         headers={
             "Accept": "application/vnd.github+json",
             "User-Agent": "FuelCellProjectHub",
@@ -39,12 +40,17 @@ def latest_release(repository=OFFICIAL_REPOSITORY):
     )
     with urlopen(request, timeout=8) as response:
         release = json.load(response)
+    if BETA:
+        candidates=[r for r in release if not r.get('draft') and r.get('prerelease') and version(r.get('tag_name','')) and version(r['tag_name'])[3]==0]
+        if not candidates:raise ValueError('No Beta update is available.')
+        release=max(candidates,key=lambda r:version(r['tag_name']))
     if (
         release.get("draft")
-        or release.get("prerelease")
+        or bool(release.get("prerelease")) != BETA
         or not version(release.get("tag_name", ""))
+        or (version(release.get('tag_name',''))[3]==0) != BETA
     ):
-        raise ValueError("No stable release is available.")
+        raise ValueError("No release is available for this edition.")
     tag = release["tag_name"]
     url = release["html_url"]
     if url != f"https://github.com/{OFFICIAL_REPOSITORY}/releases/tag/{tag}":
@@ -99,9 +105,12 @@ def verified_download(release, directory):
         raise ValueError("Installer checksum unavailable.")
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / (fresh["tag"] + "-" + ASSET)
+    if target.is_file() and valid_installer(target, checksum):
+        return target
     temporary = target.with_suffix(".part")
     digest = hashlib.sha256()
     size = 0
+    deadline = time.monotonic() + 90
     try:
         with urlopen(
             Request(installer_url, headers={"User-Agent": "GDLResearchHub"}), timeout=15
@@ -113,6 +122,8 @@ def verified_download(release, directory):
             ):
                 raise ValueError("Installer download source could not be verified.")
             while chunk := response.read(1024 * 1024):
+                if time.monotonic() > deadline:
+                    raise ValueError("Update download timed out. Retry later.")
                 size += len(chunk)
                 if size > 600 * 1024 * 1024:
                     raise ValueError("Installer exceeds the supported size.")
@@ -134,4 +145,60 @@ def launch_installer(path):
         raise ValueError("Installer updates are available on Windows only.")
     if not path.is_file():
         raise ValueError("Verified installer unavailable.")
-    return subprocess.Popen([str(path), "/SP-", "/CLOSEAPPLICATIONS", "/NORESTART"])
+    return subprocess.Popen([str(path), "/SP-", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/NORESTART"])
+
+
+def valid_installer(path, checksum):
+    """Recheck cached bytes before handing them to Windows."""
+    if not re.fullmatch(r'[a-fA-F0-9]{64}', checksum):
+        return False
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        if stream.read(2) != b'MZ':
+            return False
+        stream.seek(0)
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest() == checksum.lower()
+
+
+class PendingUpdate:
+    """Atomic per-user preference; no session, index or research files are changed."""
+    def __init__(self, directory):
+        self.directory = directory
+        self.path = directory / 'pending-update.local.json'
+
+    def read(self):
+        try:
+            row = read_json(self.path, {})
+            return row if isinstance(row, dict) and version(row.get('tag', '')) else {}
+        except ValueError:
+            return {}
+
+    def schedule(self, release):
+        if not newer(release['tag']):
+            raise ValueError('A newer update for this edition is required.')
+        previous = self.read()
+        if previous and version(previous['tag']) > version(release['tag']):
+            raise ValueError('A newer update is already scheduled.')
+        write_json(self.path, {'tag': release['tag'], 'status': 'scheduled'})
+
+    def prepare(self):
+        pending = self.read()
+        if not pending:
+            return None
+        if not newer(pending['tag']):
+            self.path.unlink(missing_ok=True)
+            return None
+        release = latest_release()
+        if not newer(release['tag']) or version(release['tag']) < version(pending['tag']):
+            raise ValueError('The scheduled update is not available yet.')
+        # Newer stable releases supersede the scheduled one; never downgrade.
+        self.schedule(release)
+        return verified_download(release, self.directory / 'updates')
+
+    def launched(self):
+        row = self.read()
+        if row:
+            row['status'] = 'installer_started'
+            write_json(self.path, row)

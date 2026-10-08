@@ -1,12 +1,16 @@
-name: Windows release
+name: Windows Beta
 on:
   push:
-    tags: ['v*']
+    branches: [develop]
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: beta-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   build:
+    if: github.ref == 'refs/heads/develop'
     runs-on: windows-latest
     defaults:
       run:
@@ -14,55 +18,73 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install build dependencies
+      - name: Install locked dependencies
         run: |
           python -m venv .venv
-          ./.venv/Scripts/python.exe -m pip install -r requirements.txt PyInstaller==6.22.3
-      - name: Check tag and test
+          & ./.venv/Scripts/python.exe -m pip install -r requirements-build.lock.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+      - name: Verify development source
         run: |
-          & ./.venv/Scripts/python.exe tools/bump_version.py check
-          if ($LASTEXITCODE -ne 0) { throw 'Version history mismatch' }
-          $version = & ./.venv/Scripts/python.exe -c 'from app.version import VERSION; print(VERSION)'
-          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag/version mismatch' }
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/gdl-tests" | Out-Null
+          $env:TEMP = "$env:RUNNER_TEMP/gdl-tests"
+          $env:TMP = $env:TEMP
           $env:QT_QPA_PLATFORM = 'offscreen'
+          & ./.venv/Scripts/python.exe tools/bump_version.py check
+          if ($LASTEXITCODE -ne 0) { throw 'Version mismatch' }
+          & ./.venv/Scripts/python.exe tools/audit_source.py
+          if ($LASTEXITCODE -ne 0) { throw 'Source audit failed' }
           & ./.venv/Scripts/python.exe tools/run_release_tests.py
           if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
-      - name: Build package
-        run: ./tools/build_windows.ps1 -OutputDirectory dist/release
-      - name: Verify packaged startup
+      - name: Build isolated Beta
+        env:
+          BETA_SEQUENCE: ${{ github.run_number }}
+        run: ./tools/build_windows.ps1 -Channel beta -BetaSequence $env:BETA_SEQUENCE -OutputDirectory dist/beta
+      - name: Verify packaged Beta startup
         run: |
           $env:QT_QPA_PLATFORM = 'offscreen'
           $report = Join-Path (Get-Location) 'dist/startup-check.json'
-          $process = Start-Process -FilePath './dist/release/FuelCellProjectHub/FuelCellProjectHub.exe' -ArgumentList @('--self-check', ('"'+$report+'"'), '--local-only') -PassThru -Wait -WindowStyle Hidden
-          if ($process.ExitCode -ne 0) { throw 'Packaged startup failed' }
-      - name: Build installer
-        run: ./tools/build_installer.ps1 -PackageDirectory dist/release/FuelCellProjectHub -OutputDirectory dist/installer
+          $process = Start-Process -FilePath './dist/beta/GDLResearchHubBeta/GDLResearchHubBeta.exe' -ArgumentList @('--self-check', ('"'+$report+'"'), '--local-only') -PassThru -Wait -WindowStyle Hidden
+          if ($process.ExitCode -ne 0) { throw 'Packaged Beta startup failed' }
+          $result = Get-Content $report -Raw | ConvertFrom-Json
+          if ($result.channel -ne 'beta') { throw 'Wrong packaged edition' }
+      - name: Build Beta installer
+        run: |
+          ./tools/build_installer.ps1 -Channel beta -PackageDirectory dist/beta/GDLResearchHubBeta -OutputDirectory dist/installer
+          Copy-Item dist/beta/GDLResearchHubBeta/_internal/config/build_metadata.json dist/installer/build-manifest.json
       - uses: actions/upload-artifact@v4
         with:
-          name: GDLResearchHub-Windows
+          name: GDLResearchHub-Beta-${{ github.sha }}
           path: fuel-cell-project-hub/dist/installer/*
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+  publish-beta:
     needs: build
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
-          name: GDLResearchHub-Windows
+          name: GDLResearchHub-Beta-${{ github.sha }}
           path: installer
-      - name: Publish stable release
+      - name: Publish versioned prerelease only
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          APPROVED_SHA: ${{ github.sha }}
         run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release already published; preserving its verified installer assets."
-          else
-            gh release create "$RELEASE_TAG" installer/* --verify-tag --generate-notes
-          fi
+          VERSION=$(python -c "import json; print(json.load(open('installer/build-manifest.json'))['version'])")
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]] || exit 1
+          test "$(python -c "import json; print(json.load(open('installer/build-manifest.json'))['commit'])")" = "$APPROVED_SHA"
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git tag -a "v$VERSION" "$APPROVED_SHA" -m "Tested GDL Research Hub Beta $VERSION"
+          git push origin "v$VERSION"
+          gh release create "v$VERSION" installer/* --verify-tag --prerelease --title "GDL Research Hub Beta $VERSION" --generate-notes

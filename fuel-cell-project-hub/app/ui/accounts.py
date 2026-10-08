@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 from app import __version__
+from app.edition import APP_NAME
 from app.ui.branding import application_icon
 from app.ui.theme import apply_theme
 from app.ui.research_viewers import Tasks
@@ -31,7 +32,7 @@ class LoginDialog(QDialog):
     def __init__(self, accounts):
         super().__init__()
         self.accounts = accounts
-        self.setWindowTitle("GDL Research Hub — Sign in")
+        self.setWindowTitle(APP_NAME + " — Sign in")
         self.setWindowIcon(application_icon())
         self.setMinimumWidth(430)
         self.tasks = Tasks(self)
@@ -41,7 +42,7 @@ class LoginDialog(QDialog):
         logo.setPixmap(application_icon().pixmap(64, 64))
         logo.setAlignment(Qt.AlignCenter)
         layout.addWidget(logo)
-        title = QLabel("GDL Research Hub")
+        title = QLabel(APP_NAME)
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet("font-size:24px;font-weight:600;")
         layout.addWidget(title)

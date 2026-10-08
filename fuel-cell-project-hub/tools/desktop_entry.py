@@ -88,7 +88,8 @@ def self_check(report):
         assert document.pageCount()==1
         assert resource_path('CHANGELOG.md').is_file()
         from app.services.storage import read_json
-        assert read_json(resource_path('version_history.json'),{})['versions'][-1]['version']==__version__
+        from app.version import VERSION
+        assert read_json(resource_path('version_history.json'),{})['versions'][-1]['version']==VERSION
         if '--local-only' not in sys.argv:
             from app.services.desktop_oauth import callback_values, CALLBACK, CallbackBroker
             assert callback_values(CALLBACK+'?code=packaged-check')['code']=='packaged-check'
@@ -106,7 +107,7 @@ def self_check(report):
         export_pdf(participation_report,weekly_pdf)
         from pypdf import PdfReader
         assert 'Packaged report fixture' in PdfReader(weekly_pdf).pages[0].extract_text()
-        assert read_json(resource_path('work_order_history.json'),{})['work_orders'][-1]['version']==__version__
+        assert read_json(resource_path('work_order_history.json'),{})['work_orders'][-1]['version']==VERSION
         result.update(weekly_pdf_export_available=True,meetings_service_available=True,
                       work_order_history_available=True,local_transcription_bundled=TranscriptionService.available)
         result.update(version=__version__, research_objects_available=True, rendered_pdf_available=True,
@@ -114,7 +115,14 @@ def self_check(report):
         from app.services.accounts import Accounts, protect
         from app.ui.accounts import LoginDialog
         import os
+        from app.edition import BETA, CHANNEL, APP_NAME, PROFILE_NAME
         account_store=Store(ROOT,Path(temporary)/'account-profile')
+        if BETA:
+            # Synthetic client configuration belongs only to this isolated fixture.
+            fixture_config=Path(temporary)/'account-config'
+            fixture_config.mkdir()
+            write_json(fixture_config/'accounts_public.json',{'url':'https://isolated-test.invalid','publishable_key':'sb_publishable_fixture'})
+            account_store.config_dir=fixture_config
         accounts=Accounts(account_store,lambda *args: None)
         login=LoginDialog(accounts)
         deadline=time.monotonic()+10
@@ -128,7 +136,7 @@ def self_check(report):
         if os.name=='nt': assert protect(protect(b'isolated-session'),True)==b'isolated-session'
         login.close(); accounts.executor.shutdown()
         result.update(login_ui_available=True, client_configuration_bundled=True,
-                      windows_session_encryption_available=os.name=='nt')
+                      windows_session_encryption_available=os.name=='nt',channel=CHANNEL,application_name=APP_NAME,profile_name=PROFILE_NAME)
         deadline=time.monotonic()+30
         while workspace.busy():
             app.processEvents();time.sleep(.01)

@@ -26,6 +26,16 @@
       "completed_at": "2026-10-08",
       "summary": "Prepare and publish the stable Windows installer and checksum through GitHub Releases.",
       "status": "complete"
+    },
+    {
+      "work_order_id": "beta-stable-separation-safe-updates",
+      "title": "Development/Beta separation and safe update installation",
+      "version": "0.4.1",
+      "started_at": "2026-10-08",
+      "completed_at": "2026-10-08",
+      "summary": "Independent Beta and Stable editions with isolated storage, channel-specific updates and approved production promotion; includes safe update options.",
+      "status": "complete",
+      "channel": "beta"
     }
   ]
 }

@@ -61,11 +61,18 @@ class ProjectLocations:
                     'read_only': kind == 'legacy', 'created_date': timestamp(), 'active': kind == 'active'}
         active = template.get('active', {'name': 'GDL Research', 'folder': 'GDL research - General'})
         legacy = template.get('legacy', [{'name': 'Michelson GDL Stuffs', 'folder': "Michelson, Andrew's files - GDL Stuffs"}])
-        return {'enabled': False, 'active': source(active['name'], active['folder'], 'active'),
+        result = {'enabled': False, 'active': source(active['name'], active['folder'], 'active'),
             'legacy': [source(s['name'], s['folder'], 'legacy') for s in legacy],
             'projects': [], 'shared_storage': str(drive / 'GDL research - General'),
             **{k: str(self.store.local_dir / v) for k, v in template.get('application_folders',
                {'database': 'catalog', 'generated': 'generated', 'cache': 'cache', 'backups': 'backups'}).items()}}
+        if self.store.sandbox_required:
+            sandbox = self.store.local_dir / 'research-sandbox'
+            result['active']['root_path']=str(sandbox / 'current')
+            result['active']['name']='Beta Research Sandbox'
+            result['legacy']=[];result['shared_storage']=str(sandbox / 'shared')
+            for key in ('database','generated','cache','backups'):result[key]=str(self.store.local_dir / key)
+        return result
 
     @staticmethod
     def validate(value):
@@ -100,6 +107,11 @@ class ProjectLocations:
 
     def save(self, value):
         value = copy.deepcopy(value)
+        if self.store.sandbox_required:
+            base=self.store.local_dir.resolve()
+            paths=[s['root_path'] for s in [value['active'],*value['legacy'],*value.get('additional',[])]]+[value[k] for k in PATH_LABELS]
+            if any(not Path(p).resolve().is_relative_to(base) for p in paths):
+                raise ValueError('Beta storage must remain inside its isolated profile. Copy test data into the Beta research sandbox.')
         for source in [value['active'], *value['legacy'], *value.get('additional', [])]:
             source['root_path'] = str(Path(os.path.expandvars(source['root_path'])).expanduser().resolve())
         for key in PATH_LABELS:

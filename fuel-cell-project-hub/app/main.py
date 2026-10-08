@@ -5,12 +5,13 @@ from app.services.storage import Store
 from app.ui.window import HubWindow
 from app.ui.components import friendly_error
 from app.ui.branding import application_icon, set_taskbar_identity
+from app.edition import APP_NAME, PROFILE_NAME, PROTOCOL, BETA
 
 
 def main():
     set_taskbar_identity()
     app = QApplication.instance() or QApplication(sys.argv)
-    app.setApplicationName("FuelCellProjectHub")
+    app.setApplicationName(PROFILE_NAME)
     app.setOrganizationName("FuelCellCapstone")
     app.setWindowIcon(application_icon())
     try:
@@ -22,7 +23,7 @@ def main():
 
         broker = CallbackBroker(store.local_dir, app)
         callback = next(
-            (value for value in sys.argv[1:] if value.startswith("gdlresearchhub:")),
+            (value for value in sys.argv[1:] if value.startswith(PROTOCOL + ":")),
             None,
         )
         if callback and broker.forward(callback):
@@ -37,7 +38,20 @@ def main():
         from app.services.diagnostics import configure
 
         configure(store.local_dir)
-        accounts = Accounts(store)
+        from app.ui.update_installation import pending_update_at_startup
+        if pending_update_at_startup(store):return 0
+        try:accounts = Accounts(store)
+        except ValueError:
+            if not BETA:raise
+            # No production endpoint or role is inherited in the local sandbox.
+            from app.services.project_locations import ProjectLocations
+            locations=ProjectLocations(store)
+            for path in (locations.value['active']['root_path'],locations.value['shared_storage']):Path(path).mkdir(parents=True,exist_ok=True)
+            locations.value['enabled']=True;locations.save(locations.value)
+            window=HubWindow(store)
+            window.banner.setText('BETA · Isolated local workspace · Beta backend unconfigured · No administrator privileges')
+            window.show();app.aboutToQuit.connect(broker.server.close)
+            return app.exec()
         app.setQuitOnLastWindowClosed(False)
         windows = []
         active_login = [None]

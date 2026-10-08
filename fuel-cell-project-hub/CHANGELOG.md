@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1 — 2026-10-08
+
+- Development/Beta work order only: separate app/installer/profile/protocol and prerelease update channels; Stable 0.4.0 remains unchanged.
+- Beta uses an isolated local research sandbox and refuses production Supabase; a separate Beta backend can be configured later.
+- Development defaults to develop, with automatic Beta builds and an explicit tested-commit production approval gate.
+- Update Now with graceful task handling and durable Update on Next Open retries.
+- Safe update choices, recoverable editor drafts and startup installation before background work.
+
 ## 0.4.0 — 2026-10-08
 
 - Publish the production Windows release with shared meetings, weekly contribution reports and legacy sample intelligence.

@@ -1,0 +1,111 @@
+name: Production promotion
+on:
+  workflow_dispatch:
+    inputs:
+      approved_commit:
+        description: Exact successful Beta source SHA approved by the human
+        required: true
+      beta_tag:
+        description: Tested Beta prerelease tag
+        required: true
+      beta_run_id:
+        description: Successful Windows Beta workflow run ID
+        required: true
+      production_release_order:
+        description: Type APPROVE PRODUCTION RELEASE only after explicit human authorization
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: production-promotion
+  cancel-in-progress: false
+jobs:
+  promote-build-publish:
+    environment: production
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      APPROVED_SHA: ${{ inputs.approved_commit }}
+      BETA_TAG: ${{ inputs.beta_tag }}
+      BETA_RUN_ID: ${{ inputs.beta_run_id }}
+      PRODUCTION_ORDER: ${{ inputs.production_release_order }}
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: fuel-cell-project-hub
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify approved Beta and promote exact source
+        run: |
+          if ($env:PRODUCTION_ORDER -cne 'APPROVE PRODUCTION RELEASE') { throw 'Explicit release order required' }
+          if ($env:APPROVED_SHA -notmatch '^[a-f0-9]{40}$' -or $env:BETA_TAG -notmatch '^v\d+\.\d+\.\d+-beta\.\d+$' -or $env:BETA_RUN_ID -notmatch '^\d+$') { throw 'Invalid approved Beta identifiers' }
+          $run = gh api "repos/$env:GH_REPO/actions/runs/$env:BETA_RUN_ID" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $run.conclusion -ne 'success' -or $run.head_sha -ne $env:APPROVED_SHA -or $run.head_branch -ne 'develop' -or $run.path -ne '.github/workflows/windows-release.yml') { throw 'Successful matching Beta run required' }
+          $release = gh release view $env:BETA_TAG --json isPrerelease,isDraft,assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or -not $release.isPrerelease -or $release.isDraft) { throw 'Tested Beta prerelease required' }
+          foreach ($name in @('GDLResearchHubBeta-Setup.exe','GDLResearchHubBeta-Setup.exe.sha256','build-manifest.json')) {
+            if ($name -notin $release.assets.name) { throw 'Beta release artifacts missing' }
+          }
+          git fetch origin develop main --tags
+          if ($LASTEXITCODE -ne 0) { throw 'Fetch failed' }
+          $tagCommit = git rev-parse "$env:BETA_TAG^{}"
+          if ($tagCommit -ne $env:APPROVED_SHA) { throw 'Beta tag does not match approved source' }
+          git merge-base --is-ancestor origin/main $env:APPROVED_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Promotion must fast-forward main' }
+          git checkout -B main $env:APPROVED_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Approved checkout failed' }
+          python -m venv .venv
+          & ./.venv/Scripts/python.exe -m pip install -r requirements-build.lock.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Locked dependencies failed' }
+          New-Item -ItemType Directory -Force .test-state | Out-Null
+          @{approved_commit=$env:APPROVED_SHA;production_release_order='APPROVED'} | ConvertTo-Json | Set-Content .test-state/production-approval.json
+      - name: Validate approved source
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/gdl-tests" | Out-Null
+          $env:TEMP = "$env:RUNNER_TEMP/gdl-tests"; $env:TMP = $env:TEMP
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          & ./.venv/Scripts/python.exe tools/bump_version.py check
+          if ($LASTEXITCODE -ne 0) { throw 'Version mismatch' }
+          & ./.venv/Scripts/python.exe tools/audit_source.py
+          if ($LASTEXITCODE -ne 0) { throw 'Source audit failed' }
+          & ./.venv/Scripts/python.exe tools/run_release_tests.py
+          if ($LASTEXITCODE -ne 0) { throw 'Regression tests failed' }
+      - name: Build approved Stable edition
+        run: ./tools/build_windows.ps1 -Channel stable -ApprovalFile .test-state/production-approval.json -OutputDirectory dist/stable
+      - name: Check packaged Stable and compile installer
+        run: |
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          $report = Join-Path (Get-Location) 'dist/stable-startup.json'
+          $process = Start-Process -FilePath './dist/stable/FuelCellProjectHub/FuelCellProjectHub.exe' -ArgumentList @('--self-check', ('"'+$report+'"'), '--local-only') -PassThru -Wait -WindowStyle Hidden
+          if ($process.ExitCode -ne 0) { throw 'Packaged startup failed' }
+          $result = Get-Content $report -Raw | ConvertFrom-Json
+          if ($result.channel -ne 'stable') { throw 'Wrong packaged edition' }
+          ./tools/build_installer.ps1 -Channel stable -PackageDirectory dist/stable/FuelCellProjectHub -OutputDirectory dist/installer
+          Copy-Item dist/stable/FuelCellProjectHub/_internal/config/build_metadata.json dist/installer/build-manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GDLResearchHub-Stable-${{ inputs.approved_commit }}
+          path: fuel-cell-project-hub/dist/installer/*
+      - name: Publish approved Stable after successful build
+        run: |
+          $version = & ./.venv/Scripts/python.exe -c 'from app.version import VERSION; print(VERSION)'
+          if ($env:BETA_TAG -notlike "v$version-beta.*") { throw 'Stable/Beta version mismatch' }
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git push origin main
+          if ($LASTEXITCODE -ne 0) { throw 'Normal main promotion rejected' }
+          git tag -a "v$version" $env:APPROVED_SHA -m "Approved GDL Research Hub production release $version"
+          if ($LASTEXITCODE -ne 0) { throw 'Stable tag exists or failed' }
+          git push origin "v$version"
+          if ($LASTEXITCODE -ne 0) { throw 'Stable tag push failed' }
+          gh release create "v$version" dist/installer/* --verify-tag --latest --title "GDL Research Hub $version" --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Stable release publication failed' }

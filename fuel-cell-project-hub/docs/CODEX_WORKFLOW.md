@@ -1,74 +1,61 @@
-# Codex source publishing workflow
+# Development and production workflow
 
-Repository: MartParty079/GDL (https://github.com/MartParty079/GDL.git)
-Primary branch: main. Development model: single developer.
-The Git root contains this app directory and a repository README; preserve the
-existing layout. No feature branch or worktree is required for normal work.
+Repository: MartParty079/GDL. Default branch: develop. Stable branch: main.
+Every work order is development only unless explicitly identified by the human
+as a Production Release Order. Read repository AGENTS.md before repository work.
+A previous release authorization does not authorize a new Stable release.
 
-## Start every work order
+## Development work order
 
-From the repository or app directory, inspect git status, git branch
---show-current and git remote -v. Verify main and the expected origin.
-Run git pull --ff-only origin main before edits. If it fails, stop editing,
-inspect divergence and reconcile intentionally while preserving all work.
-Never force push. Never automatically reset, clean, stash away or delete
-unexpected uncommitted work. Stage unrelated changes only when the user asks.
+1. Inspect status, branch and origin; pull develop with --ff-only before edits.
+   Preserve local work. Reconcile divergence; never reset/clean/force-push.
+2. Implement on develop. Increment the canonical numeric version per work order
+   with tools/bump_version.py. History is append-only. Beta build/display versions
+   append -beta.N; CI assigns N from its run number for distinct corrected builds.
+3. Run tools/run_release_tests.py and relevant offscreen smoke checks. Microsoft
+   identity tests remain deferred. Never launch Fiji during packaging checks.
+4. Review diff/whitespace, explicitly stage intended source, run audit_source.py,
+   commit/push develop normally, fetch and verify HEAD equals origin/develop.
+5. Beta CI tests the exact pushed commit, builds and checks packaged startup,
+   compiles the Beta installer/checksum and publishes a versioned prerelease.
+   Report SHA, tests, actual Beta version, installer assets and workflow status.
 
-## Work order version policy
+## Production Release Order
 
-Every implemented work order must produce a new traceable application version.
-Read app/version.py, the latest version_history.json entry and CHANGELOG first;
-confirm they agree, then record the target version before implementation.
-Default to a PATCH increment. Never reuse a completed work-order version or
-downgrade the application to an older version mentioned in a work order.
-Use tools/bump_version.py patch --work-order "Name" --summary "Completed changes"
-(minor/major require a justified milestone). History is append-only; correct
-historical factual errors explicitly. Include features, fixes and breaking
-changes. Unpublished tags and unavailable commit IDs remain null, not invented.
-Verify tools/bump_version.py check, header, login, About/history, installer
-metadata and release tag alignment before completion. Packaging derives build
-date and commit from Git; an entry cannot contain its own future commit SHA.
-Version inconsistency is a release failure. Source commits alone are not releases.
+Present the tested Beta SHA/tag/run to the human and obtain approval for that
+exact promotion. Do not infer approval from development work or old orders.
+The manual Production promotion workflow requires a successful Beta workflow
+run, matching SHA/prerelease tag/assets, an explicit approval phrase and review
+in the protected production GitHub environment before main or Stable changes.
 
-## Complete every work order
+Promotion must be a normal fast-forward of main to the tested source commit.
+Build Stable from that same SHA with the dependency lock and Stable metadata.
+Beta installer bytes are never distributed as Stable; identities differ.
+Never rebuild unreviewed source edits during promotion. Local Stable builds
+require main, a clean committed source tree and a commit-specific approval file.
+Verify version/history, packaged startup and installer/checksum before tagging or
+publishing. Stable tag pushes alone never trigger publication in the new workflow.
+Report failures honestly. Never force-push or overwrite existing release assets.
 
-1. Implement the authorized changes.
-2. Run applicable tests. The app uses unittest, not pytest:
-   .\.venv\Scripts\python.exe -m unittest discover -s tests -v
-3. Run relevant documented offscreen smoke tests; scientific launches remain
-   subject to the user's authorization. Do not launch Fiji as a packaging test.
-4. Review git status and git diff, including staged diff and whitespace checks.
-5. Explicitly stage intended source files. Do not stage OneDrive datasets.
-6. Run .\.venv\Scripts\python.exe tools/audit_source.py against the staged tree.
-7. Commit with a descriptive message, then git push origin main.
-8. Fetch origin and verify git rev-parse HEAD == git rev-parse origin/main.
-9. Report tests, final commit SHA/message, branch, push result and tree status.
+## Data and identity separation
 
-Fix new failures before a normal push; clearly report any pre-existing failures.
-If a normal push is rejected, fetch and inspect, reconcile, rerun relevant checks
-and push normally. Never use --force or -f on main.
-Use existing Git Credential Manager/GitHub CLI/browser authentication. Never
-write a token, password, secret or session cookie into repository files.
+Stable retains its existing installer ID, LocalAppData/FuelCellProjectHub profile
+and gdlresearchhub protocol. No migration copies or deletes Stable data.
+Beta has its own installer ID, executable, icon, folder, profile and protocol.
+Source development defaults to Beta; packaged edition metadata is immutable.
+Beta defaults to a local sandbox inside its profile and never auto-connects the
+university OneDrive tree. Writable/index storage and scientific analysis data
+must stay inside the sandbox. Beta contains no production account configuration.
+Its optional URL/publishable key must target a separate Supabase project.
+Roles stay database-authorized. Local Beta has no administrator privileges.
+Beta migrations are source only until applied to a verified separate project;
+production migrations and storage require explicit production approval.
 
-## Storage boundary
+## Publication boundaries
 
-GitHub stores app source, portable managed GDL source, config templates, tests,
-docs, assets, packaging .spec source and release metadata. OneDrive/SharePoint
-stores images, videos, sensor data, processed datasets, reports and old test data.
-Local profiles, caches, tokens and machine paths remain in Local AppData.
-Microsoft login provides identity through Supabase; native indexing and file
-access have no Microsoft Graph dependency.
-
-The preserved original GDL baseline stays ignored on this development computer
-because its historical defaults contain named user paths. The portable managed
-engine and baseline hash inventory are published. Fresh checkouts can run
-ordinary engine/package tests with the sanitized legacy test fixture; three comparisons against
-the original require restoring the privately held original into
-analysis/gdl/baseline and otherwise report explicit skips. Never claim those
-comparisons were performed when the original was absent.
-
-## Source push versus user update
-
-A source push is not a release. Production flow is source push, stable tested
-build, version tag, GitHub Release and packaged app update discovery. Do not
-make ordinary app users perform Git pulls or create releases for normal work.
+Git stores source, managed analysis engine, templates, tests, docs and assets.
+Never commit secrets, datasets, profiles, active personal paths, caches or builds.
+Keep the personal original GDL baseline ignored; missing baseline tests skip
+explicitly in CI. Artifacts belong in Actions/Release assets. Unknown SHAs and
+unpublished tags remain null in history. Build manifests record actual SHA,
+version and edition. Source pushes never update installed Stable applications.

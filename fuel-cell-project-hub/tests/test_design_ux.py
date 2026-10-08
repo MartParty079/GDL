@@ -117,6 +117,7 @@ class DesignUXTests(unittest.TestCase):
         with patch("app.ui.window.QMessageBox.exec") as modal, patch("app.ui.window.open_resource") as open_url:
             from app import __version__
             tag = f"v{int(__version__.split('.')[0]) + 1}.0.0"
+            if '-beta.' in __version__:tag+='-beta.1'
             self.window.update_done({"tag": tag, "url": f"https://github.com/MartParty079/GDL/releases/tag/{tag}", "name": tag})
         modal.assert_not_called()
         open_url.assert_not_called()

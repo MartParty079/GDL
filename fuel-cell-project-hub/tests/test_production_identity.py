@@ -172,7 +172,8 @@ class VersionHistoryTests(unittest.TestCase):
 
     def test_canonical_history_and_changelog_agree(self):
         from app import __version__
-        self.assertEqual(check(Path(__file__).resolve().parents[1])[0],__version__)
+        from app.version import VERSION
+        self.assertEqual(check(Path(__file__).resolve().parents[1])[0],VERSION)
 
 
 if __name__ == '__main__': unittest.main()

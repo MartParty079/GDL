@@ -70,11 +70,19 @@ def protect(data, decrypt=False):
 class Accounts:
     def __init__(self, store, transport=None):
         self.store = store
-        config = read_json(store.config_dir / "accounts_public.json", {})
-        self.url = os.environ.get("SUPABASE_URL", config.get("url", "")).rstrip("/")
+        from app.edition import BETA
+        # Test transports never access a remote project. Real Beta connections
+        # require a separately provisioned endpoint, including for authentication.
+        isolated = BETA and transport is None
+        config = read_json(store.config_dir / ("accounts_beta_public.json" if isolated else "accounts_public.json"), {})
+        self.url = os.environ.get("GDL_BETA_SUPABASE_URL" if isolated else "SUPABASE_URL", config.get("url", "")).rstrip("/")
         self.key = os.environ.get(
-            "SUPABASE_PUBLISHABLE_KEY", config.get("publishable_key", "")
+            "GDL_BETA_SUPABASE_PUBLISHABLE_KEY" if isolated else "SUPABASE_PUBLISHABLE_KEY", config.get("publishable_key", "")
         )
+        if isolated:
+            production=read_json(store.config_dir / 'accounts_public.json',{}).get('url','').rstrip('/')
+            if not self.url or self.url.casefold()==production.casefold() or 'yndvjtscbcfwvwtbjobe' in self.url.casefold():
+                raise AccountError('Beta account service is not configured. Use the isolated local Beta workspace.')
         if not self.url.startswith("https://") or not self.key.startswith(
             "sb_publishable_"
         ):

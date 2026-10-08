@@ -122,6 +122,10 @@ class GDLAnalysisService:
             raise ValueError("A GDL watchdog is already active. Finish that session before starting another.")
         self.preserve_quick_runs()
         session = self.build_session_config(results, input_folder, output_folder)
+        if self.store.sandbox_required:
+            base=self.store.local_dir.resolve()
+            if any(not Path(session[key]).resolve().is_relative_to(base) for key in ('input_folder','output_folder','report_output_folder','temp_work_folder')):
+                raise ValueError('Beta analysis input and output must remain inside its isolated research sandbox.')
         for key in ("output_folder", "report_output_folder", "temp_work_folder"):
             Path(session[key]).mkdir(parents=True, exist_ok=True)
             field = {"output_folder": "default_output_folder", "report_output_folder": "report_output_folder", "temp_work_folder": "temp_work_folder"}[key]

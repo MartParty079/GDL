@@ -2,6 +2,13 @@
 
 A native Windows research management app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
 
+Development uses **GDL Research Hub Beta** on `develop`, with a separate installer,
+local profile, research sandbox and prerelease update channel. Beta currently runs
+locally without connecting to production Supabase. Stable remains on `main` and
+requires an explicit approved Production Release Order. See
+[Beta/Stable separation](docs/beta_stable_editions.md) and
+[development workflow](docs/CODEX_WORKFLOW.md).
+
 ## Team accounts and Windows distribution
 
 The application supports approved Tarleton Microsoft and email/password accounts. Saved

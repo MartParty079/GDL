@@ -123,6 +123,7 @@ class UpdateTests(unittest.TestCase):
 
     def test_checksum_mismatch_discarded_and_verified_download(self):
         next_tag = f'v{updates.version(updates.__version__)[0] + 1}.0.0'
+        if '-beta.' in updates.__version__:next_tag+='-beta.1'
         release={'tag':next_tag,'assets':{name:{'browser_download_url':f'https://github.com/MartParty079/GDL/releases/download/{next_tag}/{name}'} for name in (updates.ASSET,updates.ASSET+'.sha256')}}
         payload=b'MZinstaller-test'; checksum=hashlib.sha256(payload).hexdigest()
         class Response:

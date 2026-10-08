@@ -13,7 +13,8 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from app.services.accounts import AccountError, protect
 from app.services.storage import read_json, write_json
 
-CALLBACK = "gdlresearchhub://auth/callback"
+from app.edition import PROTOCOL
+CALLBACK = PROTOCOL + "://auth/callback"
 TENANT = "2c5ee638-a963-49c0-ac26-828dd9b78d5e"
 CLIENT = "16fbe099-c7ed-4da8-94bf-d8abc1c4c5ec"
 
@@ -25,7 +26,7 @@ def callback_values(uri):
         )
     parsed = urlparse(uri)
     if (parsed.scheme, parsed.netloc, parsed.path) != (
-        "gdlresearchhub",
+        PROTOCOL,
         "auth",
         "/callback",
     ) or parsed.fragment:

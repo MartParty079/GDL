@@ -127,6 +127,22 @@
       "breaking_changes": [],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.4.1",
+      "date": "2026-10-08",
+      "work_order": "Development/Beta separation and safe update options",
+      "summary": "Independent Beta and Stable editions with isolated storage, channel-specific updates and approved production promotion; includes safe update options.",
+      "major_features": [
+        "Safe update choices, recoverable editor drafts and startup installation before background work.",
+        "Development-only default on develop, isolated local Beta research and optional separate Supabase backend",
+        "Independent Beta installer identity, protocol, icon and per-user profile",
+        "Automated Beta builds and an explicit commit-specific production approval gate"
+      ],
+      "major_fixes": [],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }

@@ -10,3 +10,4 @@
 !/.github/workflows/
 /.github/workflows/*
 !/.github/workflows/windows-release.yml
+!/.github/workflows/production-promotion.yml

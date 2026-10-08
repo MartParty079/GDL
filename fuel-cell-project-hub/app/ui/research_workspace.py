@@ -86,11 +86,12 @@ def control(title, action, layout):
 
 
 def version_dialog(parent):
+    from app.edition import APP_NAME
     dialog = QDialog(parent)
-    dialog.setWindowTitle("About GDL Research Hub")
+    dialog.setWindowTitle("About " + APP_NAME)
     dialog.resize(700, 550)
     layout = QVBoxLayout(dialog)
-    layout.addWidget(QLabel("GDL Research Hub " + __version__))
+    layout.addWidget(QLabel(APP_NAME + " " + __version__))
     from app.services.storage import read_json
     history = read_json(resource_path("version_history.json"), {"versions": []})
     build = read_json(resource_path('config/build_metadata.json'),{})
