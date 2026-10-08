@@ -112,6 +112,21 @@
         "Database-checked admin activity reporting and minimal team roster RPC"
       ],
       "github_release": null
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-10-08",
+      "work_order": "Production release 0.4.0",
+      "summary": "Publish the production Windows release with shared meetings, weekly contribution reports and legacy sample intelligence.",
+      "major_features": [
+        "Stable GitHub release, Windows installer and SHA-256 update verification."
+      ],
+      "major_fixes": [
+        "Index completion status handles nested classification metadata."
+      ],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }

@@ -331,7 +331,8 @@ class ResearchPanel(QWidget):
 
     def completed(self, summary):
         if getattr(self.settings.store, "accounts", None): self.settings.store.accounts.event("INDEX_COMPLETED", details={"count":summary.get("current",0)+summary.get("legacy",0)})
-        self.status.set_message(' · '.join(f'{k}: {v:,}' for k, v in summary.items()), 'success' if not summary['errors'] else 'warning')
+        counts = {k: v for k, v in summary.items() if isinstance(v, (int, float))}
+        self.status.set_message(' · '.join(f'{k}: {v:,}' for k, v in counts.items()), 'success' if not summary.get('errors', 0) else 'warning')
         self.changed.emit()
 
     def index_failed(self, message):

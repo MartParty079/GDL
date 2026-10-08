@@ -115,7 +115,9 @@ class DesignUXTests(unittest.TestCase):
 
     def test_update_available_uses_notification_without_downloading(self):
         with patch("app.ui.window.QMessageBox.exec") as modal, patch("app.ui.window.open_resource") as open_url:
-            self.window.update_done({"tag": "v0.4.0", "url": "https://github.com/team/repo/releases/tag/v0.4.0", "name": "0.3.0"})
+            from app import __version__
+            tag = f"v{int(__version__.split('.')[0]) + 1}.0.0"
+            self.window.update_done({"tag": tag, "url": f"https://github.com/MartParty079/GDL/releases/tag/{tag}", "name": tag})
         modal.assert_not_called()
         open_url.assert_not_called()
         self.assertIn("Update available", self.window.toasts.message.text())

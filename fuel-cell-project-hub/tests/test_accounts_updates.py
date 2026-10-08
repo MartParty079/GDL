@@ -122,7 +122,8 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(ValueError):updates.asset_url(release,updates.ASSET)
 
     def test_checksum_mismatch_discarded_and_verified_download(self):
-        release={'tag':'v0.4.0','assets':{name:{'browser_download_url':f'https://github.com/MartParty079/GDL/releases/download/v0.4.0/{name}'} for name in (updates.ASSET,updates.ASSET+'.sha256')}}
+        next_tag = f'v{updates.version(updates.__version__)[0] + 1}.0.0'
+        release={'tag':next_tag,'assets':{name:{'browser_download_url':f'https://github.com/MartParty079/GDL/releases/download/{next_tag}/{name}'} for name in (updates.ASSET,updates.ASSET+'.sha256')}}
         payload=b'MZinstaller-test'; checksum=hashlib.sha256(payload).hexdigest()
         class Response:
             def __init__(self,data):self.data=data; self.offset=0

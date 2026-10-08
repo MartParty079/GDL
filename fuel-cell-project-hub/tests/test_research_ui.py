@@ -38,6 +38,11 @@ class ResearchUITests(unittest.TestCase):
         self.app.processEvents()
         self.temp.cleanup()
 
+    def test_index_completion_handles_nested_classification_metadata(self):
+        panel = self.window.research_panel
+        panel.completed({'current': 1200, 'legacy': 3, 'errors': 0, 'classification': {'images': 2}})
+        self.assertIn('1,200', panel.status.text())
+
     def test_background_index_filters_pagination_and_laptop_startup(self):
         for n in range(240):
             (self.current / f'file-{n}.txt').write_text(str(n))

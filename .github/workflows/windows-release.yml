@@ -28,7 +28,7 @@ jobs:
           $version = & ./.venv/Scripts/python.exe -c 'from app.version import VERSION; print(VERSION)'
           if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag/version mismatch' }
           $env:QT_QPA_PLATFORM = 'offscreen'
-          & ./.venv/Scripts/python.exe -m unittest discover -s tests -v
+          & ./.venv/Scripts/python.exe tools/run_release_tests.py
           if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
       - name: Build package
         run: ./tools/build_windows.ps1 -OutputDirectory dist/release
@@ -36,7 +36,7 @@ jobs:
         run: |
           $env:QT_QPA_PLATFORM = 'offscreen'
           $report = Join-Path (Get-Location) 'dist/startup-check.json'
-          $process = Start-Process -FilePath './dist/release/FuelCellProjectHub/FuelCellProjectHub.exe' -ArgumentList @('--self-check', ('"'+$report+'"')) -PassThru -Wait -WindowStyle Hidden
+          $process = Start-Process -FilePath './dist/release/FuelCellProjectHub/FuelCellProjectHub.exe' -ArgumentList @('--self-check', ('"'+$report+'"'), '--local-only') -PassThru -Wait -WindowStyle Hidden
           if ($process.ExitCode -ne 0) { throw 'Packaged startup failed' }
       - name: Build installer
         run: ./tools/build_installer.ps1 -PackageDirectory dist/release/FuelCellProjectHub -OutputDirectory dist/installer
@@ -60,4 +60,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" installer/* --verify-tag --generate-notes
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already published; preserving its verified installer assets."
+          else
+            gh release create "$RELEASE_TAG" installer/* --verify-tag --generate-notes
+          fi

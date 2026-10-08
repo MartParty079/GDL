@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 — 2026-10-08
+
+- Publish the production Windows release with shared meetings, weekly contribution reports and legacy sample intelligence.
+- Stable GitHub release, Windows installer and SHA-256 update verification.
+- Fix index completion status when classification metadata contains nested values.
+
 ## 0.3.3 — 2026-10-08
 
 - Measurable active sessions, shared meetings and per-person weekly contribution reports
