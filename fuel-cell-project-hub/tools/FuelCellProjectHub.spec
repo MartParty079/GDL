@@ -15,7 +15,7 @@ beta=channel=='beta'
 exe_name='GDLResearchHubBeta' if beta else 'FuelCellProjectHub'
 app_name='GDL Research Hub Beta' if beta else 'GDL Research Hub'
 icon_name='app_icon_beta.ico' if beta else 'app_icon.ico'
-datas = [(str(project_directory / 'config' / name), 'config') for name in ('project_defaults.json', 'software_manifest.json', 'file_classification.json', 'research_defaults.json', 'indexing_rules.json', 'accounts_beta_public.json' if beta else 'accounts_public.json')]
+datas = [(str(project_directory / 'config' / name), 'config') for name in ('project_defaults.json', 'software_manifest.json', 'file_classification.json', 'research_defaults.json', 'indexing_rules.json')]
 engine = project_directory / 'analysis/gdl/engine'
 for source_file in engine.rglob('*'):
     if source_file.is_file() and '__pycache__' not in source_file.parts and source_file.suffix != '.pyc':
@@ -26,8 +26,6 @@ datas.append((str(project_directory / 'assets'), 'assets'))
 datas.append((str(project_directory / 'CHANGELOG.md'), '.'))
 datas.append((str(project_directory / 'version_history.json'), '.'))
 datas.append((str(project_directory / 'work_order_history.json'), '.'))
-if beta:
-    datas.append((str(project_directory / 'config/shared_project_public.json'), 'config'))
 app_version = runpy.run_path(str(project_directory / 'app/version.py'))['VERSION']
 sequence=int(os.environ.get('GDL_BETA_SEQUENCE') or json.loads((project_directory/'config/edition.json').read_text()).get('beta_sequence',1))
 display_version=app_version+(f'-beta.{sequence}' if beta else '')

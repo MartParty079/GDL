@@ -431,6 +431,8 @@ class WeeklyPanel(QWidget):
         action(bar,'Export PDF',lambda:self.export('pdf'))
         action(bar,'Export CSV',lambda:self.export('csv'))
         self.all_button=action(bar,'Generate All Team Reports',self.export_all);self.all_button.setVisible(accounts.profile['role']=='admin')
+        self.combined_button=action(bar,'Export Combined Team PDF',self.export_combined)
+        self.combined_button.setVisible(accounts.profile['role']=='admin')
         self.status=QLabel('Choose a period, then Generate. Active time is measured from v0.3.3 onward.');self.status.setWordWrap(True);layout.addWidget(self.status)
         splitter=QSplitter();layout.addWidget(splitter,1)
         self.team=QListWidget();self.team.setMaximumWidth(270);self.team.itemClicked.connect(self.select_report);splitter.addWidget(self.team)
@@ -492,4 +494,17 @@ class WeeklyPanel(QWidget):
                     export_pdf(r,Path(folder)/(name+'-'+r['user_id'][:8]+'-'+r['begin'][:10]+'.pdf'),self.accounts.store)
                 self.status.setText(f'{len(reports)} individual team reports exported.')
             except (OSError,ValueError):self.status.setText('Choose a writable folder inside the shared project.')
+        self.generate(exported)
+
+    def export_combined(self):
+        if not self.accounts.admin_unlocked:return
+        from app.services.contributions import combined_report
+        path,_=QFileDialog.getSaveFileName(self,'Combined team report','Team-Weekly-Activity.pdf','PDF (*.pdf)')
+        if not path:return
+        self.person.setCurrentIndex(0)
+        def exported(reports):
+            try:
+                export_pdf(combined_report(reports),path,self.accounts.store)
+                self.status.setText('Combined team report exported.')
+            except (OSError,ValueError):self.status.setText('Choose a writable folder within the configured workspace.')
         self.generate(exported)

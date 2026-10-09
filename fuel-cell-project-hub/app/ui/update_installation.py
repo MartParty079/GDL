@@ -96,7 +96,7 @@ class SafeUpdate(QObject):
             self.fail('Installer could not start.\nStage: Installer launch\n' + failure_reason(exc));return
         finally:
             if accounts:accounts.lock.release()
-        self.state='installed';self.window.update_exit_ready=True
+        self.state='installer_started';self.window.update_exit_ready=True
         self.window.setEnabled(True);self.window.close()
 
     def fail(self,message):

@@ -66,7 +66,10 @@ Root: HKCU; Subkey: "Software\Classes\{#Protocol}\DefaultIcon"; ValueType: strin
 Root: HKCU; Subkey: "Software\Classes\{#Protocol}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ExeName}.exe"" ""%1"""; Check: not IsTestInstall
 [Run]
 Filename: "{app}\{#ExeName}.exe"; Description: "Open {#AppName}"; Flags: nowait postinstall skipifsilent; Check: not IsTestInstall
-; LocalAppData/FuelCellProjectHub remains untouched on upgrade and uninstall.
+; LocalAppData/FuelCellProjectHub, FuelCellProjectHubBeta and
+; FuelCellProjectHubDevelopment data stay outside the installation.
+; The installer never copies/deletes local identities, PIN hashes, OneDrive data,
+; caches or research indexes. Edition IDs and folders remain backward compatible.
 
 [Code]
 function IsTestInstall: Boolean;

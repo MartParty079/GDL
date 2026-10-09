@@ -88,8 +88,40 @@ class ArtifactTests(unittest.TestCase):
             gh.assert_not_called()
         with patch.object(publish,'gh',side_effect=['MartParty079',json.dumps({'commit':{'sha':'b'*40}})]) as gh:
             with self.assertRaisesRegex(ValueError,'Develop changed'):
-                publish.publish('a'*40,'v0.4.3-beta.5','123','APPROVE PRODUCTION RELEASE')
+                publish.publish('a'*40,'v0.4.3-beta.5','123','APPROVE PRODUCTION RELEASE',
+                    {'approved_commit':'a'*40,'beta_tag':'v0.4.3-beta.5','stable_version':'0.4.3','response':'YES',
+                     'question':publish.promotion_question('0.4.3-beta.5','0.4.3')})
             self.assertEqual(gh.call_count,2)
+
+    def test_rejected_missing_or_other_build_confirmation_never_dispatches(self):
+        spec=importlib.util.spec_from_file_location('publish',ROOT/'tools/publish_stable.py')
+        publish=importlib.util.module_from_spec(spec);spec.loader.exec_module(publish)
+        receipt={'approved_commit':'a'*40,'beta_tag':'v0.5.0-beta.1','stable_version':'0.5.0','response':'YES',
+                 'question':publish.promotion_question('0.5.0-beta.1','0.5.0')}
+        self.assertEqual(publish.validate_confirmation('a'*40,'v0.5.0-beta.1',receipt),'0.5.0')
+        for bad in (None,dict(receipt,response='NO'),dict(receipt,approved_commit='b'*40),dict(receipt,stable_version='0.4.3')):
+            with patch.object(publish,'gh') as gh, self.assertRaises(ValueError):
+                publish.publish('a'*40,'v0.5.0-beta.1','123','APPROVE PRODUCTION RELEASE',bad)
+            gh.assert_not_called()
+
+    def test_exact_yes_dispatches_and_uses_supported_sole_maintainer_review(self):
+        spec=importlib.util.spec_from_file_location('publish',ROOT/'tools/publish_stable.py')
+        publish=importlib.util.module_from_spec(spec);spec.loader.exec_module(publish)
+        sha='a'*40
+        receipt={'approved_commit':sha,'beta_tag':'v0.5.0-beta.1','stable_version':'0.5.0','response':'YES',
+                 'question':publish.promotion_question('0.5.0-beta.1','0.5.0')}
+        responses=['MartParty079',json.dumps({'commit':{'sha':sha}}),
+            json.dumps({'conclusion':'success','headBranch':'develop','headSha':sha}),
+            'https://github.com/MartParty079/GDL/actions/runs/123456',
+            json.dumps([{'environment':{'name':'production','id':2},'current_user_can_approve':True}])]
+        with patch.object(publish,'gh',side_effect=responses) as gh,patch.object(publish.subprocess,'run') as review:
+            self.assertEqual(publish.publish(sha,receipt['beta_tag'],'123','APPROVE PRODUCTION RELEASE',receipt),'123456')
+        dispatch=gh.call_args_list[3].args
+        self.assertIn('production-promotion.yml',dispatch)
+        self.assertIn('confirmation_response=YES',dispatch)
+        self.assertIn('confirmation_question='+receipt['question'],dispatch)
+        self.assertEqual(json.loads(review.call_args.kwargs['input'])['state'],'approved')
+        self.assertNotIn('--force',str(gh.call_args_list))
 
 
 if __name__=='__main__':unittest.main()

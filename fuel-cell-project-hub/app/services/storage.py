@@ -39,7 +39,7 @@ class Store:
         self.root = Path(root)
         self.config_dir = self.root / "config"
         self.sandbox_required = BETA and local_dir is None
-        self.shared_required = self.sandbox_required
+        self.shared_required = False
         self.shared_index = None
         override = os.environ.get('GDL_HUB_BETA_DATA_DIR' if BETA else 'FUEL_HUB_DATA_DIR')
         self.local_dir = Path(local_dir or (Path(override) / PROFILE_NAME if BETA and override else override) or
@@ -48,6 +48,19 @@ class Store:
         self.project = read_json(self.local_dir / 'project_settings.json',
                                  read_json(self.config_dir / "project.json", defaults))
         self.local = read_json(self.local_dir / "local.json", {"paths": {}, "setup_complete": False})
+        if self.sandbox_required:
+            # Retire earlier Beta's live-project mapping without touching its files.
+            unsafe = self.local.get('shared_root') or self.local.get('local_project_root')
+            locations = self.local.get('project_locations', {})
+            paths = [locations.get(k) for k in ('shared_storage', 'database', 'generated', 'cache', 'backups')]
+            paths += [s.get('root_path') for s in [locations.get('active', {}), *locations.get('legacy', [])]]
+            if unsafe or any(p and not Path(p).resolve().is_relative_to(self.local_dir.resolve()) for p in paths):
+                write_json(self.local_dir / 'migration-backups' / ('pre-local-identity-' + uuid.uuid4().hex + '.json'), self.local)
+                for key in ('shared_root', 'shared_project_id', 'project_locations', 'local_project_root', 'local_project_folder', 'project_snapshot_enabled'):
+                    self.local.pop(key, None)
+                self.local['sandbox_migration_notice'] = 'Earlier shared mappings were preserved in a local backup. Beta now uses isolated test data.'
+                self.project = copy.deepcopy(defaults)
+                self.save_local()
         self.events = read_json(self.local_dir / "activity.json", [])
         self.bugs = read_json(self.local_dir / "bugs.json", [])
         self.manifest = read_json(self.config_dir / "software_manifest.json", [])
@@ -85,11 +98,22 @@ class Store:
             except (OSError, ValueError) as exc:
                 self.storage_error = str(exc)
 
+        if self.sandbox_required:
+            from app.services.project_locations import ProjectLocations
+            locations = ProjectLocations(self)
+            if not locations.value.get('enabled'):
+                value = locations.value
+                for path in [value['active']['root_path'], *[value[k] for k in ('shared_storage', 'database', 'generated', 'cache', 'backups')]]:
+                    Path(path).mkdir(parents=True, exist_ok=True)
+                locations.save(value)
+
     def save_local(self):
         write_json(self.local_dir / "local.json", self.local)
 
     def attach_shared(self, root):
         from app.services.shared_index import SharedIndex
+        if self.sandbox_required and not Path(root).resolve().is_relative_to(self.local_dir.resolve()):
+            raise ValueError('Beta cannot connect the production shared project. Use its isolated sandbox.')
         expected = self.local.get('shared_project_id')
         if self.shared_required:
             configured = read_json(self.config_dir / 'shared_project_public.json', {}).get('project_id')
@@ -98,7 +122,6 @@ class Store:
             expected = configured or expected
         shared = SharedIndex(self, root, expected)
         self.shared_index = shared
-        self.sandbox_required = False
         self.local.update(shared_root=str(shared.root), shared_project_id=shared.identity['project_id'],
                           project_locations=shared.locations())
         self.project = read_json(shared.control / 'settings/project_settings.json', self.defaults)
@@ -119,6 +142,8 @@ class Store:
 
     def validate_project_output(self, path):
         path = Path(path).resolve()
+        if self.sandbox_required and not path.is_relative_to(self.local_dir.resolve()):
+            raise ValueError('Development and Beta exports must stay in the isolated profile sandbox.')
         if self.shared_index:
             if not path.is_relative_to(self.shared_index.root) or path.is_relative_to(self.shared_index.control):
                 raise ValueError('Save research exports inside the shared project, outside its control folder.')
@@ -144,11 +169,13 @@ class Store:
             write_json(self.project_data('logs') / (self.events[-1]['id'] + '.json'), self.events[-1])
         elif not self.shared_required:
             write_json(self.local_dir / "activity.json", self.events)
-        if area == "Settings" and getattr(self, "accounts", None):
-            self.accounts.event("SETTINGS_CHANGED")
+        if getattr(self, "accounts", None):
+            self.accounts.event("SETTINGS_CHANGED" if area == "Settings" else "MANUAL_RECORD_EDIT", entity_name=message[:180])
 
     def save_project(self, value, reason="Project settings changed"):
         from app.services.project_storage import validate_shared_settings
+        if getattr(self, "accounts", None):
+            self.accounts.require_admin()
         validate_shared_settings(value)
         if self.migration_pending:
             self.save_local()

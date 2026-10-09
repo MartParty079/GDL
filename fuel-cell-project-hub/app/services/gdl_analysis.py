@@ -142,6 +142,9 @@ class GDLAnalysisService:
         Path(session["status_file"]).parent.mkdir(parents=True, exist_ok=True)
         Path(session["launcher_log"]).parent.mkdir(parents=True, exist_ok=True)
         path = self.directory / "sessions" / (session["session_id"] + ".json")
+        accounts = getattr(self.store, 'accounts', None)
+        if accounts and accounts.profile:
+            session['initiated_by'] = accounts.profile['id']
         write_json(path, session)
         environment = os.environ.copy()
         environment["GDL_SESSION_CONFIG"] = str(path)

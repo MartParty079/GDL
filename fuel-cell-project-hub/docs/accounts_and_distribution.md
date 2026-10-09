@@ -1,3 +1,7 @@
+> Historical hosted-auth documentation. The 0.5.0 Development/Beta candidate
+> retires these desktop login instructions; use [LOCAL_TEAM_IDENTITY.md](LOCAL_TEAM_IDENTITY.md).
+> Existing Stable and remote records remain unchanged until an approved promotion.
+
 # Accounts and Windows distribution — 0.3.0
 
 Version 0.2.0 is replaced by 0.3.0. This adds team identity and distribution

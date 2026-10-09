@@ -2,29 +2,32 @@
 
 A native Windows research management app for the fuel-cell capstone. Built from the supplied document pack; reference Markdown is preserved in `docs/reference/`.
 
-Development uses **GDL Research Hub Beta** on `develop`, with a separate installer,
-local profile and prerelease update channel. Beta maps the authorized existing
-shared OneDrive project using verified identity and published index snapshots. It runs
-locally without connecting to production Supabase. Stable remains on `main` and
-requires an explicit approved Production Release Order. See
-[Beta/Stable separation](docs/beta_stable_editions.md) and
-[development workflow](docs/CODEX_WORKFLOW.md).
-See [shared project setup and migration](docs/SHARED_ONEDRIVE_INDEX.md).
+Source execution defaults to isolated **Development** on `develop`. CI publishes
+separately installable **GDL Research Hub Beta** prereleases. Both use isolated
+research sandboxes; neither modifies the live production OneDrive project.
+Stable remains on `main` and requires the exact-build confirmation in the
+[Codex workflow](docs/CODEX_WORKFLOW.md). Existing Stable installations are unchanged.
 
-## Team accounts and Windows distribution
+## Local team profiles and Windows distribution
 
-The application supports approved Tarleton Microsoft and email/password accounts. Saved
-sessions are encrypted for the Windows user. Administrators receive users,
-activity, installations and system views; privileged changes are checked by
-the hosted backend. Local SQLite and OneDrive remain the research backbone.
+Select Matthew Kime (Admin), Andrew Michelson, Monterrius Ridley or Ryan Rodriguez.
+Members may use optional four- to six-digit PINs. Admin functions require a PIN,
+with a private recovery code created during setup. Login requires no email,
+internet, Microsoft registration or Supabase project. OneDrive permissions still
+control research file access. Shared profiles use a designated writer and revision
+backups; immutable activity events queue locally while storage is unavailable.
 
-Windows users install `GDLResearchHub-Setup.exe`; Python, Git and developer
-configuration are unnecessary. Updates use verified stable GitHub release
-installers. See [accounts and distribution](docs/accounts_and_distribution.md)
-for setup, security, acceptance results and current limits. See
-[production integration](docs/production_integration.md) for the latest work order,
-desktop callback, version history and release acceptance status. The canonical
-version is in app/version.py; version_history.json retains prior work orders.
+**Admin · User Activity** provides per-person metrics and event filters. Members
+have **My Activity**. **Weekly Activity** exports individual and combined team PDFs.
+No productivity score is invented. See the [local identity guide](docs/LOCAL_TEAM_IDENTITY.md)
+for PIN setup/recovery, storage, activity semantics and historical-record preservation.
+
+Testers install `GDLResearchHubBeta-Setup.exe`; Stable users retain
+`GDLResearchHub-Setup.exe`. Python and Git are unnecessary for installed apps.
+Updates remain channel-specific and checksum-verified. Starting the installer is
+not reported as a successful update; the new running version must be verified.
+See [edition separation](docs/beta_stable_editions.md). Canonical version lives in
+app/version.py; version_history.json preserves prior work orders.
 
 ## Research workspace
 
@@ -37,10 +40,11 @@ and [CHANGELOG.md](CHANGELOG.md) for behavior, verification and current limits.
 
 ## Native research indexing
 
-A previously validated account can use local research offline for up to
-24 hours, with an OFFLINE indicator and queued activity. First login requires
-connectivity. Microsoft provides identity through Supabase; Graph is not used for storage. OneDrive handles synchronization; Windows provides the folders;
-the Hub owns its local catalog, content search and research metadata.
+Local team login works offline without a hosted-session expiry. OneDrive handles
+synchronization; Windows provides folders; the Hub owns its local catalog,
+content search and research metadata. Development/Beta storage paths must remain
+inside their isolated profile; copy representative fixtures there for testing.
+The existing Stable workspace retains its published legacy catalog unchanged.
 
 Use **Settings > Storage > Project** to configure **GDL Research** (current)
 and **Previous GDL Research**, source **Michelson GDL Stuffs** (read-only

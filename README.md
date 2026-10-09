@@ -9,8 +9,10 @@ OneDrive/SharePoint = project and experimental data.
 
 ## Development workflow
 
-Development defaults to **develop** and the independently installed **GDL Research
-Hub Beta**. **main** and Stable publication require an explicit Production Release
+Development defaults to **develop** with an isolated source Development app and
+the independently installed **GDL Research Hub Beta**. Team login uses local profiles
+and optional Member PINs; Admin functions require a PIN. Development/Beta research
+stays in isolated sandboxes. **main** and Stable publication require an explicit Production Release
 Order approving the tested Beta commit. See the
 [edition guide](fuel-cell-project-hub/docs/beta_stable_editions.md).
 

@@ -10,25 +10,24 @@
 | Profile under LocalAppData | FuelCellProjectHubBeta | FuelCellProjectHub |
 | Protocol | gdlresearchhubbeta | gdlresearchhub |
 | Updates | vX.Y.Z-beta.N prereleases only | vX.Y.Z stable releases only |
-| Backend | Offline shared project; optional separate Beta Supabase | Existing production Supabase |
+| Identity in the new candidate | Local team profiles / required Admin PIN | Same local design only after approved promotion |
 
-Stable installation/data stay untouched. Beta never migrates Stable settings or
-tokens. Both editions can run simultaneously. Beta has a blue B icon with gold
-BETA badge, and Beta labels in window, login, About and version. Local Beta has
-no administrator privileges. Authenticated Beta retains database-authorized roles.
+Existing Stable installation/data stay untouched. Beta never migrates Stable
+settings or tokens. Both editions can run simultaneously. Beta has its BETA icon
+badge and labels in window, login, About and version. Local Admin organizational
+access requires the Admin PIN; Beta status never grants privileges.
 
-For a future separate Beta backend, set GDL_BETA_SUPABASE_URL and
-GDL_BETA_SUPABASE_PUBLISHABLE_KEY or configure config/accounts_beta_public.json
-before an approved Beta build. Use only a publishable key from a separate project.
-The production endpoint is explicitly refused. Apply migrations only to that
-verified Beta project. Production database/storage are unchanged by this order.
+Source execution is a third **Development** stage: FuelCellProjectHubDevelopment
+profile, Development title, automatic `-dev.N` identifier, separate sandbox and no
+remote installer feed. Rerun current develop source for Development updates.
+Packaged editions ignore source environment overrides and remain immutable.
 
-The fixed-root amendment authorizes the existing shared OneDrive project for
-Beta research. Persistent data lives there; the Beta profile holds mappings,
-secure sessions, preferences and disposable cache. Only the explicitly enrolled
-authority indexes; clients read verified immutable snapshots. Stable installations
-and backend writes remain isolated. See SHARED_ONEDRIVE_INDEX.md for the approved
-catalog-only migration, pending legacy file links and authority transfer procedure.
+The local identity order supersedes the earlier live-root Beta amendment.
+Development/Beta cannot map/write production research, configuration or indexes.
+Older Beta mappings are backed up locally and disconnected; a fresh index namespace
+prevents reopening an earlier production-linked Beta catalog. Files and prior
+snapshots remain intact. See LOCAL_TEAM_IDENTITY.md for profile writer procedure,
+recovery, shared transport and the retained historical Supabase records.
 
 ## Update choices
 
@@ -49,7 +48,9 @@ Changed editor layouts retain update-drafts.local.json for manual recovery.
 
 ## Approval gate
 
-Beta CI publishes only tested prereleases. Production requires an explicit order,
+Beta CI publishes only tested prereleases. Production requires a fresh affirmative
+answer to the exact question in CODEX_WORKFLOW.md, a matching local confirmation
+receipt, an explicit order,
 approved Beta SHA/tag/run, the approval phrase and protected environment review.
 It promotes the exact tested source and uses the dependency lock. Stable requires
 different installer metadata, so its bytes are built from the approved source.

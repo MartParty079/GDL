@@ -326,6 +326,10 @@ class ResearchPanel(QWidget):
         self.status.set_message(message)
 
     def start_index(self, tier=None, choose=False, apply_settings=True, **options):
+        accounts = getattr(self.settings.store, 'accounts', None)
+        if accounts and not accounts.admin_unlocked:
+            self.status.set_message('Select Admin and enter its PIN to manage indexing.', 'warning')
+            return
         shared = self.settings.store.shared_index
         if shared and not shared.authority:
             shared.submit('refresh', {})

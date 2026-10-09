@@ -74,7 +74,10 @@ class ProjectLocations:
             result['active']['root_path']=str(sandbox / 'current')
             result['active']['name']='Beta Research Sandbox'
             result['legacy']=[];result['shared_storage']=str(sandbox / 'shared')
-            for key in ('database','generated','cache','backups'):result[key]=str(self.store.local_dir / key)
+            # A fresh index namespace cannot reopen a pre-isolation Beta catalog
+            # with paths into the production project. Prior catalogs stay intact.
+            for key in ('database','generated','cache','backups'):
+                result[key]=str(self.store.local_dir / 'sandbox-local-team' / key)
         return result
 
     @staticmethod
@@ -118,6 +121,9 @@ class ProjectLocations:
 
     def save(self, value):
         value = copy.deepcopy(value)
+        accounts = getattr(self.store, 'accounts', None)
+        if accounts:
+            accounts.require_admin()
         if getattr(self.store, 'shared_index', None):
             expected = self.store.shared_index.locations()
             if value != expected:
@@ -148,8 +154,18 @@ class ProjectLocations:
             source.update(source_type='legacy', project_type='legacy', dataset_status='old_test_data', read_only=True, active=False)
         value['active'].update(source_type='active', project_type='active', dataset_status='current', active=True)
         value['enabled'] = True
-        self.store.local['project_locations'] = value
-        self.store.save_local()
+        from contextlib import nullcontext
+        with accounts.lock if accounts else nullcontext():
+            identity_root = accounts.prepare_storage(value['shared_storage']) if accounts else None
+            previous = self.store.local.get('project_locations')
+            self.store.local['project_locations'] = value
+            try:
+                self.store.save_local()
+            except OSError:
+                self.store.local['project_locations'] = previous
+                raise
+            if accounts:
+                accounts.shared = identity_root
         self.value = value
         self.store.record('Configuration', 'Research project locations changed; source files preserved')
 

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QApplication, QWidget, QLineEdit
 from app.services import updates
 from app.services.storage import Store, write_json
 from app.services.project_locations import ProjectLocations
-from app.services.accounts import Accounts, AccountError
+from app.services.local_accounts import LocalAccounts
 from app.ui.update_installation import SafeUpdate, StartupUpdate, pending_update_at_startup
 from app.ui.update_recovery import UpdateRecovery
 from app import edition
@@ -156,6 +156,9 @@ class PendingUpdateTests(unittest.TestCase):
         write_json(self.pending.path,{'tag':'v'+updates.__version__,'status':'installer_started'})
         with patch.object(updates,'latest_release') as network:self.assertIsNone(self.pending.prepare());network.assert_not_called()
         self.assertFalse(self.pending.path.exists())
+        result=json.loads((self.root/'update-result.local.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'],'version_verified')
+        self.assertEqual(result['verified_version'],updates.__version__)
     def test_interrupted_download_removes_partial_and_preserves_retry(self):
         release=future_release();self.pending.schedule(release)
         checksum=hashlib.sha256(b'MZfixture').hexdigest()
@@ -189,9 +192,14 @@ class EditionTests(unittest.TestCase):
             locations.value['active']['root_path']=str(Path(directory)/'production')
             with self.assertRaises(ValueError):locations.save(locations.value)
             with self.assertRaises(ValueError):store.connect_storage(Path(directory)/'production')
-    def test_production_backend_is_refused_before_any_request(self):
-        with tempfile.TemporaryDirectory() as directory,patch.dict(os.environ,{'GDL_BETA_SUPABASE_URL':'https://yndvjtscbcfwvwtbjobe.supabase.co','GDL_BETA_SUPABASE_PUBLISHABLE_KEY':'sb_publishable_fixture'}),patch.object(edition,'BETA',True):
-            with self.assertRaises(AccountError):Accounts(Store(local_dir=Path(directory)))
+    def test_identity_ignores_external_backend_configuration(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'GDL_BETA_SUPABASE_URL':'https://production.invalid','GDL_BETA_SUPABASE_PUBLISHABLE_KEY':'unused'}):
+            accounts=LocalAccounts(Store(local_dir=Path(directory)))
+            try:
+                accounts.sign_in(accounts.users()[1]['id'])
+                self.assertFalse(hasattr(accounts, 'url'))
+                self.assertEqual(accounts.profile['role'], 'member')
+            finally:accounts.close()
     def test_release_policy_requires_exact_approval_and_correct_branch(self):
         validate=runpy.run_path(str(ROOT/'tools/release_policy.py'))['validate'];sha='a'*40
         validate('beta','develop',sha)

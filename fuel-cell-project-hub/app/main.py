@@ -10,95 +10,39 @@ from app.edition import APP_NAME, PROFILE_NAME, PROTOCOL, BETA
 
 def main():
     set_taskbar_identity()
+    owns_application = QApplication.instance() is None
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName(PROFILE_NAME)
     app.setOrganizationName("FuelCellCapstone")
     app.setWindowIcon(application_icon())
     try:
-        from app.services.accounts import Accounts
-        from app.ui.accounts import LoginDialog, attach_account_ui
+        from app.services.local_accounts import LocalAccounts as Accounts
+        from app.ui.local_accounts import LoginDialog, attach_account_ui
 
         store = Store()
-        from app.services.desktop_oauth import CallbackBroker
-
-        broker = CallbackBroker(store.local_dir, app)
-        callback = next(
-            (value for value in sys.argv[1:] if value.startswith(PROTOCOL + ":")),
-            None,
-        )
-        if callback and broker.forward(callback):
-            return 0
-        if not broker.listen():
-            QMessageBox.information(
-                None,
-                "GDL Research Hub",
-                "GDL Research Hub is already open. Return to its window to sign in.",
-            )
+        from PySide6.QtCore import QLockFile
+        instance_lock = QLockFile(str(store.local_dir / 'application.lock'))
+        if not instance_lock.tryLock(0):
+            QMessageBox.information(None, APP_NAME, 'This edition is already open. Return to its workspace.')
             return 0
         from app.services.diagnostics import configure
 
         configure(store.local_dir / 'cache' if BETA else store.local_dir)
         from app.ui.update_installation import pending_update_at_startup
         if pending_update_at_startup(store):return 0
-        if store.shared_required:
-            from app.ui.shared_project_setup import connect_shared_project
-            if not connect_shared_project(store):
-                broker.server.close()
-                return 0
-            from PySide6.QtWidgets import QProgressDialog
-            progress = QProgressDialog('Verifying the shared project index. Research files will not be scanned.', '', 0, 0)
-            progress.setCancelButton(None)
-            progress.show()
-            app.processEvents()
-            try:
-                store.shared_index.load()
-            finally:
-                progress.close()
-        try:accounts = Accounts(store)
-        except ValueError:
-            if not BETA:raise
-            # No production endpoint or role is inherited by offline Beta.
-            window=HubWindow(store)
-            authority = 'Configured indexing authority' if store.shared_index.authority else 'Published index reader'
-            window.banner.setText('BETA · Shared OneDrive project · ' + authority + ' · Backend unconfigured · No backend administrator privileges')
-            window.show();app.aboutToQuit.connect(broker.server.close)
-            return app.exec()
+        accounts = Accounts(store)
         app.setQuitOnLastWindowClosed(False)
         windows = []
         active_login = [None]
-
-        def receive_callback(uri):
-            if active_login[0] is not None and active_login[0].isVisible():
-                active_login[0].microsoft_return(uri)
-
-        broker.received.connect(receive_callback)
 
         def login():
             dialog = LoginDialog(accounts)
             active_login[0] = dialog
             windows.append(dialog)
-            if callback:
-                QTimer.singleShot(100, lambda: receive_callback(callback))
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 app.quit()
                 return
-            from app.services.project_locations import ProjectLocations
-            from PySide6.QtWidgets import QFileDialog
-
-            locations = ProjectLocations(store)
-            if not locations.value.get("enabled"):
-                value = locations.value
-                folder = Path(value["active"]["root_path"])
-                if not folder.is_dir():
-                    selected = QFileDialog.getExistingDirectory(
-                        dialog, "Locate Research Folder"
-                    )
-                    if selected:
-                        value["active"]["root_path"] = selected
-                        value["shared_storage"] = selected
-                        folder = Path(selected)
-                if folder.is_dir():
-                    locations.save(value)
+            store.accounts = accounts
             try:
                 window = HubWindow(store)
             except Exception:
@@ -120,7 +64,10 @@ def main():
                 window.signout_pending = True
                 window.setEnabled(False)
                 window.account_timer.stop()
+                if hasattr(window, 'startup_reconciliation'):
+                    window.startup_reconciliation.stop()
                 window.session_presence.stop()
+                window.research_panel.watcher.stop()
                 window.storage_panel.cancel_index()
                 window.research_panel.cancel_index()
 
@@ -170,17 +117,15 @@ def main():
             window.startup_reconciliation.setSingleShot(True)
             window.startup_reconciliation.timeout.connect(
                 lambda: window.research_panel.start_index(quick=True)
-                if window.storage_settings.catalog and window.isVisible()
+                if accounts.admin_unlocked and window.storage_settings.catalog and window.isVisible()
                 else None
             )
             window.startup_reconciliation.start(300)
 
         from PySide6.QtCore import QTimer
 
-        app.aboutToQuit.connect(
-            lambda: accounts.executor.shutdown(wait=False, cancel_futures=True)
-        )
-        app.aboutToQuit.connect(broker.server.close)
+        app.aboutToQuit.connect(accounts.close)
+        app.aboutToQuit.connect(instance_lock.unlock)
         QTimer.singleShot(0, login)
     except Exception as exc:
         box = QMessageBox(
@@ -192,7 +137,19 @@ def main():
         box.setDetailedText(str(exc))
         box.exec()
         return 1
-    return app.exec()
+    result = app.exec()
+    # Dispose our windows while Qt still exists, rather than relying on Python's
+    # interpreter teardown order after a sign-out/login sequence.
+    from PySide6.QtCore import QCoreApplication, QEvent
+    for window in windows:
+        window.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    windows.clear()
+    import gc
+    gc.collect()
+    if owns_application:
+        app.shutdown()
+    return result
 
 
 if __name__ == "__main__":

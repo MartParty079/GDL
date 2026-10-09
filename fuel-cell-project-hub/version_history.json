@@ -172,6 +172,23 @@
       "breaking_changes": [],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-10-09",
+      "work_order": "Local Team Identity, Activity and Three-Stage Releases",
+      "summary": "Replace hosted login with local team profiles and PINs; isolate Development/Beta data and require exact-build production confirmation.",
+      "major_features": [
+        "Four permanent team profiles, Admin PIN recovery, offline activity, and combined weekly reports."
+      ],
+      "major_fixes": [
+        "Disconnect earlier Beta production mappings without moving research files."
+      ],
+      "breaking_changes": [
+        "Hosted desktop login is retired; historical cloud records remain preserved remotely and require a reviewed ID mapping before import."
+      ],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }

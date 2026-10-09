@@ -10,15 +10,16 @@ from unittest.mock import patch
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import Qt, QCoreApplication, QEvent
 from app.services.storage import Store, timestamp
-from app.services.accounts import Accounts, ConnectionUnavailable
+from app.services.local_accounts import LocalAccounts
+from app.services.local_meetings import meeting_rows
 from app.services.contributions import ActiveSession, Participation, WeeklyReports, aggregate, export_pdf, export_csv, report_html
 from app.services.meetings import Meetings, import_transcript
 from app.ui.participation import MeetingEditor
 from tests import test_research_workspace as fixtures
 
 QT_APP = None
-USER = '9f020e44-7f50-4aef-a716-655a647c2498'
-OTHER = '7f47b79b-96cd-4d64-b473-f731f5548541'
+USER = str(uuid.uuid5(uuid.NAMESPACE_URL, 'capstone-hub:team:Andrew Michelson'))
+OTHER = str(uuid.uuid5(uuid.NAMESPACE_URL, 'capstone-hub:team:Ryan Rodriguez'))
 
 
 class ParticipationTests(unittest.TestCase):
@@ -66,27 +67,20 @@ class MeetingTests(unittest.TestCase):
         global QT_APP
         QT_APP=QApplication.instance() or QApplication([])
         self.fixture=fixtures.WorkspaceTests();self.fixture.setUp()
-        self.store=self.fixture.store;self.cloud={};self.events={};self.sessions={};self.online=True
-        self.profile=dict(id=USER,email='member@example.invalid',display_name='Researcher A',role='user',active=True)
-        def transport(method,path,data):
-            if not self.online:raise ConnectionUnavailable('Offline')
-            if path.startswith('/rest/v1/activity_events') and method=='POST':
-                for e in data:self.events.setdefault(e['client_event_id'],copy.deepcopy(e))
-            elif path.startswith('/rest/v1/user_sessions') and method=='POST':self.sessions[data['id']]=copy.deepcopy(data)
-            elif path=='/rest/v1/rpc/hub_save_meeting':
-                row=copy.deepcopy(data['record']);old=self.cloud.get(row['id'])
-                if old and old['client_mutation_id']==row['client_mutation_id']:return old
-                if old and old['revision']!=data['expected_revision']:return {'conflict':True}
-                row['revision']=data['expected_revision']+1;self.cloud[row['id']]=row;return copy.deepcopy(row)
-            elif path=='/rest/v1/rpc/hub_team_roster':return [self.profile,dict(id=OTHER,display_name='Researcher B',active=True)]
-            elif path.startswith('/rest/v1/meetings?'):return list(copy.deepcopy(self.cloud).values())
-            elif path.startswith('/rest/v1/meeting_attendees?'):return [dict(a,meeting_id=m['id']) for m in self.cloud.values() for a in m['attendees']]
-            elif path.startswith('/rest/v1/meeting_actions?'):return [dict(a,meeting_id=m['id']) for m in self.cloud.values() for a in m['actions']]
-            elif path.startswith('/rest/v1/activity_events?') and method=='GET':return list(copy.deepcopy(self.events).values())
-            elif path.startswith('/rest/v1/user_sessions?') and method=='GET':return list(copy.deepcopy(self.sessions).values())
-            return []
-        self.accounts=Accounts(self.store,transport);self.accounts.profile=self.profile;self.accounts.session={'access_token':'test'}
-        self.store.accounts=self.accounts;self.service=Meetings(self.accounts,self.fixture.catalog)
+        self.store=self.fixture.store
+        self.store.local['project_locations']['shared_storage']=str(self.fixture.current)
+        self.store.save_local()
+        self.accounts=LocalAccounts(self.store)
+        self.accounts.registry['users']=[p for p in self.accounts.registry['users'] if p['id'] in (USER, OTHER)]
+        for p in self.accounts.registry['users']:
+            p['display_name']='Researcher A' if p['id']==USER else 'Researcher B'
+        from app.services.storage import write_json
+        write_json(self.accounts.profile_path, self.accounts.registry)
+        self.accounts.sign_in(USER)
+        self.accounts.flush()
+        self.profile=self.accounts.profile
+        self.store.accounts=self.accounts
+        self.service=Meetings(self.accounts,self.fixture.catalog)
 
     def tearDown(self):
         self.accounts.executor.shutdown(wait=True)
@@ -101,11 +95,14 @@ class MeetingTests(unittest.TestCase):
         row['content']['transcript']='Matthew: Verify Holy GDL.'
         row['attendees']=[dict(person_key=USER,user_id=USER,guest_name='',attended=True,attendance_status='Present',notes=''),dict(person_key=OTHER,user_id=OTHER,guest_name='',attended=False,attendance_status='Absent',notes='')]
         row['actions']=[dict(id=str(uuid.uuid4()),title='Verify sample family',assigned_to=USER,due_date='2026-10-16',completed=False)]
-        self.online=False;self.service.save(row)
-        with self.assertRaises(ValueError):self.service.sync()
+        online_root=self.accounts.shared
+        self.accounts.shared=self.fixture.root/'unavailable'/'AppData'/'beta'
+        self.service.save(row)
+        self.assertIn('unavailable',self.service.sync())
         reopened=Meetings(self.accounts,self.fixture.catalog)
         self.assertEqual(reopened.list('Holy')[0]['content']['notes'],row['content']['notes'])
-        self.online=True;self.assertEqual(reopened.sync(),'Meetings synchronized')
+        self.accounts.shared=online_root
+        self.assertEqual(reopened.sync(),'Meetings synchronized through OneDrive')
         shared=reopened.get(row['id']);self.assertEqual(shared['revision'],1)
         self.assertFalse(shared['attendees'][1]['attended'])
         changed=copy.deepcopy(shared);changed['content']['transcript']='Edited transcript';changed['actions'][0]['completed']=True
@@ -113,21 +110,22 @@ class MeetingTests(unittest.TestCase):
         self.assertEqual(reopened.get(row['id'])['revision'],2)
         self.assertEqual(reopened.get(row['id'])['content']['transcript_history'][-1]['text'],'Matthew: Verify Holy GDL.')
         stale=copy.deepcopy(shared);stale['content']['notes']='Stale edits';reopened.save(stale)
-        self.assertIn('Conflict',reopened.sync());self.assertEqual(reopened.get(row['id'])['content']['notes'],'Stale edits')
-        self.assertEqual(self.cloud[row['id']]['content']['notes'],'Decisions and next steps')
+        self.assertIn('conflict',reopened.sync());self.assertEqual(reopened.get(row['id'])['content']['notes'],'Stale edits')
+        self.assertEqual(meeting_rows(self.accounts)[0]['content']['notes'],'Decisions and next steps')
         other=Meetings(self.accounts,self.fixture.catalog);other.user=OTHER
         with self.assertRaises(ValueError):other.save(shared)
 
     def test_session_offline_absolute_retry_and_event_dedup(self):
-        p=Participation(self.accounts);p.session.row['active_seconds']=0
-        self.online=False
-        with self.assertRaises(ConnectionUnavailable):p.flush()
+        online_root=self.accounts.shared
+        self.accounts.shared=self.fixture.root/'unavailable'/'AppData'/'beta'
+        p=Participation(self.accounts)
+        self.assertFalse(p.flush())
         self.assertTrue(p.pending)
-        self.online=True;p.flush();p.flush();self.assertEqual(len(self.sessions),1)
-        self.accounts.offline=True;self.accounts.event('FILE_OPENED','file','f','report.pdf')
-        snapshot=copy.deepcopy(self.accounts.pending);self.accounts.offline=False;self.accounts.flush()
-        self.accounts.pending=snapshot;self.accounts.flush()
-        self.assertEqual(len(self.events),1)
+        self.accounts.event('FILE_OPENED','file','f','report.pdf')
+        self.accounts.shared=online_root
+        p.flush();p.flush()
+        self.assertEqual(len(self.accounts.rows('Sessions')),1)
+        self.assertEqual(len([e for e in self.accounts.rows('Events') if e['event_type']=='FILE_OPENED']),1)
 
     def test_docx_and_extractable_pdf_transcript_import(self):
         from docx import Document
@@ -142,9 +140,9 @@ class MeetingTests(unittest.TestCase):
         self.accounts.offline=True
         (self.fixture.current/'external.csv').write_text('value\n1',encoding='utf-8')
         self.fixture.catalog.refresh()
-        self.assertFalse(any(e['event_type']=='FILE_ADDED' for e in self.accounts.pending))
+        self.assertFalse(any(e['event_type']=='FILE_ADDED' for e in self.accounts.rows('Events')))
         destination=self.fixture.catalog.import_current(self.fixture.old)
-        added=[e for e in self.accounts.pending if e['event_type']=='FILE_ADDED']
+        added=[e for e in self.accounts.rows('Events') if e['event_type']=='FILE_ADDED']
         self.assertEqual(len(added),1);self.assertEqual(added[0]['user_id'],USER)
         self.assertEqual(added[0]['details']['attribution'],'app_user_action')
         self.assertTrue(destination.is_file())
@@ -192,6 +190,7 @@ class MeetingTests(unittest.TestCase):
         normal=WeeklyReports(self.accounts);begin=datetime.now().astimezone()-timedelta(days=1);end=begin+timedelta(days=7)
         with self.assertRaises(ValueError):normal.load(dict(id=OTHER),begin,end)
         self.accounts.profile['role']='admin'
+        self.accounts.admin_unlocked=True
         parent=QMainWindow();panel=WeeklyPanel(parent,self.accounts)
         def settle():
             limit=time.monotonic()+5

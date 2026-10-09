@@ -14,6 +14,17 @@ on:
       production_release_order:
         description: Type APPROVE PRODUCTION RELEASE only after explicit human authorization
         required: true
+      confirmation_response:
+        description: Human answer to the exact-build confirmation question (NO cancels)
+        type: choice
+        options: ['NO', 'YES']
+        required: true
+      proposed_stable_version:
+        description: Stable version displayed in the human confirmation
+        required: true
+      confirmation_question:
+        description: Exact confirmation question presented to the human
+        required: true
 permissions:
   contents: read
 concurrency:
@@ -34,6 +45,9 @@ jobs:
       BETA_TAG: ${{ inputs.beta_tag }}
       BETA_RUN_ID: ${{ inputs.beta_run_id }}
       PRODUCTION_ORDER: ${{ inputs.production_release_order }}
+      CONFIRMATION_RESPONSE: ${{ inputs.confirmation_response }}
+      PROPOSED_STABLE_VERSION: ${{ inputs.proposed_stable_version }}
+      CONFIRMATION_QUESTION: ${{ inputs.confirmation_question }}
     defaults:
       run:
         shell: pwsh
@@ -49,6 +63,10 @@ jobs:
         run: |
           if ('${{ github.sha }}' -ne $env:APPROVED_SHA) { throw 'Workflow source must match the exact approved Beta commit' }
           if ($env:PRODUCTION_ORDER -cne 'APPROVE PRODUCTION RELEASE') { throw 'Explicit release order required' }
+          if ($env:CONFIRMATION_RESPONSE -cne 'YES') { throw 'Production promotion rejected or unconfirmed; publication cancelled' }
+          $betaVersion = $env:BETA_TAG -creplace '^v',''
+          $expectedQuestion = "Beta version $betaVersion has passed the required release checks and is ready for Production. Do you approve promoting this exact build to Stable version $env:PROPOSED_STABLE_VERSION and publishing it for all Capstone Hub users?"
+          if ($env:CONFIRMATION_QUESTION -cne $expectedQuestion) { throw 'Exact-build human confirmation question required' }
           if ($env:APPROVED_SHA -notmatch '^[a-f0-9]{40}$' -or $env:BETA_TAG -notmatch '^v\d+\.\d+\.\d+-beta\.\d+$' -or $env:BETA_RUN_ID -notmatch '^\d+$') { throw 'Invalid approved Beta identifiers' }
           $run = gh api "repos/$env:GH_REPO/actions/runs/$env:BETA_RUN_ID" | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0 -or $run.conclusion -ne 'success' -or $run.head_sha -ne $env:APPROVED_SHA -or $run.head_branch -ne 'develop' -or $run.path -ne '.github/workflows/windows-release.yml') { throw 'Successful matching Beta run required' }
@@ -64,6 +82,7 @@ jobs:
           git merge-base --is-ancestor origin/main $env:APPROVED_SHA
           if ($LASTEXITCODE -ne 0) { throw 'Promotion must fast-forward main' }
           $version = git show "$($env:APPROVED_SHA):fuel-cell-project-hub/app/version.py" | Select-String '^VERSION = "(.+)"$' | ForEach-Object { $_.Matches[0].Groups[1].Value }
+          if ($env:PROPOSED_STABLE_VERSION -cne $version -or $env:BETA_TAG -notlike "v$version-beta.*") { throw 'Confirmed version differs from tested source' }
           git rev-parse --verify "refs/tags/v$version" 2>$null
           if ($LASTEXITCODE -eq 0) { throw 'Stable tag already exists; never overwrite a published version' }
           git checkout -B main $env:APPROVED_SHA

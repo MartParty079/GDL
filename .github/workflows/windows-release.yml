@@ -12,6 +12,8 @@ jobs:
   build:
     if: github.ref == 'refs/heads/develop'
     runs-on: windows-latest
+    env:
+      GDL_HUB_CHANNEL: beta
     defaults:
       run:
         working-directory: fuel-cell-project-hub

@@ -4,7 +4,6 @@ import html
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlencode
 from app import __version__
 from app.services.storage import read_json, write_json
 from app.services.formatting import format_duration
@@ -89,37 +88,29 @@ class Participation:
         with self.accounts.lock:
             self.pending[row['id']] = row
             write_json(self.path, self.pending)
+            if getattr(self.accounts, 'local_identity', False):
+                self.accounts.publish_session(row)
             if self.accounts.store.shared_index:
                 write_json(self.accounts.store.project_data('logs/sessions') / (row['id'] + '.json'), row)
         return row
 
     def flush(self):
-        a = self.accounts
-        if a.offline or not a.profile or not a.session:
-            return False
-        with a.lock:
-            rows = [dict(r) for r in self.pending.values() if r['user_id'] == a.profile['id']]
-        for row in rows:
-            a.request('POST', '/rest/v1/user_sessions?on_conflict=id', row,
-                      prefer='resolution=merge-duplicates,return=minimal')
-            with a.lock:
-                if self.pending.get(row['id']) == row:
-                    self.pending.pop(row['id'], None)
-                write_json(self.path, self.pending)
-        return True
+        return self.accounts.flush()
 
 
 def fetch_pages(accounts, table, filters=()):
-    rows = []
-    page_size=5 if table in ('meetings','user_sessions') else 250
-    for offset in range(0, 100000, page_size):
-        page = accounts.request('GET', '/rest/v1/' + table + '?' + urlencode([
-            ('select', '*'), *filters, ('order', 'id.asc'), ('offset', offset), ('limit', page_size)])) or []
-        rows.extend(page)
-        if len(page) < page_size:
-            return rows
-    raise ValueError('This period has too many records. Choose a shorter date range.')
-
+    if table == 'activity_events':
+        return accounts.rows('Events')
+    if table == 'user_sessions':
+        return accounts.rows('Sessions')
+    from app.services.local_meetings import meeting_rows
+    meetings = meeting_rows(accounts)
+    if table == 'meetings':
+        return meetings
+    if table in ('meeting_attendees', 'meeting_actions'):
+        key = 'attendees' if table == 'meeting_attendees' else 'actions'
+        return [dict(row, meeting_id=m['id']) for m in meetings for row in m.get(key, [])]
+    raise ValueError('Unsupported local activity collection.')
 
 def default_week(now=None):
     now = now or datetime.now().astimezone()
@@ -168,6 +159,9 @@ def aggregate(person, begin, end, events, sessions, attendance, meetings):
     opened = [e for e in events if e['event_type'] == 'FILE_OPENED']
     added = [e for e in events if e['event_type'] == 'FILE_ADDED' and e.get('details', {}).get('attribution') == 'app_user_action']
     metrics = {'Logins': counts.get('LOGIN', 0), 'Sessions': len(sessions),
+               'Procedure revisions': counts.get('PROCEDURE_UPDATED', 0),
+               'Image processing runs completed': counts.get('IMAGE_PROCESSED', 0),
+               'Reliability errors': sum(n for k, n in counts.items() if k.endswith(('_FAILED', '_ERROR'))),
                'Active time': format_duration(union_seconds([i for s in sessions.values() for i in s.get('active_intervals', [])], begin, end)),
                'Files added (known attribution)': len(added), 'Files opened': len(opened),
                'Current files opened': sum(e.get('details', {}).get('source') == 'current' for e in opened),
@@ -196,11 +190,15 @@ def aggregate(person, begin, end, events, sessions, attendance, meetings):
     summary = f'{name} recorded {metrics["Active time"]} of active Hub use across {len(sessions)} sessions, opened {len(opened)} files, added {len(added)} attributed files, and attended {attended} explicitly recorded meetings.'
     sample_names={e['entity_id']:e.get('entity_name') or e['entity_id'] for e in events if e.get('entity_type')=='sample'}
     sample_names.update({e.get('details',{}).get('sample_id'):e['details']['sample_name'] for e in events if e.get('details',{}).get('sample_name')})
+    active_seconds = union_seconds([i for s in sessions.values() for i in s.get('active_intervals', [])], begin, end)
+    session_seconds = union_seconds([[s['started_at'], s.get('ended_at') or s['last_active_at']] for s in sessions.values()], begin, end)
+    metrics['Estimated session duration'] = format_duration(session_seconds)
     return dict(person=name, user_id=identity, begin=begin.isoformat(), end=end.isoformat(), metrics=metrics,
+                active_seconds=active_seconds, session_seconds=session_seconds,
                 summary=summary, samples=related['sample'], experiments=related['experiment'], events=events,
                 sample_names=sample_names,
                 attendance=[dict(r, title=eligible[r['meeting_id']]['title']) for r in records.values()],
-                limitations='Active time starts with v0.3.3. Earlier activity has no measured duration. Externally discovered files have unknown attribution. Attendance excludes Excused entries. Usage measures recorded actions, not engineering value.')
+                limitations='This report covers recorded activity available in this edition. Earlier hosted history is preserved separately. Externally discovered files have unknown attribution. Attendance excludes Excused entries. Usage measures recorded actions, not engineering value.')
 
 
 class WeeklyReports:
@@ -208,13 +206,11 @@ class WeeklyReports:
         self.accounts = accounts
 
     def roster(self):
-        if self.accounts.profile['role'] != 'admin':
-            return [self.accounts.profile]
-        return self.accounts.request('POST', '/rest/v1/rpc/hub_team_roster', {}) or []
+        return self.accounts.roster()
 
     def load(self, person, begin, end):
         a = self.accounts
-        if person['id'] != a.profile['id'] and a.profile['role'] != 'admin':
+        if person['id'] != a.profile['id'] and not a.admin_unlocked:
             raise ValueError('You can view your own weekly activity.')
         events = fetch_pages(a, 'activity_events', [('user_id', 'eq.' + person['id']), ('created_at', 'gte.' + utc_text(begin)), ('created_at', 'lt.' + utc_text(end))])
         sessions = fetch_pages(a, 'user_sessions', [('user_id', 'eq.' + person['id']), ('started_at', 'lt.' + utc_text(end)), ('last_active_at', 'gte.' + utc_text(begin))])
@@ -228,6 +224,29 @@ class WeeklyReports:
                 pending = participation.pending
                 sessions = [s for s in sessions if s['id'] not in pending] + list(pending.values())
         return aggregate(person, begin, end, events, sessions, attendance, meetings)
+
+
+def combined_report(reports):
+    if not reports:
+        raise ValueError('Generate individual reports for this period first.')
+    result = dict(reports[0], person='Combined team report', user_id='team', samples={}, experiments={}, sample_names={})
+    result['metrics'] = {key: sum(r['metrics'][key] for r in reports) for key, value in reports[0]['metrics'].items()
+                         if isinstance(value, (int, float)) and key not in ('Unique samples worked with', 'Unique experiments worked with')}
+    for kind in ('samples', 'experiments'):
+        for r in reports:
+            for identity, count in r[kind].items():
+                result[kind][identity] = result[kind].get(identity, 0) + count
+        result['metrics']['Unique ' + kind + ' worked with'] = len(result[kind])
+    result['metrics']['Active time'] = format_duration(sum(r['active_seconds'] for r in reports))
+    result['metrics']['Estimated session duration'] = format_duration(sum(r['session_seconds'] for r in reports))
+    events = {e['client_event_id']: e for r in reports for e in r['events']}
+    result['events'] = sorted(events.values(), key=lambda e: e['created_at'])
+    result['metrics']['First login'] = min((r['metrics']['First login'] for r in reports if r['metrics']['First login'] != 'Not recorded'), default='Not recorded')
+    result['metrics']['Last activity'] = result['events'][-1]['created_at'] if result['events'] else 'Not recorded'
+    result['metrics']['Attendance'] = 'See per-user reports; attendance totals count person-meetings.'
+    result['attendance'] = [dict(a, title=r['person'] + ': ' + a['title']) for r in reports for a in r['attendance']]
+    result['summary'] = 'Combined measured activity for ' + str(len(reports)) + ' team members. ' + '; '.join(r['person'] + ': ' + r['metrics']['Active time'] for r in reports)
+    return result
 
 
 def report_html(report):
@@ -261,10 +280,15 @@ def export_pdf(report, path, store=None):
            Paragraph(esc(report['person']),styles['Heading2']),
            Paragraph(esc(report['begin'][:10]+' through '+report['end'][:10]+' (end exclusive)'),styles['BodyText']),
            Paragraph(esc(report['summary']),styles['BodyText'])]
-    usage=('Logins','Sessions','Active time','First login','Last activity')
+    usage=('Logins','Sessions','Active time','Estimated session duration','First login','Last activity')
+    def display_metric(key):
+        value = report['metrics'][key]
+        if key in ('First login', 'Last activity') and value != 'Not recorded':
+            return instant(value).strftime('%Y-%m-%d %H:%M UTC')
+        return value
     meeting=('Meetings attended','Meetings explicitly missed','Attendance','Meeting notes edited','Transcripts edited','Action items completed')
     for title,keys in [('Application usage',usage),('Research activity',[k for k in report['metrics'] if k not in usage+meeting]),('Meetings',meeting)]:
-        rows=[[Paragraph(esc(k),styles['BodyText']),Paragraph(esc(report['metrics'][k]),styles['BodyText'])] for k in keys]
+        rows=[[Paragraph(esc(k),styles['BodyText']),Paragraph(esc(display_metric(k)),styles['BodyText'])] for k in keys]
         table=Table(rows,colWidths=[330,170],hAlign='LEFT')
         table.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(-1,-1),12),
             ('BOTTOMPADDING',(0,0),(-1,-1),4),('LINEBELOW',(0,0),(-1,-1),.25,colors.HexColor('#e4e9ed'))]))
@@ -275,6 +299,7 @@ def export_pdf(report, path, store=None):
     if not report['samples']:story.append(Paragraph('No sample activity recorded.',styles['BodyText']))
     story.append(Paragraph('Recorded attendance',styles['Heading2']))
     for row in report['attendance']:story.append(Paragraph(esc(row['title']+' - '+row['attendance_status']),styles['BodyText']))
+    if not report['attendance']:story.append(Paragraph('No attendance recorded for this period.',styles['BodyText']))
     timeline={}
     for e in report['events']:
         key=(e['created_at'][:10],e['event_type'],e.get('entity_name') or '')

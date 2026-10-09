@@ -1,3 +1,16 @@
+# Current policy: isolated Development/Beta (0.5.0)
+
+The Local User Authentication work order supersedes the historical live-project
+Beta mapping below. New Development/Beta builds use isolated profile-contained
+sandboxes. Earlier Beta root mappings are backed up locally and disconnected;
+production research files and published snapshots remain untouched. The existing
+Stable application retains access to its legacy catalog. The architecture and
+catalog migration below are retained as historical documentation and fixture
+coverage, not authorization for new Beta production writes. Local organizational
+roles/PINs replace hosted desktop authentication; see LOCAL_TEAM_IDENTITY.md.
+
+---
+
 # Shared OneDrive project — Development/Beta
 
 Beta now maps the existing `GDL research - General` project. Stable installations,

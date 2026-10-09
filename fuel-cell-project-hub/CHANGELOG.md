@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 — 2026-10-09
+
+- Replace hosted login with local team profiles and PINs; isolate Development/Beta data and require exact-build production confirmation.
+- Four permanent team profiles, Admin PIN recovery, offline activity, and combined weekly reports.
+- Disconnect earlier Beta production mappings without moving research files.
+- Hosted desktop login is retired; historical cloud records remain preserved remotely and require a reviewed ID mapping before import.
+
 ## 0.4.3 — 2026-10-09
 
 - Diagnose wrong-edition Stable assets, verify public release artifacts, and prepare safe solo-maintainer promotion.

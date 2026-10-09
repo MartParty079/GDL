@@ -86,18 +86,18 @@ def control(title, action, layout):
 
 
 def version_dialog(parent):
-    from app.edition import APP_NAME
+    from app.edition import APP_NAME, CHANNEL
     dialog = QDialog(parent)
     dialog.setWindowTitle("About " + APP_NAME)
     dialog.resize(700, 550)
     layout = QVBoxLayout(dialog)
-    layout.addWidget(QLabel(APP_NAME + " " + __version__))
+    layout.addWidget(QLabel(APP_NAME + " " + __version__ + ' · ' + CHANNEL.title()))
     from app.services.storage import read_json
     history = read_json(resource_path("version_history.json"), {"versions": []})
     build = read_json(resource_path('config/build_metadata.json'),{})
     detail = 'Build: ' + build.get('commit','Source checkout')[:12] + ' · ' + build.get('built_at','')[:10]
     if hasattr(parent,'store'):
-        detail += '\nInstallation: '+parent.store.local.get('install_created_at','')[:10]+' · ID: '+parent.store.local.get('install_id','Not registered')
+        detail += '\nInstallation: '+parent.store.local.get('install_created_at','')[:10]+' · ID: '+parent.store.local.get('local_identity_device',parent.store.local.get('install_id','Not registered'))
     diagnostics = QLabel(detail); diagnostics.setWordWrap(True); layout.addWidget(diagnostics)
     view = QTextEdit()
     view.setReadOnly(True)
@@ -1307,6 +1307,9 @@ class ResearchHub(QWidget):
                 self.window.tabs.setCurrentWidget(panel)
             else:
                 self.message.setText('Sign in to use shared meetings and weekly reports.')
+            return
+        if not self.catalog:
+            self.message.setText('Research storage is not configured or its index is unavailable. Other tools and personal activity remain usable.')
             return
         if not hasattr(self, "view_modes"):
             self.view_modes = {}

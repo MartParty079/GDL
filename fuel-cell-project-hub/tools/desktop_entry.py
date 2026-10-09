@@ -58,7 +58,7 @@ def self_check(report):
         assert catalog.query(query='compression')[1] == 1
         assert not hasattr(window, 'auth')
         result.update(native_content_search=True, local_parsers_present=True, graph_storage_removed=True,
-                      microsoft_identity_supported=True)
+                      microsoft_identity_supported=False)
         window.files_panel.reload()
         result.update(research_catalog_available=True, research_current_files=indexed['current'],
                       research_legacy_files=indexed['legacy'], research_index_errors=indexed['errors'],
@@ -91,13 +91,6 @@ def self_check(report):
         from app.services.storage import read_json
         from app.version import VERSION
         assert read_json(resource_path('version_history.json'),{})['versions'][-1]['version']==VERSION
-        if '--local-only' not in sys.argv:
-            from app.services.desktop_oauth import callback_values, CALLBACK, CallbackBroker
-            assert callback_values(CALLBACK+'?code=packaged-check')['code']=='packaged-check'
-            broker=CallbackBroker(Path(temporary)/'callback-profile')
-            assert broker.listen()
-            broker.server.close()
-            result.update(protocol_callback_available=True)
         result.update(structured_version_history_available=True)
         from app.services.contributions import aggregate, export_pdf
         from app.services.meetings import Meetings, TranscriptionService
@@ -127,31 +120,35 @@ def self_check(report):
         assert NativeIndex(reader).summary()['current'] == 1
         assert not reader.shared_index.authority
         result.update(shared_snapshot_reader_available=True)
-        from app.services.accounts import Accounts, protect
-        from app.ui.accounts import LoginDialog
-        import os
-        from app.edition import BETA, CHANNEL, APP_NAME, PROFILE_NAME
+        from app.services.local_accounts import LocalAccounts
+        from app.ui.local_accounts import LoginDialog, attach_account_ui
+        from app.edition import CHANNEL, APP_NAME, PROFILE_NAME
         account_store=Store(ROOT,Path(temporary)/'account-profile')
-        if BETA:
-            # Synthetic client configuration belongs only to this isolated fixture.
-            fixture_config=Path(temporary)/'account-config'
-            fixture_config.mkdir()
-            write_json(fixture_config/'accounts_public.json',{'url':'https://isolated-test.invalid','publishable_key':'sb_publishable_fixture'})
-            account_store.config_dir=fixture_config
-        accounts=Accounts(account_store,lambda *args: None)
+        accounts=LocalAccounts(account_store)
         login=LoginDialog(accounts)
-        deadline=time.monotonic()+10
-        while login.tasks.busy():
+        assert login.person.count() == 4
+        member = accounts.users()[1]
+        accounts.sign_in(member['id'])
+        assert accounts.profile['display_name'] == 'Andrew Michelson'
+        account_store.accounts = accounts
+        # Exercise the actual account UI, session heartbeat, meetings and reports.
+        with patch('app.ui.window.QTimer.singleShot'):
+            account_window = HubWindow(account_store)
+        attach_account_ui(account_window, accounts, lambda: None)
+        account_window.show()
+        deadline = time.monotonic() + 30
+        while account_window.research_workspace.busy() or account_window.weekly_panel.tasks.busy() or account_window.meetings_panel.busy():
             app.processEvents(); time.sleep(.01)
-            if time.monotonic()>deadline: raise RuntimeError('Login startup timed out')
-        app.processEvents()
-        while login.tasks.busy(): app.processEvents();time.sleep(.01)
-        assert login.signin.isEnabled()
-        assert account_store.config_dir.joinpath('accounts_public.json').is_file()
-        if os.name=='nt': assert protect(protect(b'isolated-session'),True)==b'isolated-session'
-        login.close(); accounts.executor.shutdown()
-        result.update(login_ui_available=True, client_configuration_bundled=True,
-                      windows_session_encryption_available=os.name=='nt',channel=CHANNEL,application_name=APP_NAME,profile_name=PROFILE_NAME)
+            if time.monotonic() > deadline: raise ValueError('Local account workspace did not finish startup.')
+        assert 'My Activity' in [account_window.tabs.tabText(i) for i in range(account_window.tabs.count())]
+        assert not hasattr(account_window, 'admin_workspace')
+        account_window.session_presence.stop()
+        accounts.sign_out()
+        accounts.close()
+        account_window.close(); account_window.deleteLater()
+        login.close(); login.deleteLater()
+        result.update(login_ui_available=True, external_auth_required=False, local_identity_available=True,
+                      channel=CHANNEL,application_name=APP_NAME,profile_name=PROFILE_NAME)
         deadline=time.monotonic()+30
         while workspace.busy():
             app.processEvents();time.sleep(.01)

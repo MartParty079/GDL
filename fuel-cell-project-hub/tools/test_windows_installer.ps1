@@ -37,7 +37,7 @@ foreach ($scenario in @('fresh', 'upgrade')) {
     # Startup self-check uses its own isolated fixture, never the real user profile.
     $preserved = Join-Path $destination 'preservation-fixture'
     New-Item -ItemType Directory -Force $preserved | Out-Null
-    foreach ($name in @('settings.json','encrypted-session.bin','research.sqlite3','research.txt')) {
+    foreach ($name in @('settings.json','encrypted-session.bin','research.sqlite3','research.txt','profiles.json','pin-hash.json','local-identity.json','activity-event.json')) {
         [IO.File]::WriteAllText((Join-Path $preserved $name), 'preserve-' + $name)
     }
     $before = @(Get-ChildItem -LiteralPath $preserved | Get-FileHash -Algorithm SHA256 | Select-Object Hash)

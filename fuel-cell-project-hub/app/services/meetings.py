@@ -6,7 +6,6 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from app.services.storage import timestamp, read_json, write_json
-from app.services.accounts import AccountError
 from app.services.contributions import fetch_pages
 
 MEETING_TYPES = ('Team Meeting', 'Advisor Meeting', 'Lab Meeting', 'Design Review',
@@ -62,7 +61,7 @@ class Meetings:
                                  transcript_history=[], related=[], files={}), attendees=[], actions=[])
 
     def editable(self, row):
-        return row['created_by'] == self.user or self.accounts.profile['role'] == 'admin'
+        return row['created_by'] == self.user or self.accounts.admin_unlocked
 
     def save(self, row):
         if not self.editable(row):
@@ -101,41 +100,8 @@ class Meetings:
         return row
 
     def sync(self):
-        if self.accounts.offline:
-            return 'Offline · meeting edits saved locally'
-        self.conflicts = []
-        with self.connect() as db:
-            pending = [(identity, json.loads(payload)) for identity, payload in db.execute(
-                'SELECT id,payload FROM meeting_cache WHERE user_id=? AND pending=1', (self.user,))]
-        for identity, row in pending:
-            try:
-                saved = self.accounts.request('POST', '/rest/v1/rpc/hub_save_meeting', {'record': row, 'expected_revision': row['revision']})
-            except AccountError:
-                raise ValueError('Meeting sync is unavailable. Your edits remain saved locally; reconnect and retry.') from None
-            if isinstance(saved, dict) and saved.get('conflict'):
-                self.conflicts.append(identity)
-                continue
-            if self.shared:
-                write_json(self.accounts.store.project_data('metadata/meetings/' + self.accounts.install_id) /
-                           (str(uuid.uuid4()) + '.json'), {'user_id': self.user, 'updated_at': timestamp(), 'record': saved, 'pending': False})
-            with self.connect() as db:
-                current = db.execute('SELECT payload FROM meeting_cache WHERE user_id=? AND id=?', (self.user, identity)).fetchone()
-                if current and json.loads(current[0]) == row:
-                    db.execute('UPDATE meeting_cache SET payload=?,pending=0 WHERE user_id=? AND id=?', (json.dumps(saved), self.user, identity))
-                elif current:
-                    # Local edits made while this snapshot was sending retain the new base revision.
-                    local = json.loads(current[0]); local['revision'] = saved['revision']
-                    db.execute('UPDATE meeting_cache SET payload=? WHERE user_id=? AND id=?', (json.dumps(local), self.user, identity))
-        rows = fetch_pages(self.accounts, 'meetings')
-        attendees = fetch_pages(self.accounts, 'meeting_attendees')
-        actions = fetch_pages(self.accounts, 'meeting_actions')
-        with self.connect() as db:
-            for row in rows:
-                row['attendees'] = [r for r in attendees if r['meeting_id'] == row['id']]
-                row['actions'] = [r for r in actions if r['meeting_id'] == row['id']]
-                db.execute('INSERT INTO meeting_cache VALUES(?,?,?,0) ON CONFLICT(user_id,id) DO UPDATE SET payload=excluded.payload WHERE meeting_cache.pending=0',
-                           (self.user, row['id'], json.dumps(row)))
-        return ('Conflict · another user saved these meetings. Export your edits, then reload the shared version: ' + ', '.join(self.conflicts)) if self.conflicts else 'Meetings synchronized'
+        from app.services.local_meetings import sync_meetings
+        return sync_meetings(self)
 
     def discard_pending(self, identity):
         """Explicit UI confirmation required; caller can export the pending draft first."""
@@ -143,7 +109,7 @@ class Meetings:
             db.execute('DELETE FROM meeting_cache WHERE user_id=? AND id=?', (self.user, identity))
 
     def roster(self):
-        return self.accounts.request('POST', '/rest/v1/rpc/hub_team_roster', {}) or []
+        return self.accounts.users()
 
     def file_ref(self, path):
         path = Path(path).resolve()

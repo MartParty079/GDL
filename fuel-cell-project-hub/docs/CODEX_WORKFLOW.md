@@ -49,17 +49,37 @@ Report failures honestly. Never force-push or overwrite existing release assets.
 Stable retains its existing installer ID, LocalAppData/FuelCellProjectHub profile
 and gdlresearchhub protocol. No migration copies or deletes Stable data.
 Beta has its own installer ID, executable, icon, folder, profile and protocol.
-Source development defaults to Beta; packaged edition metadata is immutable.
-The shared OneDrive amendment explicitly authorizes Beta mapping the existing
-GDL research - General project. Identity verification is mandatory, indexing
-is restricted to the explicitly enrolled authority, and SQLite publication uses
-closed immutable snapshots. Persistent research stays in the shared root; local
-verified copies are disposable cache. See SHARED_ONEDRIVE_INDEX.md for migration
-and authority recovery. Beta contains no production account configuration.
-Its optional URL/publishable key must target a separate Supabase project.
-Roles stay database-authorized. Local Beta has no administrator privileges.
-Beta migrations are source only until applied to a verified separate project;
-production migrations and storage require explicit production approval.
+Source execution defaults to isolated Development with automatic -dev.N versions;
+release tests select Beta explicitly and frozen edition metadata is immutable.
+The local identity order supersedes the earlier live-project Beta amendment.
+Development/Beta data, profiles and research indexes stay in isolated local
+sandboxes, never the Production OneDrive project. Earlier mappings are backed up
+locally and disconnected; no shared files/snapshots are moved or deleted.
+Shared identity/activity files are channel-scoped; local SQLite caches never
+become multi-user OneDrive databases. Organizational local roles replace hosted
+login requirements. Admin requires a PIN; Members do not gain administrative
+access because a build is Beta. Supabase projects, historical remote records and
+migrations remain untouched. Read LOCAL_TEAM_IDENTITY.md for setup/recovery.
+
+## Mandatory confirmation before every Stable promotion
+
+After checking the exact Beta tag, SHA, workflow and installer assets, display
+source Beta, proposed Stable version, changes, test results, known issues,
+installer compatibility and data migration requirements. Ask exactly:
+
+"Beta version [VERSION] has passed the required release checks and is ready for Production. Do you approve promoting this exact build to Stable version [VERSION] and publishing it for all Capstone Hub users?"
+
+Only a new explicit affirmative human answer authorizes publication. A rejection
+cancels promotion. Record the displayed question, approved_commit, beta_tag,
+stable_version and response YES in an ignored local confirmation file. Never
+fabricate this receipt or infer it from a development order. The release helper
+requires --confirmation-file and validates the exact question/build/version before
+any GitHub operation. The protected production workflow also checks the answer,
+question, exact source and proposed version. Its named review gate remains.
+After approval Codex dispatches and legitimately reviews as the sole maintainer,
+then verifies the workflow, installer/checksum/manifest, public downloads and
+Stable update discovery. The user need not execute GitHub commands. A failed run
+is not a completed release. This work order authorizes Beta publication only.
 
 ## Publication boundaries
 

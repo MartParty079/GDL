@@ -1,6 +1,8 @@
-"""Run release regressions while respecting deferred Microsoft identity testing."""
+"""Run release regressions with isolated Beta metadata and no external login."""
 
 import sys
+import os
+os.environ.setdefault("GDL_HUB_CHANNEL", "beta")
 import unittest
 from pathlib import Path
 
@@ -20,6 +22,6 @@ def release_tests(suite):
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"))
-    print("Microsoft identity tests deferred by user instruction.", flush=True)
+    print("External identity login is retired; no Microsoft identity flow or Fiji is launched.", flush=True)
     result = unittest.TextTestRunner(verbosity=2).run(release_tests(suite))
     sys.exit(0 if result.wasSuccessful() else 1)

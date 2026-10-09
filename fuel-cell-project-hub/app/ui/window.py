@@ -331,6 +331,10 @@ class HubWindow(QMainWindow):
         self.render_project()
 
     def open_settings(self, index):
+        accounts = getattr(self.store, 'accounts', None)
+        if accounts and not accounts.admin_unlocked:
+            notify(self, 'Select the Admin profile and enter its PIN to configure shared storage or indexing.', 'warning')
+            return
         self.show_page("Settings")
         self.settings_tabs.setCurrentIndex(index)
 
@@ -891,6 +895,9 @@ class HubWindow(QMainWindow):
         self.release_status_text = "Latest release: " + release["tag"] + " · current: " + __version__
         self.update_status.set_message(self.release_status_text, "success")
         self.header_update.setText("Update " + release["tag"] if newer(release["tag"]) else "Up to date")
+        if self.store.local.get('skipped_update') == release['tag'] and not getattr(self, 'manual_update_check', True):
+            self.header_update.setText('Updates · skipped ' + release['tag'])
+            return
         if newer(release["tag"]) and getattr(self, 'manual_update_check', True):
             notify(self, "Update available. Review it under Settings → Updates.")
         elif getattr(self, 'manual_update_check', True):
@@ -917,6 +924,10 @@ class HubWindow(QMainWindow):
         update.setEnabled(newer(release["tag"])); layout.addWidget(update)
         later=button("Update on Next Open",lambda:(self.schedule_update(),dialog.accept()))
         later.setEnabled(newer(release['tag']));layout.addWidget(later)
+        def skip():
+            self.store.local['skipped_update'] = release['tag'];self.store.save_local();dialog.accept()
+        skip_button=button('Skip This Version',skip)
+        skip_button.setEnabled(newer(release['tag']));layout.addWidget(skip_button)
         layout.addWidget(button("Cancel", dialog.reject)); dialog.resize(650,450); dialog.exec()
 
     def download_update(self):
@@ -943,7 +954,7 @@ class HubWindow(QMainWindow):
         self.safe_update.install(path)
 
     def closeEvent(self, event):
-        if hasattr(self,'safe_update') and self.safe_update.state not in ('idle','installed'):
+        if hasattr(self,'safe_update') and self.safe_update.state not in ('idle','installer_started'):
             event.ignore();return
         if self.workers or self.storage_panel.indexing or self.research_panel.indexing or self.research_workspace.busy() or (hasattr(self, "account_tasks") and self.account_tasks.busy()) or (hasattr(self, "admin_workspace") and self.admin_workspace.tasks.busy()) or (hasattr(self, 'meetings_panel') and self.meetings_panel.busy()) or (hasattr(self,'weekly_panel') and self.weekly_panel.tasks.busy()):
             self.storage_panel.cancel_index()

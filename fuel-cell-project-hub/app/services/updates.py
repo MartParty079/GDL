@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from app import __version__
 from app.services.storage import read_json, write_json
-from app.edition import BETA, ASSET_NAME
+from app.edition import BETA, ASSET_NAME, DEVELOPMENT, CHANNEL
 
 OFFICIAL_REPOSITORY = "MartParty079/GDL"
 ASSET = ASSET_NAME
@@ -60,8 +60,8 @@ def failure_reason(exc):
 
 
 def version(value):
-    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?", value)
-    return tuple(map(int,match.groups()[:3]))+(0 if match[4] else 1,int(match[4] or 0)) if match else None
+    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)(?:-(beta|dev)\.(\d+))?", value)
+    return tuple(map(int,match.groups()[:3]))+({'beta':0,'dev':-1,None:1}[match[4]],int(match[5] or 0)) if match else None
 
 
 def newer(tag, installed=__version__):
@@ -74,6 +74,8 @@ def latest_release(repository=OFFICIAL_REPOSITORY):
         raise ValueError(
             "Updates use the official GDL Research Hub release repository."
         )
+    if DEVELOPMENT:
+        raise UpdateError('Development uses local builds from develop. No remote installer channel is enabled; Beta and Stable installers cannot update this edition.')
     request = Request(
         f"https://api.github.com/repos/{repository}/releases" + ("?per_page=100" if BETA else "/latest"),
         headers={
@@ -298,6 +300,8 @@ class PendingUpdate:
         if not pending:
             return None
         if not newer(pending['tag']):
+            if pending.get('status') == 'installer_started' and version(pending['tag'])[3] == version(__version__)[3]:
+                write_json(self.directory / 'update-result.local.json', {'target':pending['tag'], 'verified_version':__version__, 'channel':CHANNEL, 'status':'version_verified', 'verified_at':datetime.now(timezone.utc).isoformat()})
             self.path.unlink(missing_ok=True)
             return None
         release = latest_release()

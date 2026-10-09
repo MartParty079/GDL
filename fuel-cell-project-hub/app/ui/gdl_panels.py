@@ -360,6 +360,11 @@ class GDLPanel(QWidget):
             self.error.message.set_message(status.get("message", "View the session log and retry."), "error")
         if state in TERMINAL and self.last_state and state != self.last_state:
             notify(self.window, "GDL analysis " + STATES.get(state, state).lower(), "error" if state in ("FAILED", "LAUNCH_FAILED") else "info")
+            accounts = getattr(self.window.store, 'accounts', None)
+            if accounts and status.get('initiated_by'):
+                accounts.event('IMAGE_PROCESSED' if state == 'COMPLETED' else 'PROCESSING_FAILED',
+                               'processing', status.get('session_id', ''), details={'state':state},
+                               status='completed' if state == 'COMPLETED' else 'failed', owner=status['initiated_by'])
         self.last_state = state
         self.report_button.setVisible(bool(status.get("reports")))
 

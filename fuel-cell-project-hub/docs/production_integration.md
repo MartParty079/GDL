@@ -1,3 +1,7 @@
+> Historical hosted-auth documentation. The 0.5.0 Development/Beta candidate
+> retires these desktop login instructions; use [LOCAL_TEAM_IDENTITY.md](LOCAL_TEAM_IDENTITY.md).
+> Existing Stable and remote records remain unchanged until an approved promotion.
+
 # Production integration and version management
 
 Work order: Production Authentication, Administration, Packaging, Updates,
