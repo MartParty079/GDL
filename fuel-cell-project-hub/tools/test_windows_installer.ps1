@@ -5,6 +5,7 @@ param(
     [string]$Report = '.test-state/installer-acceptance.json'
 )
 $ErrorActionPreference = 'Stop'
+New-Item -ItemType Directory -Force (Split-Path -Parent ([IO.Path]::GetFullPath($Report))) | Out-Null
 $installerPath = (Resolve-Path -LiteralPath $Installer).Path
 $checksum = ((Get-Content -LiteralPath ($installerPath + '.sha256') -Raw).Trim() -split '\s+')[0]
 if ((Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash -ine $checksum) { throw 'Installer checksum mismatch' }
