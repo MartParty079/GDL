@@ -84,3 +84,14 @@ commits, wrong actors and failed Beta runs. It never bypasses platform permissio
 checks. A dispatched/approved run is not a completed release: verify Actions,
 main/tag SHA, public assets and updater checks before reporting success.
 This repair order prepares 0.4.3; it does not itself publish that Stable release.
+
+## Standalone test-harness limitation
+
+The full release suite passed and exited successfully. Running only
+test_accounts_updates.py passed its seven assertions but Windows Python crashed
+during final garbage collection. The same access violation was reproduced with
+the untouched v0.4.0 source and the same runtime, proving it predates these
+repairs. Unsuccessful test-only cleanup experiments were removed. This is not
+reported as a passing standalone process or silently suppressed. Packaged
+startup and disposable installed-app checks run in separate processes and must
+exit zero. The full release suite remains the required CI regression gate.
