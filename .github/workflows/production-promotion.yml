@@ -21,6 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   promote-build-publish:
+    if: github.actor == 'MartParty079'
     environment: production
     runs-on: windows-latest
     permissions:
@@ -46,6 +47,7 @@ jobs:
           python-version: '3.12'
       - name: Verify approved Beta and promote exact source
         run: |
+          if ('${{ github.sha }}' -ne $env:APPROVED_SHA) { throw 'Workflow source must match the exact approved Beta commit' }
           if ($env:PRODUCTION_ORDER -cne 'APPROVE PRODUCTION RELEASE') { throw 'Explicit release order required' }
           if ($env:APPROVED_SHA -notmatch '^[a-f0-9]{40}$' -or $env:BETA_TAG -notmatch '^v\d+\.\d+\.\d+-beta\.\d+$' -or $env:BETA_RUN_ID -notmatch '^\d+$') { throw 'Invalid approved Beta identifiers' }
           $run = gh api "repos/$env:GH_REPO/actions/runs/$env:BETA_RUN_ID" | ConvertFrom-Json
@@ -61,6 +63,9 @@ jobs:
           if ($tagCommit -ne $env:APPROVED_SHA) { throw 'Beta tag does not match approved source' }
           git merge-base --is-ancestor origin/main $env:APPROVED_SHA
           if ($LASTEXITCODE -ne 0) { throw 'Promotion must fast-forward main' }
+          $version = git show "$($env:APPROVED_SHA):fuel-cell-project-hub/app/version.py" | Select-String '^VERSION = "(.+)"$' | ForEach-Object { $_.Matches[0].Groups[1].Value }
+          git rev-parse --verify "refs/tags/v$version" 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'Stable tag already exists; never overwrite a published version' }
           git checkout -B main $env:APPROVED_SHA
           if ($LASTEXITCODE -ne 0) { throw 'Approved checkout failed' }
           python -m venv .venv
@@ -91,6 +96,13 @@ jobs:
           if ($result.channel -ne 'stable') { throw 'Wrong packaged edition' }
           ./tools/build_installer.ps1 -Channel stable -PackageDirectory dist/stable/FuelCellProjectHub -OutputDirectory dist/installer
           Copy-Item dist/stable/FuelCellProjectHub/_internal/config/build_metadata.json dist/installer/build-manifest.json
+      - name: Validate installer assets before publication
+        run: |
+          $metadata = Get-Content dist/installer/build-manifest.json -Raw | ConvertFrom-Json
+          & ./.venv/Scripts/python.exe tools/validate_release_artifacts.py --directory dist/installer --channel stable --version $metadata.version --commit $metadata.commit
+          if ($LASTEXITCODE -ne 0) { throw 'Updater artifact validation failed' }
+      - name: Test disposable fresh install and installed edition upgrade
+        run: ./tools/test_windows_installer.ps1 -Installer dist/installer/GDLResearchHub-Setup.exe -Channel stable
       - uses: actions/upload-artifact@v4
         with:
           name: GDLResearchHub-Stable-${{ inputs.approved_commit }}
@@ -109,3 +121,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Stable tag push failed' }
           gh release create "v$version" dist/installer/* --verify-tag --latest --title "GDL Research Hub $version" --generate-notes
           if ($LASTEXITCODE -ne 0) { throw 'Stable release publication failed' }
+      - name: Verify published public downloads and legacy updater contract
+        run: |
+          $version = & ./.venv/Scripts/python.exe -c 'from app.version import VERSION; print(VERSION)'
+          & ./.venv/Scripts/python.exe tools/validate_release_artifacts.py --directory dist/published --channel stable --version $version --commit $env:APPROVED_SHA --published-tag "v$version"
+          if ($LASTEXITCODE -ne 0) {
+            gh release edit "v$version" --draft --latest=false
+            throw 'Published assets failed validation; release withdrawn'
+          }

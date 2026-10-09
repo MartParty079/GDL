@@ -14,7 +14,11 @@ An old release authorization does not authorize another Stable publication.
 Development: implement -> test -> commit/push develop -> build Beta -> report.
 Production: verify approved Beta -> human approves exact promotion -> update main
 without unreviewed changes -> stable tag -> gated Stable build/release -> verify.
-Use the protected production workflow; never bypass its approval review.
+Use the protected production workflow. The explicitly authorized sole maintainer
+may dispatch and approve their own exact-commit release when GitHub self-review
+is enabled. Never publish from ordinary development work or bypass platform
+permissions. This repair order prepares a candidate only; new explicit human
+authorization is required to publish it.
 
 Inspect status, branch and origin; pull the target branch with --ff-only before
 editing. Preserve unexpected work and reconcile divergence intentionally. Never

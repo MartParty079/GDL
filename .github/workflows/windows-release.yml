@@ -56,6 +56,13 @@ jobs:
         run: |
           ./tools/build_installer.ps1 -Channel beta -PackageDirectory dist/beta/GDLResearchHubBeta -OutputDirectory dist/installer
           Copy-Item dist/beta/GDLResearchHubBeta/_internal/config/build_metadata.json dist/installer/build-manifest.json
+      - name: Validate installer assets before publication
+        run: |
+          $metadata = Get-Content dist/installer/build-manifest.json -Raw | ConvertFrom-Json
+          & ./.venv/Scripts/python.exe tools/validate_release_artifacts.py --directory dist/installer --channel beta --version $metadata.version --commit $metadata.commit
+          if ($LASTEXITCODE -ne 0) { throw 'Updater artifact validation failed' }
+      - name: Test disposable fresh install and installed edition upgrade
+        run: ./tools/test_windows_installer.ps1 -Installer dist/installer/GDLResearchHubBeta-Setup.exe -Channel beta
       - uses: actions/upload-artifact@v4
         with:
           name: GDLResearchHub-Beta-${{ github.sha }}
@@ -88,3 +95,4 @@ jobs:
           git tag -a "v$VERSION" "$APPROVED_SHA" -m "Tested GDL Research Hub Beta $VERSION"
           git push origin "v$VERSION"
           gh release create "v$VERSION" installer/* --verify-tag --prerelease --title "GDL Research Hub Beta $VERSION" --generate-notes
+          python fuel-cell-project-hub/tools/validate_release_artifacts.py --directory verified-public --channel beta --version "$VERSION" --commit "$APPROVED_SHA" --published-tag "v$VERSION"

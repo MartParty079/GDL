@@ -47,6 +47,9 @@ SolidCompression=yes
 CloseApplications=yes
 CloseApplicationsFilter={#ExeName}.exe
 RestartApplications=no
+SetupMutex=GDLResearchHub-{#Channel}-Installer
+CreateUninstallRegKey=not IsTestInstall
+Uninstallable=not IsTestInstall
 WizardStyle=modern
 VersionInfoVersion={#NumericVersion}
 [Tasks]
@@ -54,23 +57,33 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 [Files]
 Source: "{#PackageRoot}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#ExeName}.exe"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#ExeName}.exe"; Tasks: desktopicon
+Name: "{group}\{#AppName}"; Filename: "{app}\{#ExeName}.exe"; Check: not IsTestInstall
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#ExeName}.exe"; Tasks: desktopicon; Check: not IsTestInstall
 [Registry]
-Root: HKCU; Subkey: "Software\Classes\{#Protocol}"; ValueType: string; ValueName: ""; ValueData: "URL:{#AppName} Sign In"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\{#Protocol}"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
-Root: HKCU; Subkey: "Software\Classes\{#Protocol}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#ExeName}.exe,0"
-Root: HKCU; Subkey: "Software\Classes\{#Protocol}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ExeName}.exe"" ""%1"""
+Root: HKCU; Subkey: "Software\Classes\{#Protocol}"; ValueType: string; ValueName: ""; ValueData: "URL:{#AppName} Sign In"; Flags: uninsdeletekey; Check: not IsTestInstall
+Root: HKCU; Subkey: "Software\Classes\{#Protocol}"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Check: not IsTestInstall
+Root: HKCU; Subkey: "Software\Classes\{#Protocol}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#ExeName}.exe,0"; Check: not IsTestInstall
+Root: HKCU; Subkey: "Software\Classes\{#Protocol}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ExeName}.exe"" ""%1"""; Check: not IsTestInstall
 [Run]
-Filename: "{app}\{#ExeName}.exe"; Description: "Open {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#ExeName}.exe"; Description: "Open {#AppName}"; Flags: nowait postinstall skipifsilent; Check: not IsTestInstall
 ; LocalAppData/FuelCellProjectHub remains untouched on upgrade and uninstall.
 
 [Code]
+function IsTestInstall: Boolean;
+begin
+  Result := ExpandConstant('{param:GDLTESTINSTALL|0}') = '1';
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ExistingMS, ExistingLS: Cardinal;
 begin
   Result := '';
+  if IsTestInstall and (Pos(Uppercase(AddBackslash(ExpandConstant('{%TEMP}')) + 'gdl-installer-tests\'), Uppercase(AddBackslash(ExpandFileName(ExpandConstant('{app}'))))) <> 1) then
+  begin
+    Result := 'Test installations must stay in the disposable gdl-installer-tests temporary directory.';
+    exit;
+  end;
   if FileExists(ExpandConstant('{app}\{#OtherExe}')) then
     Result := 'Choose a separate installation folder for this edition.'
   else if GetVersionNumbers(ExpandConstant('{app}\{#ExeName}.exe'), ExistingMS, ExistingLS) then

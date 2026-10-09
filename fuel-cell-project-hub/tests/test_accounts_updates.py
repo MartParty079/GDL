@@ -134,12 +134,12 @@ class UpdateTests(unittest.TestCase):
             def geturl(self):return 'https://release-assets.githubusercontent.com/asset'
         with tempfile.TemporaryDirectory() as temporary, patch.object(updates,'latest_release',return_value=release):
             root=Path(temporary)
-            with patch.object(updates,'urlopen',side_effect=[Response((checksum+'  file').encode()),Response(payload)]):
+            with patch.object(updates,'urlopen',side_effect=[Response((checksum+'  '+updates.ASSET).encode()),Response(payload)]):
                 result=updates.verified_download(release,root); self.assertEqual(result.read_bytes(),payload)
             result.unlink()
-            with patch.object(updates,'urlopen',side_effect=[Response(('0'*64).encode()),Response(payload)]):
+            with patch.object(updates,'urlopen',side_effect=[Response(('0'*64+'  '+updates.ASSET).encode()),Response(payload)]):
                 with self.assertRaises(ValueError):updates.verified_download(release,root)
-            self.assertEqual(list(root.iterdir()),[])
+            self.assertEqual(list(root.glob('*.exe'))+list(root.glob('*.part')),[])
 
 
 if __name__=='__main__':unittest.main()

@@ -158,6 +158,20 @@
       "breaking_changes": [],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.4.3",
+      "date": "2026-10-09",
+      "work_order": "Repair updater artifacts and solo-maintainer releases",
+      "summary": "Diagnose wrong-edition Stable assets, verify public release artifacts, and prepare safe solo-maintainer promotion.",
+      "major_features": [],
+      "major_fixes": [
+        "Actionable updater diagnostics, download locking and installer handoff integrity.",
+        "Validate release edition, source, version, asset names and checksums before and after publication."
+      ],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }

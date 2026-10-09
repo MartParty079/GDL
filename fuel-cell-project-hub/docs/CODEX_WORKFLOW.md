@@ -27,6 +27,13 @@ exact promotion. Do not infer approval from development work or old orders.
 The manual Production promotion workflow requires a successful Beta workflow
 run, matching SHA/prerelease tag/assets, an explicit approval phrase and review
 in the protected production GitHub environment before main or Stable changes.
+The sole authorized maintainer, MartParty079, may both dispatch and approve a
+release after explicit human authorization; a second developer is not required.
+The production environment retains its named reviewer and branch restrictions,
+with prevent_self_review=false only after the exact setting change is approved.
+Never bypass GitHub permissions. The updater repair order authorizes candidate
+preparation, not publication. Present the tested candidate and await a subsequent
+explicit Stable release instruction.
 
 Promotion must be a normal fast-forward of main to the tested source commit.
 Build Stable from that same SHA with the dependency lock and Stable metadata.

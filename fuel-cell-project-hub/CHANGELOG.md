@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3 — 2026-10-09
+
+- Diagnose wrong-edition Stable assets, verify public release artifacts, and prepare safe solo-maintainer promotion.
+- Actionable updater diagnostics, download locking and installer handoff integrity.
+- Validate release edition, source, version, asset names and checksums before and after publication.
+
 ## 0.4.2 — 2026-10-08
 
 - Identity-bound shared OneDrive mapping with a pinned project identifier.

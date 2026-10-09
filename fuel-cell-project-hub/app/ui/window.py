@@ -929,9 +929,15 @@ class HubWindow(QMainWindow):
 
     def offer_deferred_update(self,message):
         box=QMessageBox(self);box.setWindowTitle('Update safely');box.setText(message)
+        retry=box.addButton('Retry Download',QMessageBox.ActionRole)
+        from app.services.storage import read_json
+        import json
+        details=read_json(self.store.local_dir/'updates'/'update-diagnostics.local.json',{})
+        box.setDetailedText(json.dumps(details,indent=2) if details else 'No download details recorded. The existing installation is preserved.')
         later=box.addButton('Update on Next Open',QMessageBox.AcceptRole)
         box.addButton(QMessageBox.Cancel);box.exec()
         if box.clickedButton()==later:self.schedule_update()
+        elif box.clickedButton()==retry:QTimer.singleShot(0,self.safe_update.start)
 
     def install_update(self, path):
         self.safe_update.install(path)

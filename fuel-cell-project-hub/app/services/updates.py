@@ -6,6 +6,9 @@ import hashlib
 import os
 import time
 import subprocess
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from app import __version__
@@ -14,6 +17,46 @@ from app.edition import BETA, ASSET_NAME
 
 OFFICIAL_REPOSITORY = "MartParty079/GDL"
 ASSET = ASSET_NAME
+
+
+class UpdateError(ValueError):
+    """Safe actionable text; raw transport exceptions must never reach the UI."""
+
+
+@contextmanager
+def update_lock(directory):
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / 'update.lock').open('a+b') as stream:
+        stream.seek(0); stream.write(b'0'); stream.flush(); stream.seek(0)
+        try:
+            if os.name == 'nt':
+                import msvcrt
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            raise UpdateError('Stage: Staging\nAnother update is already running. Retry after it finishes.') from None
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            if os.name == 'nt':
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+def failure_reason(exc):
+    if isinstance(exc, HTTPError):
+        return f'GitHub returned HTTP {exc.code}. ' + ('Wait and retry.' if exc.code in (403, 429) else 'Retry or contact the release maintainer.')
+    if isinstance(exc, (URLError, TimeoutError, ConnectionError)):
+        return 'GitHub could not be reached. Check your connection and retry.'
+    if isinstance(exc, PermissionError):
+        return 'Windows denied access to the local update folder. Check permissions and security software.'
+    if isinstance(exc, ValueError):
+        return str(exc)
+    return 'The operation was interrupted. Retry; your existing installation is unchanged.'
 
 
 def version(value):
@@ -92,25 +135,56 @@ def asset_url(release, name):
 
 
 def verified_download(release, directory):
+    record = {'timestamp': datetime.now(timezone.utc).isoformat(), 'current_version': __version__,
+              'target_version': release.get('tag'), 'channel': 'beta' if BETA else 'stable',
+              'asset': ASSET, 'stage': 'Release metadata', 'status': 'started',
+              'signature': 'Not required by this release policy; SHA-256 is mandatory.',
+              'staging_directory': str(directory)}
+    try:
+        with update_lock(directory):
+            result = _verified_download(release, directory, record)
+        record.update(status='verified', stage='Verified')
+        return result
+    except Exception as exc:
+        reason = failure_reason(exc)
+        record.update(status='failed', reason=reason, http_status=getattr(exc, 'code', None))
+        raise UpdateError(f"Version: {record['target_version']}\nStage: {record['stage']}\nReason: {reason}\nYour existing installation was not changed.") from None
+    finally:
+        try:
+            write_json(directory / 'update-diagnostics.local.json', record)
+        except OSError:
+            pass
+
+
+def _verified_download(release, directory, record):
     fresh = latest_release()
     if fresh["tag"] != release["tag"] or not newer(fresh["tag"]):
         raise ValueError("Release changed. Check for updates again.")
     installer_url = asset_url(fresh, ASSET)
     checksum_url = asset_url(fresh, ASSET + ".sha256")
+    record['stage'] = 'Checksum download'
     with urlopen(
         Request(checksum_url, headers={"User-Agent": "GDLResearchHub"}), timeout=8
     ) as response:
-        checksum = response.read(512).decode("ascii").split()[0]
+        fields = response.read(512).decode("ascii").split()
+        checksum = fields[0] if fields else ''
+    if len(fields) != 2 or fields[1].lstrip('*') != ASSET:
+        raise ValueError('Published checksum must identify the installer for this edition.')
     if not re.fullmatch("[a-fA-F0-9]{64}", checksum):
         raise ValueError("Installer checksum unavailable.")
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / (fresh["tag"] + "-" + ASSET)
+    record['expected_sha256'] = checksum.lower()
     if target.is_file() and valid_installer(target, checksum):
+        write_json(target.with_suffix('.verified.json'), {'sha256': checksum.lower(), 'tag': fresh['tag'], 'asset': ASSET})
         return target
+    target.with_suffix('.verified.json').unlink(missing_ok=True)
+    target.unlink(missing_ok=True)
     temporary = target.with_suffix(".part")
     digest = hashlib.sha256()
     size = 0
-    deadline = time.monotonic() + 90
+    deadline = time.monotonic() + 600
+    record['stage'] = 'Installer download'
     try:
         with urlopen(
             Request(installer_url, headers={"User-Agent": "GDLResearchHub"}), timeout=15
@@ -129,12 +203,16 @@ def verified_download(release, directory):
                     raise ValueError("Installer exceeds the supported size.")
                 digest.update(chunk)
                 stream.write(chunk)
+        record.update(stage='Checksum verification', actual_sha256=digest.hexdigest(), downloaded_bytes=size)
+        if fresh['assets'][ASSET].get('size') and size != fresh['assets'][ASSET]['size']:
+            raise ValueError('Download is incomplete. Retry Download.')
         if digest.hexdigest() != checksum.lower():
             raise ValueError("Installer verification failed. Download discarded.")
         with temporary.open("rb") as stream:
             if stream.read(2) != b"MZ":
                 raise ValueError("Windows installer is invalid.")
         os.replace(temporary, target)
+        write_json(target.with_suffix('.verified.json'), {'sha256': checksum.lower(), 'tag': fresh['tag'], 'asset': ASSET})
         return target
     finally:
         temporary.unlink(missing_ok=True)
@@ -145,7 +223,22 @@ def launch_installer(path):
         raise ValueError("Installer updates are available on Windows only.")
     if not path.is_file():
         raise ValueError("Verified installer unavailable.")
-    return subprocess.Popen([str(path), "/SP-", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/NORESTART"])
+    receipt = read_json(path.with_suffix('.verified.json'), {})
+    if receipt.get('asset') != ASSET or not newer(receipt.get('tag', '')) or not valid_installer(path, receipt.get('sha256', '')):
+        raise UpdateError('Stage: Installer launch\nInstaller integrity changed or verification is missing. Retry Download.')
+    diagnostic = read_json(path.parent / 'update-diagnostics.local.json', {})
+    try:
+        process = subprocess.Popen([str(path), "/SP-", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/NORESTART"])
+        diagnostic.update(stage='Installer launch', status='installer_started')
+        return process
+    except OSError as exc:
+        diagnostic.update(stage='Installer launch', status='failed', reason=failure_reason(exc))
+        raise UpdateError('Stage: Installer launch\n' + failure_reason(exc)) from None
+    finally:
+        try:
+            write_json(path.parent / 'update-diagnostics.local.json', diagnostic)
+        except OSError:
+            pass
 
 
 def valid_installer(path, checksum):
@@ -184,6 +277,23 @@ class PendingUpdate:
         write_json(self.path, {'tag': release['tag'], 'status': 'scheduled'})
 
     def prepare(self):
+        try:
+            return self._prepare()
+        except UpdateError:
+            raise
+        except Exception as exc:
+            reason = failure_reason(exc)
+            try:
+                write_json(self.directory / 'updates' / 'update-diagnostics.local.json', {
+                    'timestamp': datetime.now(timezone.utc).isoformat(), 'current_version': __version__,
+                    'target_version': self.read().get('tag'), 'channel': 'beta' if BETA else 'stable',
+                    'asset': ASSET, 'stage': 'Release metadata', 'status': 'failed',
+                    'reason': reason, 'http_status': getattr(exc, 'code', None)})
+            except OSError:
+                pass
+            raise UpdateError('Stage: Release metadata\nReason: ' + reason + '\nYour existing installation was not changed.') from None
+
+    def _prepare(self):
         pending = self.read()
         if not pending:
             return None

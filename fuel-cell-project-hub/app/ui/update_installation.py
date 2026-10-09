@@ -75,7 +75,7 @@ class SafeUpdate(QObject):
                     self.fail('Activity synchronization is still running. Your pending activity is saved locally. Choose Update on Next Open to let it finish.');return
                 return
             self.timer.stop();self.state='downloading'
-            self.tasks.start(self.pending.prepare,self.install,lambda _:self.fail('Update download unavailable or verification failed. Your current app remains usable; the update will be retried on next open.'))
+            self.tasks.start(self.pending.prepare,self.install,self.fail)
 
     def install(self,path):
         # ready precedes QThread.finished; wait for the downloader to be disposed.
@@ -91,8 +91,9 @@ class SafeUpdate(QObject):
             launch_installer(path)
             if presence:presence.stop()
             self.pending.launched()
-        except Exception:
-            self.fail('Installer could not start. Your current app remains usable; the update will be retried on next open.');return
+        except Exception as exc:
+            from app.services.updates import failure_reason
+            self.fail('Installer could not start.\nStage: Installer launch\n' + failure_reason(exc));return
         finally:
             if accounts:accounts.lock.release()
         self.state='installed';self.window.update_exit_ready=True
@@ -133,9 +134,9 @@ class StartupUpdate(QDialog):
             self.failed('');return
         self.installing=True;self.accept()
 
-    def failed(self,_):
-        self.message.setText('The scheduled update could not be installed. Your files and session are preserved. Continue using the app; the update will be retried on next open.')
-        if self.tasks.busy():QTimer.singleShot(50,lambda:self.failed(''));return
+    def failed(self,message):
+        self.message.setText(message or 'Installer launch failed. Your files and session are preserved. Retry under Settings → Updates.')
+        if self.tasks.busy():QTimer.singleShot(50,lambda:self.failed(message));return
         self.reject()
 
     def reject(self):

@@ -161,13 +161,13 @@ class PendingUpdateTests(unittest.TestCase):
         checksum=hashlib.sha256(b'MZfixture').hexdigest()
         class Broken(Response):
             def read(self,n=-1):raise OSError('interrupted')
-        with patch.object(updates,'latest_release',return_value=release),patch.object(updates,'urlopen',side_effect=[Response(checksum.encode()),Broken(b'')]):
-            with self.assertRaises(OSError):self.pending.prepare()
+        with patch.object(updates,'latest_release',return_value=release),patch.object(updates,'urlopen',side_effect=[Response((checksum+'  '+updates.ASSET).encode()),Broken(b'')]):
+            with self.assertRaises(updates.UpdateError):self.pending.prepare()
         self.assertEqual(list((self.root/'updates').glob('*.part')),[]);self.assertTrue(self.pending.read())
     def test_cached_installer_rehashed_before_reuse(self):
         release=future_release();payload=b'MZfixture';checksum=hashlib.sha256(payload).hexdigest()
         cache=self.root/'updates';cache.mkdir();target=cache/(release['tag']+'-'+updates.ASSET);target.write_bytes(payload)
-        with patch.object(updates,'latest_release',return_value=release),patch.object(updates,'urlopen',return_value=Response(checksum.encode())) as network:
+        with patch.object(updates,'latest_release',return_value=release),patch.object(updates,'urlopen',return_value=Response((checksum+'  '+updates.ASSET).encode())) as network:
             self.assertEqual(updates.verified_download(release,cache),target);self.assertEqual(network.call_count,1)
 
 
