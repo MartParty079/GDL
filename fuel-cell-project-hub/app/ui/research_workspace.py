@@ -1451,6 +1451,16 @@ class ResearchHub(QWidget):
             )
 
     def edit_object(self, kind, obj=None):
+        organization = getattr(self.window, 'organization_panel', None)
+        if organization and obj is None:
+            self.window.tabs.setCurrentWidget(organization)
+            organization.category.setCurrentText('Experimental')
+            from app.ui.organization import RecordEditor
+            editor = RecordEditor(organization.service, kind, parent=self)
+            if editor.exec():
+                organization.attempt(lambda: organization.service.submit(kind, editor.title.text(), editor.values()))
+                organization.reload()
+            return
         origin = (
             obj["origin"]
             if obj

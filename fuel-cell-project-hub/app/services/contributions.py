@@ -105,6 +105,11 @@ def fetch_pages(accounts, table, filters=()):
         return accounts.rows('Sessions')
     from app.services.local_meetings import meeting_rows
     meetings = meeting_rows(accounts)
+    organization = getattr(accounts.store, 'organization_service', None)
+    if organization:
+        meetings += [dict(id=row['uuid'], title=row['title'], meeting_date=row['created_at'][:10],
+            attendees=[{'user_id': person, 'attended': True, 'attendance_status': 'Present'} for person in row['fields'].get('attendees', [])],
+            actions=[]) for row in organization.rows(kind='meeting')]
     if table == 'meetings':
         return meetings
     if table in ('meeting_attendees', 'meeting_actions'):

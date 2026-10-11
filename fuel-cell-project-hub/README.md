@@ -8,6 +8,13 @@ research sandboxes; neither modifies the live production OneDrive project.
 Stable remains on `main` and requires the exact-build confirmation in the
 [Codex workflow](docs/CODEX_WORKFLOW.md). Existing Stable installations are unchanged.
 
+**Project Organization** adds the four approved categories, permanent E/S/P/R/D/MTG
+records, creator provenance, exact procedure revisions, raw/derived file links,
+five unassigned coordination roles, owned tasks and meeting agenda/minutes/summary.
+Members submit recoverable proposals; the enrolled Admin publishes validated
+snapshots. See [Beta setup and migration](docs/PROJECT_ORGANIZATION.md). Existing
+catalogs and source filenames are preserved; no production migration runs here.
+
 ## Local team profiles and Windows distribution
 
 Select Matthew Kime (Admin), Andrew Michelson, Monterrius Ridley or Ryan Rodriguez.

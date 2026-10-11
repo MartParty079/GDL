@@ -66,6 +66,16 @@
       "summary": "Replace hosted login with local team profiles and PINs; isolate Development/Beta data and require exact-build production confirmation.",
       "status": "implemented",
       "channel": "beta"
+    },
+    {
+      "work_order_id": "cap-org-2026-10-10-project-organization-and-collaboration",
+      "title": "CAP-ORG-2026-10-10 Project organization and collaboration",
+      "version": "0.6.0",
+      "started_at": "2026-10-10",
+      "completed_at": null,
+      "summary": "Add four-category project records, immutable member proposals, Admin snapshots, traceable files and structured meetings in isolated Beta.",
+      "status": "implemented",
+      "channel": "beta"
     }
   ]
 }

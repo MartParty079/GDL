@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 — 2026-10-10
+
+- Add four-category project records, immutable member proposals, Admin snapshots, traceable files and structured meetings in isolated Beta.
+- Permanent E/S/P/R/D/MTG identifiers with immutable UUIDs and date-first revision filenames
+- Creator provenance, exact procedure revisions and raw-to-derived image links
+- Single-writer organization snapshots, offline proposals, checksum recovery and legacy dry-run inventory
+- Five unassigned coordination roles, owned tasks, meeting lifecycle and PDF exports
+- Keep live production catalogs and research unchanged during Beta organization setup
+
 ## 0.5.0 — 2026-10-09
 
 - Replace hosted login with local team profiles and PINs; isolate Development/Beta data and require exact-build production confirmation.

@@ -356,6 +356,9 @@ class LocalAccounts:
                     unique[row['id']] = row
                 except (OSError, ValueError, KeyError):
                     self.warning = 'An activity record is unreadable. It was preserved for Admin review.'
+        organization = getattr(self.store, 'organization_service', None)
+        if kind == 'Events' and organization:
+            for row in organization.activity_events(): unique[row['id']] = row
         rows = [row for identity, row in unique.items() if identity not in conflicts]
         if not self.admin_unlocked:
             rows = [r for r in rows if self.profile and r['user_id'] == self.profile['id']]

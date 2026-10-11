@@ -131,6 +131,15 @@ def self_check(report):
         accounts.sign_in(member['id'])
         assert accounts.profile['display_name'] == 'Andrew Michelson'
         account_store.accounts = accounts
+        from app.services.organization import Organization, CATEGORIES
+        accounts.setup_admin('246810')
+        accounts.sign_in(accounts.users()[0]['id'], '246810')
+        organization = Organization(account_store)
+        organization.root.mkdir(parents=True, exist_ok=True)
+        organization.initialize()
+        organization.submit('sample', 'Packaged organization sample')
+        organization.consume()
+        accounts.sign_in(member['id'])
         # Exercise the actual account UI, session heartbeat, meetings and reports.
         with patch('app.ui.window.QTimer.singleShot'):
             account_window = HubWindow(account_store)
@@ -142,13 +151,17 @@ def self_check(report):
             if time.monotonic() > deadline: raise ValueError('Local account workspace did not finish startup.')
         assert 'My Activity' in [account_window.tabs.tabText(i) for i in range(account_window.tabs.count())]
         assert not hasattr(account_window, 'admin_workspace')
+        assert account_window.organization_panel.category.count() == len(CATEGORIES) == 4
+        assert len(account_window.organization_panel.service.rows(kind='role')) == 5
+        assert account_window.organization_panel.service.rows(kind='sample')[0]['id'] == 'S0001'
         account_window.session_presence.stop()
         accounts.sign_out()
         accounts.close()
         account_window.close(); account_window.deleteLater()
         login.close(); login.deleteLater()
         result.update(login_ui_available=True, external_auth_required=False, local_identity_available=True,
-                      channel=CHANNEL,application_name=APP_NAME,profile_name=PROFILE_NAME)
+                      channel=CHANNEL,application_name=APP_NAME,profile_name=PROFILE_NAME,
+                      organization_four_categories=True,organization_snapshot_member_reader=True)
         deadline=time.monotonic()+30
         while workspace.busy():
             app.processEvents();time.sleep(.01)

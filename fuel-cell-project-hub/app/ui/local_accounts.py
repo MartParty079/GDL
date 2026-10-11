@@ -216,6 +216,9 @@ def attach_account_ui(window, accounts, sign_out):
     window.weekly_panel = WeeklyPanel(window, accounts)
     window.tabs.addTab(window.meetings_panel, 'Meetings')
     window.tabs.addTab(window.weekly_panel, 'Weekly Activity')
+    from app.ui.organization import OrganizationPanel
+    window.organization_panel = OrganizationPanel(window)
+    window.tabs.addTab(window.organization_panel, 'Project Organization')
     panel = ActivityPanel(accounts, window)
     window.tabs.addTab(panel, 'Admin · User Activity' if accounts.admin_unlocked else 'My Activity')
     if accounts.admin_unlocked:
@@ -255,6 +258,8 @@ def attach_account_ui(window, accounts, sign_out):
             accounts.refresh()
             button.setText(accounts.profile['display_name'] + ' · ' + accounts.profile['role'].upper())
             accounts.executor.submit(accounts.flush)
+            if not window.organization_panel.working:
+                window.organization_panel.sync()
         except ValueError as exc:
             window.banner.setText(str(exc)); sign_out()
     window.account_timer.timeout.connect(refresh); window.account_timer.start(60_000)

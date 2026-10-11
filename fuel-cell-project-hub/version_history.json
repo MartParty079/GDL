@@ -189,6 +189,24 @@
       ],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.6.0",
+      "date": "2026-10-10",
+      "work_order": "CAP-ORG-2026-10-10 Project organization and collaboration",
+      "summary": "Add four-category project records, immutable member proposals, Admin snapshots, traceable files and structured meetings in isolated Beta.",
+      "major_features": [
+        "Permanent E/S/P/R/D/MTG identifiers with immutable UUIDs and date-first revision filenames",
+        "Creator provenance, exact procedure revisions and raw-to-derived image links",
+        "Single-writer organization snapshots, offline proposals, checksum recovery and legacy dry-run inventory",
+        "Five unassigned coordination roles, owned tasks, meeting lifecycle and PDF exports"
+      ],
+      "major_fixes": [
+        "Keep live production catalogs and research unchanged during Beta organization setup"
+      ],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }
