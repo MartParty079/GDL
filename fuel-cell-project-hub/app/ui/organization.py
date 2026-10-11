@@ -1,9 +1,10 @@
 """Four organization categories with guided metadata and proposal review."""
 import json
+import copy
 import threading
 from html import escape
 from pathlib import Path
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QDesktopServices, QImageReader, QPixmap
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -27,29 +28,49 @@ FIELDS = {
     'meeting': ('created_at', 'meeting_time', 'location', 'facilitator_id', 'note_taker_id', 'attendees',
                 'stage', 'agenda', 'minutes', 'summary', 'decisions', 'blockers', 'next_meeting_date',
                 'recording_path', 'transcript_path', 'summary_reviewed_by_id', 'summary_approved'),
-    'task': ('owner_id', 'supporting_members', 'due_date', 'acceptance', 'status', 'meeting_uuid',
-             'milestone', 'semester', 'deliverable', 'linked_file_uuids', 'decision_reference'),
+    'task': ('owner_id', 'supporting_members', 'due_date', 'acceptance', 'status', 'meeting_uuid', 'goal_uuid', 'period_uuid',
+             'milestone', 'semester', 'deliverable', 'linked_file_uuids', 'decision_reference', 'blockers'),
     'role': ('member_id', 'backup_id', 'notes'),
+    'goal': ('owner_id', 'due_date', 'status', 'output', 'next_step', 'blockers', 'period_uuid', 'active_goal'),
+    'period': ('start_date', 'end_date', 'due_at', 'grace_at', 'review_at'),
+    'deliverable': ('owner_id', 'period_uuid', 'role_uuid', 'submission_status', 'work_completed',
+                    'evidence_uuids', 'in_progress', 'results', 'blockers', 'next_plan', 'support_needed',
+                    'notes', 'reviewer_id', 'feedback', 'addendum_to'),
     'file': ('file_state', 'created_at', 'sequence', 'experiment_uuid', 'sample_uuids', 'procedure_uuid', 'meeting_uuid', 'design_uuid', 'research_uuid',
              'procedure_revision', 'parent_file_uuid', 'processing_run_id', 'document_type',
              'microscope_scale_calibration', 'magnification', 'illumination', 'exposure', 'sample_side_region',
              'operator_id', 'apparatus_settings', 'pressure_compression', 'units', 'run_count', 'notes'),
 }
-LONG = {'history', 'instructions', 'setup', 'results', 'notes', 'comparison_reason', 'feedback',
+FIELDS['file'] += ('recording_consent', 'deliverable_uuid')
+FIELDS['meeting'] += ('period_uuid', 'next_priorities', 'recording_consent', 'transcript_status')
+FIELDS['experiment'] += ('status', 'active_experiment')
+LONG = {'work_completed', 'in_progress', 'next_plan', 'support_needed', 'next_priorities',
+        'history', 'instructions', 'setup', 'results', 'notes', 'comparison_reason', 'feedback',
         'agenda', 'minutes', 'summary', 'decisions', 'blockers', 'acceptance', 'follow_up'}
 PEOPLE = {'owner_id', 'member_id', 'backup_id', 'facilitator_id', 'note_taker_id', 'reviewer_id',
           'operator_id', 'summary_reviewed_by_id'}
 LINKS = {'procedure_uuid': 'procedure', 'experiment_uuid': 'experiment', 'meeting_uuid': 'meeting',
          'parent_file_uuid': 'file', 'cad_source_uuid': 'file', 'design_uuid': 'design', 'research_uuid': 'research'}
+LINKS.update(period_uuid='period', goal_uuid='goal', role_uuid='role', addendum_to='deliverable', deliverable_uuid='deliverable')
 CHOICES = {'file_state': ('raw', 'poremap', 'overlay', 'outline', 'derived', 'reference'),
     'stage': ('agenda', 'minutes', 'summary'), 'status': ('planned', 'active', 'blocked', 'done'),
     'dimensionality': ('Unverified', '2D', '3D'), 'new_used_state': ('Unverified', 'New', 'Used'),
     'semester': ('Fall 2026', 'Spring 2027 — future planning only'),
-    'summary_approved': ('No', 'Yes')}
+    'summary_approved': ('No', 'Yes'), 'active_goal': ('No', 'Yes'), 'active_experiment': ('No', 'Yes'),
+    'recording_consent': ('No', 'Yes'), 'transcript_status': ('Not Supplied', 'Uploaded', 'Transcribed', 'Reviewed'),
+    'submission_status': ('Draft', 'Submitted', 'Under Review', 'Accepted', 'Changes Requested', 'Resubmitted')}
+FIELD_LABELS = {'sample_uuids': 'Linked Samples', 'procedure_uuid': 'Procedure', 'procedure_revision': 'Exact Procedure Revision',
+    'parent_file_uuid': 'Original Raw Image', 'processing_run_id': 'Processing Run UUID', 'created_at': 'Original Capture / Record Date',
+    'owner_id': 'Accountable Owner', 'period_uuid': 'Reporting Period', 'role_uuid': 'Assigned Coordination Role',
+    'evidence_uuids': 'Linked Evidence', 'goal_uuid': 'Goal', 'deliverable_uuid': 'Biweekly Submission',
+    'due_at': 'Deadline with Timezone', 'grace_at': 'Optional Grace Deadline', 'review_at': 'Optional Review Date',
+    'file_state': 'File Subtype', 'cad_source_uuid': 'Editable CAD Source', 'export_file_uuids': 'Fabrication Export Files',
+    'summary_reviewed_by_id': 'Summary Reviewer', 'attendees': 'Actual Attendance (select Present members)',
+    'recording_consent': 'Participant Permission to Store Recording', 'addendum_to': 'Accepted Submission for Addendum'}
 
 
 class RecordEditor(QDialog):
-    def __init__(self, service, kind, row=None, parent=None):
+    def __init__(self, service, kind, row=None, parent=None, defaults=None):
         super().__init__(parent)
         self.service, self.kind, self.row = service, kind, row
         self.setWindowTitle(('Edit ' if row else 'New ') + kind.title() + ' · Pending Admin publication')
@@ -62,7 +83,8 @@ class RecordEditor(QDialog):
         self.title = QLineEdit((row or {}).get('title', '')); form.addRow('Short description', self.title)
         if kind == 'role': self.title.setReadOnly(True)
         self.fields = {}
-        values = (row or {}).get('fields', {})
+        values = (row or {}).get('fields', defaults or {})
+        self.initial_fields = copy.deepcopy(values)
         for key in FIELDS[kind]:
             value = (row['created_at'] if row and key == 'created_at' else values.get(key, MEETING_TEMPLATES.get(key, '') if kind == 'meeting' else ''))
             if key in PEOPLE or key in LINKS or key in CHOICES or key.endswith('_section'):
@@ -77,16 +99,21 @@ class RecordEditor(QDialog):
                         widget.addItem(linked['id'] + ' · ' + linked['title'], linked['uuid'])
                 else:
                     choices = CHOICES.get(key) or tuple(p.split('/')[1] for p in FOLDERS if p.startswith('02_Research' if key == 'research_section' else '04_Design'))
+                    if key == 'status' and kind == 'goal': choices = ('To Do', 'In Progress', 'Blocked', 'Done')
+                    if key == 'status' and kind == 'experiment': choices = ('Ready', 'Running', 'In Use', 'Data Collected', 'Analyzed', 'Reviewed')
                     for item in choices:
-                        widget.addItem(item, item)
+                        human = {'raw': 'Raw Image', 'poremap': 'Pore Map', 'overlay': 'Overlay', 'outline': 'Outline',
+                                 'derived': 'Other Processed Output', 'reference': 'Reference / Document', 'planned': 'To Do',
+                                 'active': 'In Progress', 'blocked': 'Blocked', 'done': 'Done'}.get(item, item.replace('_', ' '))
+                        widget.addItem(human, item)
                 widget.setCurrentIndex(max(0, widget.findData(value)))
-            elif key in ('sample_uuids', 'attendees', 'supporting_members'):
+            elif key in ('sample_uuids', 'attendees', 'supporting_members', 'evidence_uuids'):
                 widget = QListWidget(); widget.setSelectionMode(QAbstractItemView.MultiSelection); widget.setMaximumHeight(110)
-                candidates = service.accounts.users() if key != 'sample_uuids' else service.rows(kind='sample')
+                candidates = service.rows(kind='sample') if key == 'sample_uuids' else service.rows() if key == 'evidence_uuids' else service.accounts.users()
                 for candidate in candidates:
                     label = candidate.get('display_name') or candidate['id'] + ' · ' + candidate['title']
                     widget.addItem(label); item = widget.item(widget.count() - 1)
-                    item.setData(Qt.UserRole, candidate['id'] if key != 'sample_uuids' else candidate['uuid'])
+                    item.setData(Qt.UserRole, candidate['uuid'] if key in ('sample_uuids', 'evidence_uuids') else candidate['id'])
                     item.setSelected(item.data(Qt.UserRole) in value)
             elif key in LONG:
                 widget = QTextEdit(); widget.setPlainText(str(value)); widget.setFixedHeight(125)
@@ -95,17 +122,53 @@ class RecordEditor(QDialog):
                 widget = QLineEdit(', '.join(value) if isinstance(value, list) else str(value))
                 if key == 'created_at': widget.setPlaceholderText('YYYY-MM-DD (source creation/capture date; blank = today)')
                 if key == 'due_date': widget.setPlaceholderText('YYYY-MM-DD')
+                if key in ('start_date', 'end_date'): widget.setPlaceholderText('YYYY-MM-DD; fourteen-day reporting span')
+                if key.endswith('_at') and key != 'created_at': widget.setPlaceholderText('YYYY-MM-DDTHH:MM:SS-05:00 (include timezone)')
                 if key.endswith('_uuids'): widget.setPlaceholderText('Comma-separated immutable file UUIDs from details')
             if row and key == 'created_at': widget.setEnabled(False)
             self.fields[key] = widget
-            form.addRow(key.replace('_', ' ').title(), widget)
+            form.addRow(FIELD_LABELS.get(key, key.replace('_uuid', '').replace('_id', '').replace('_', ' ').title()), widget)
         self.reason = QLineEdit(); form.addRow('Reason for edit', self.reason)
+        if kind == 'meeting':
+            views = QComboBox(); views.addItems(('Meeting Details', 'Agenda', 'Live Notes & Attendance', 'Summary & Approval'))
+            layout.insertWidget(1, views)
+            groups = ({'created_at', 'meeting_time', 'location', 'facilitator_id', 'note_taker_id', 'period_uuid', 'next_meeting_date'},
+                      {'agenda', 'period_uuid'}, {'minutes', 'attendees', 'decisions', 'blockers', 'next_priorities', 'recording_path', 'recording_consent', 'transcript_path', 'transcript_status'},
+                      {'summary', 'summary_reviewed_by_id', 'summary_approved'})
+            def view(index):
+                for key, widget in self.fields.items(): form.setRowVisible(widget, key in groups[index] or key == 'stage')
+            views.currentIndexChanged.connect(view); views.setCurrentIndex({'agenda': 1, 'minutes': 2, 'summary': 3}.get(values.get('stage', 'agenda'), 1)); view(views.currentIndex())
         self.error = QLabel(); self.error.setWordWrap(True); layout.addWidget(self.error)
+        if kind in ('meeting', 'deliverable'):
+            from app.services.storage import read_json, write_json
+            self.draft_path = service.local / 'drafts' / service.actor['user_id'] / (kind + '-' + ((row or {}).get('uuid') or 'new') + '.json')
+            cached = read_json(self.draft_path, {})
+            def recover():
+                if cached.get('base_revision') != ((row or {}).get('revision', 0)):
+                    QMessageBox.information(self, 'Compare recovered draft', 'The shared record changed. Copy relevant text after comparing; no newer notes will be overwritten.\n' + json.dumps(cached, indent=2)); return
+                self.title.setText(cached.get('title', ''))
+                for key, value in cached.get('fields', {}).items():
+                    control = self.fields.get(key)
+                    if isinstance(control, QComboBox): control.setCurrentIndex(max(0, control.findData(value)))
+                    elif isinstance(control, QTextEdit): control.setPlainText(str(value))
+                    elif isinstance(control, QLineEdit): control.setText(', '.join(value) if isinstance(value, list) else str(value))
+                    elif isinstance(control, QListWidget):
+                        for index in range(control.count()): control.item(index).setSelected(control.item(index).data(Qt.UserRole) in value)
+            if cached:
+                recover_button = QPushButton('Recover Local Draft'); recover_button.clicked.connect(recover); layout.addWidget(recover_button)
+            self.draft_timer = QTimer(self)
+            def autosave():
+                try:
+                    write_json(self.draft_path, {'base_revision': (row or {}).get('revision', 0), 'title': self.title.text(), 'fields': self.values()})
+                except (OSError, ValueError): self.error.setText('Local draft could not be saved. Use Save to queue changes or keep the editor open.')
+            self.autosave = autosave
+            self.draft_timer.timeout.connect(autosave); self.draft_timer.start(5000)
+            self.finished.connect(lambda _: self.draft_timer.stop())
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.validate); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
 
     def values(self):
-        values = dict((self.row or {}).get('fields', {}))
+        values = copy.deepcopy(self.initial_fields)
         for key, widget in self.fields.items():
             value = (widget.currentData() if isinstance(widget, QComboBox) else
                      [i.data(Qt.UserRole) for i in widget.selectedItems()] if isinstance(widget, QListWidget) else
@@ -123,6 +186,8 @@ class RecordEditor(QDialog):
             if not self.title.text().strip(): raise ValueError('Enter a short description.')
             if self.row and not self.reason.text().strip(): raise ValueError('Enter the reason for your correction.')
             self.service._validate_fields(self.kind, self.values(), self.service.state['records'])
+            from app.services.team_workflow import validate
+            validate(self.service, self.kind, self.values(), self.service.state['records'], self.row)
             self.accept()
         except ValueError as exc:
             self.error.setText(str(exc))
@@ -143,8 +208,14 @@ class OrganizationPanel(QWidget):
         self.path = QLabel('Configured root: ' + str(self.service.root)); self.path.setWordWrap(True); layout.addWidget(self.path)
         nav = QHBoxLayout(); layout.addLayout(nav)
         self.category = QComboBox(); self.category.addItems(CATEGORIES); nav.addWidget(self.category)
+        self.subsection = QComboBox(); self.subsection.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.subsection.setMinimumContentsLength(30); nav.addWidget(self.subsection)
         self.kind = QComboBox(); nav.addWidget(self.kind)
-        self.search = QLineEdit(); self.search.setPlaceholderText('Search IDs, aliases, names, contributors or provenance'); nav.addWidget(self.search, 1)
+        filter_row = QHBoxLayout(); layout.addLayout(filter_row)
+        self.archive_filter = QComboBox(); self.archive_filter.addItems(('Current Records', 'Archived Records', 'All Records')); filter_row.addWidget(self.archive_filter)
+        self.workspace_filter = QComboBox(); self.workspace_filter.addItems(('Project & Workspace', 'Canonical Project Only', 'Workspace Only')); filter_row.addWidget(self.workspace_filter)
+        self.search = QLineEdit(); self.search.setPlaceholderText('Search IDs, aliases, names, contributors or provenance'); filter_row.addWidget(self.search, 1)
+        clear = QPushButton('Clear Filters'); clear.clicked.connect(lambda: (self.search.clear(), self.subsection.setCurrentIndex(0), self.archive_filter.setCurrentIndex(0), self.workspace_filter.setCurrentIndex(0), self.kind.setCurrentIndex(0))); filter_row.addWidget(clear)
         self.actions = FlowLayout(); layout.addLayout(self.actions)
         for title, action in (('New record', self.new), ('Upload file', self.upload), ('Edit metadata', self.edit),
                               ('Open source', self.open), ('Refresh / submit pending', self.sync), ('Pending requests', self.pending),
@@ -153,7 +224,7 @@ class OrganizationPanel(QWidget):
         admin = FlowLayout(); layout.addLayout(admin)
         for title, action in (('Preview / initialize', self.setup), ('Publish requests', self.publish),
                               ('Legacy dry run', self.inventory), ('Check missing paths', self.reconcile),
-                              ('Restore snapshot', self.rollback)):
+                              ('Restore snapshot', self.rollback), ('Archive / Restore Record', self.archive), ('Link Legacy Images', self.legacy_links)):
             control = QPushButton(title); control.clicked.connect(action); control.setVisible(self.service.accounts.admin_unlocked); admin.addWidget(control)
         self.cancel_button = QPushButton('Stop inventory safely'); self.cancel_button.clicked.connect(self.cancel.set)
         self.cancel_button.setVisible(False); admin.addWidget(self.cancel_button)
@@ -164,11 +235,15 @@ class OrganizationPanel(QWidget):
         self.table.setColumnWidth(0, 145); self.table.setColumnWidth(2, 120); self.table.setColumnWidth(3, 145); self.table.setColumnWidth(4, 180)
         detail_page = QWidget(); detail_layout = QVBoxLayout(detail_page)
         self.image = QLabel(); self.image.setAlignment(Qt.AlignCenter); self.image.setMaximumHeight(250); self.image.hide(); detail_layout.addWidget(self.image)
+        self.image_choice = QComboBox(); self.image_choice.hide(); detail_layout.addWidget(self.image_choice)
+        self.image_choice.currentIndexChanged.connect(self.preview_image)
         self.details = QTextEdit(); self.details.setReadOnly(True); detail_layout.addWidget(self.details, 1)
         split.addWidget(detail_page); split.setSizes([820, 360])
         self.table.itemSelectionChanged.connect(self.detail)
         self.category.currentTextChanged.connect(self.change_category)
+        self.subsection.currentIndexChanged.connect(self.select_subsection)
         self.kind.currentIndexChanged.connect(self.reload); self.search.textChanged.connect(self.reload)
+        self.archive_filter.currentIndexChanged.connect(self.reload); self.workspace_filter.currentIndexChanged.connect(self.reload)
         notice = QLabel(LIMIT + ' Literature comparisons require a recorded reviewer rationale. Automatic transcription is not available; attach a verified transcript manually.')
         notice.setWordWrap(True); layout.addWidget(notice)
         self.change_category()
@@ -183,6 +258,7 @@ class OrganizationPanel(QWidget):
             for control in self.findChildren(QWidget):
                 if isinstance(control, (QPushButton, QComboBox, QLineEdit)): control.setEnabled(True)
             self.cancel_button.setVisible(False); self.reload()
+            if hasattr(self.window, 'home_panel'): self.window.home_panel.reload()
             if done: done(result)
         def fail(message):
             finish(None); QMessageBox.information(self, 'Organization unavailable', 'Operation incomplete. Pending changes and original files were preserved.\n' + str(message))
@@ -195,18 +271,43 @@ class OrganizationPanel(QWidget):
 
     def change_category(self, *_):
         from app.services.organization import KINDS
+        from app.ui.home import SUBMENUS
+        self.subsection.blockSignals(True); self.subsection.clear()
+        self.subsection.addItem('All ' + self.category.currentText() + ' records', None)
+        for label, kind, section in SUBMENUS[self.category.currentText()]: self.subsection.addItem(label, (kind, section))
+        self.subsection.blockSignals(False)
         self.kind.blockSignals(True); self.kind.clear(); self.kind.addItem('All record types', '')
         for kind, (_, category) in KINDS.items():
             if category == self.category.currentText() or kind == 'file': self.kind.addItem(kind.title(), kind)
         self.kind.blockSignals(False); self.reload()
 
+    def select_subsection(self, *_):
+        selected = self.subsection.currentData()
+        self.search.clear()
+        self.kind.setCurrentIndex(max(0, self.kind.findData(selected[0] if selected else '')))
+        self.reload()
+
     def reload(self, *_):
         self.rows = self.service.rows(self.category.currentText(), self.kind.currentData(), self.search.text())
+        if self.archive_filter.currentIndex() < 2:
+            archived = self.archive_filter.currentIndex() == 1
+            self.rows = [r for r in self.rows if (r['fields'].get('archived') == 'Yes') == archived]
+        if self.workspace_filter.currentIndex():
+            workspace = self.workspace_filter.currentIndex() == 2
+            self.rows = [r for r in self.rows if r.get('relative_path', '').startswith('_Team_Workspaces/') == workspace]
+        selected = self.subsection.currentData()
+        if selected and selected[1]:
+            section = selected[1]
+            self.rows = [r for r in self.rows if section in (r['fields'].get('research_section'), r['fields'].get('design_section'), r['fields'].get('document_type'), r['fields'].get('stage'))
+                         or section == 'minutes' and r['fields'].get('stage') == 'summary']
         self.table.setRowCount(len(self.rows))
         self.table.clearSelection(); self.table.setCurrentCell(-1, -1)
         people = {p['id']: p['display_name'] for p in self.service.accounts.registry['users']}
         for number, row in enumerate(self.rows):
-            fields = row['fields']
+            fields = dict(row['fields'])
+            if row['kind'] == 'deliverable':
+                fields['file_state'] = fields.get('submission_status', 'Draft')
+                fields['status'] = fields['file_state']
             values = (row['id'] + ' · ' + row['kind'], row['title'], str(row['revision']) + ' · ' + fields.get('file_state', fields.get('stage', 'record')),
                       row['created_by_display_name'], people.get(fields.get('owner_id'), 'Unassigned') + ' · ' + fields.get('status', ''))
             for column, value in enumerate(values): self.table.setItem(number, column, QTableWidgetItem(value))
@@ -222,14 +323,14 @@ class OrganizationPanel(QWidget):
         row = self.selected()
         if not row: return
         self.image.hide()
-        if row['kind'] == 'file' and row.get('relative_path'):
-            from app.services.project_storage import PLACEHOLDER_FLAGS
-            source = self.service.safe(row['relative_path'])
-            if source.is_file() and not getattr(source.stat(), 'st_file_attributes', 0) & PLACEHOLDER_FLAGS:
-                reader = QImageReader(str(source))
-                if reader.canRead():
-                    reader.setScaledSize(reader.size().scaled(360, 240, Qt.KeepAspectRatio))
-                    self.image.setPixmap(QPixmap.fromImage(reader.read())); self.image.show()
+        self.image_choice.blockSignals(True); self.image_choice.clear()
+        candidates = [row] + [r for r in self.service.rows() if (row['kind'] == 'sample' and row['uuid'] in r['fields'].get('sample_uuids', []))
+            or r['fields'].get('parent_file_uuid') == row['uuid'] or row['fields'].get('parent_file_uuid') == r['uuid']]
+        for candidate in candidates:
+            if Path(candidate.get('relative_path', '')).suffix.lower() in ('.png', '.jpg', '.jpeg', '.tif', '.tiff', '.bmp'):
+                self.image_choice.addItem(candidate['id'] + ' · ' + candidate['fields'].get('file_state', 'reference') + ' · ' + candidate['title'], candidate['uuid'])
+        self.image_choice.blockSignals(False); self.image_choice.setVisible(self.image_choice.count() > 0)
+        self.preview_image()
         linked = [r for r in self.service.rows() if row['uuid'] in json.dumps(r['fields'])]
         history = [r for r in self.service.state['audit'] if r.get('record_uuid') == row['uuid']]
         people = {p['id']: p['display_name'] for p in self.service.accounts.registry['users']}
@@ -241,7 +342,7 @@ class OrganizationPanel(QWidget):
         body = '<h2>' + escape(row['id'] + ' · ' + row['title']) + '</h2>'
         if row['kind'] == 'research':
             body += '<p><b>' + ('Reviewer-marked comparable' if row['fields'].get('comparable') else 'Excluded from direct comparison') + '</b><br>' + escape(row['fields'].get('comparability_warning', LIMIT)) + '</p>'
-        for name, value in (('Creator', row['created_by_display_name']), ('Revision', row['revision']), ('Created', row['created_at'][:10]),
+        for name, value in (('Creator', row['created_by_display_name']), ('Identity verification', row.get('created_by_verification', 'Historical app attribution')), ('Revision', row['revision']), ('Created', row['created_at'][:10]),
                             ('Original filename', row.get('original_filename', '')), ('Source path', row.get('relative_path', ''))):
             if value != '': body += '<p><b>' + name + ':</b> ' + escape(str(value)) + '</p>'
         body += '<h3>Metadata</h3>'
@@ -251,6 +352,39 @@ class OrganizationPanel(QWidget):
         body += '<h3>Linked records</h3>' + ''.join('<p>' + escape(r['id'] + ' · ' + r['title']) + '</p>' for r in linked)
         body += '<h3>Provenance</h3><p>' + str(len(history)) + ' audited changes. Inspect audit for prior/new values and immutable UUIDs.</p>'
         self.details.setHtml(body)
+
+    def preview_image(self, *_):
+        self.image.hide()
+        row = self.service.state['records'].get(self.image_choice.currentData(), {})
+        if not row.get('relative_path'): return
+        from app.services.project_storage import PLACEHOLDER_FLAGS
+        source = self.service.safe(row['relative_path'])
+        if source.is_file() and not getattr(source.stat(), 'st_file_attributes', 0) & PLACEHOLDER_FLAGS:
+            reader = QImageReader(str(source))
+            if reader.canRead():
+                reader.setScaledSize(reader.size().scaled(360, 240, Qt.KeepAspectRatio))
+                self.image.setPixmap(QPixmap.fromImage(reader.read())); self.image.show()
+
+    def legacy_links(self):
+        dialog = QDialog(self); dialog.setWindowTitle('Review Legacy Image Associations'); dialog.resize(650, 450); form = QFormLayout(dialog)
+        sample, raw = QComboBox(), QComboBox()
+        derivatives = QListWidget(); derivatives.setSelectionMode(QAbstractItemView.MultiSelection)
+        for row in self.service.rows(kind='sample'): sample.addItem(row['id'] + ' · ' + row['title'], row['uuid'])
+        for row in self.service.rows():
+            if not row.get('legacy'): continue
+            state = row['fields'].get('file_state')
+            if state in ('raw', 'reference'): raw.addItem(row['id'] + ' · ' + row['title'], row['uuid'])
+            if state in ('poremap', 'overlay', 'outline'):
+                derivatives.addItem(row['id'] + ' · ' + row['title']); derivatives.item(derivatives.count()-1).setData(Qt.UserRole, row['uuid'])
+        reason = QLineEdit(); form.addRow('Published sample', sample); form.addRow('Legacy raw image', raw); form.addRow('Matching derivative images', derivatives); form.addRow('Association evidence / reason', reason)
+        form.addRow(QLabel('Original files and Unknown creators are preserved. Processing conditions remain unverified.'))
+        controls = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        def save():
+            sample_key, raw_key = sample.currentData(), raw.currentData()
+            derived_keys, evidence = [item.data(Qt.UserRole) for item in derivatives.selectedItems()], reason.text()
+            self.run(lambda: self.service.link_legacy_images(sample_key, raw_key, derived_keys, evidence)); dialog.accept()
+        controls.accepted.connect(save)
+        controls.rejected.connect(dialog.reject); form.addRow(controls); dialog.exec()
 
     def new(self):
         choices = [self.kind.itemData(i) for i in range(1, self.kind.count()) if self.kind.itemData(i) not in ('role', 'file')]
@@ -266,12 +400,8 @@ class OrganizationPanel(QWidget):
         if editor.exec(): self.attempt(lambda: self.service.submit(row['kind'], editor.title.text(), editor.values(), row['uuid'], editor.reason.text())); self.reload()
 
     def upload(self):
-        source, _ = QFileDialog.getOpenFileName(self, 'Select resident file to copy; source remains unchanged')
-        if not source: return
-        editor = RecordEditor(self.service, 'file', parent=self); editor.title.setText(Path(source).stem)
-        if editor.exec():
-            values, title = editor.values(), editor.title.text()
-            self.run(lambda: self.service.upload(source, title, values))
+        from app.ui.intake import IntakeDialog
+        IntakeDialog(self, self.service).exec()
 
     def open(self):
         row = self.selected()
@@ -281,6 +411,16 @@ class OrganizationPanel(QWidget):
                 if not target.exists(): raise ValueError('Source is missing or not synchronized. It has not been marked deleted.')
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
             self.attempt(action)
+
+    def archive(self):
+        row = self.selected()
+        if not row or row['kind'] == 'role': return
+        archived = row['fields'].get('archived') == 'Yes'
+        reason, ok = QInputDialog.getText(self, 'Restore record' if archived else 'Archive record', 'Reason (no files will be deleted or moved):')
+        if not ok or not reason.strip(): return
+        values = dict(row['fields'], archived='No' if archived else 'Yes')
+        self.attempt(lambda: self.service.submit(row['kind'], row['title'], values, row['uuid'], reason))
+        self.reload()
 
     def text_dialog(self, title, text):
         dialog = QDialog(self); dialog.setWindowTitle(title); dialog.resize(800, 600)
@@ -295,7 +435,7 @@ class OrganizationPanel(QWidget):
 
     def publish(self): self.run(self.service.consume)
     def sync(self):
-        configured = self.window.store.local.get('project_locations', {}).get('shared_storage')
+        configured = self.window.store.local.get('organization_root') or self.window.store.local.get('project_locations', {}).get('shared_storage')
         if configured and Path(configured).resolve() != self.service.root:
             self.service = Organization(self.window.store)
             self.path.setText('Configured root: ' + str(self.service.root))

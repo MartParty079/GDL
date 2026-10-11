@@ -15,6 +15,13 @@ Members submit recoverable proposals; the enrolled Admin publishes validated
 snapshots. See [Beta setup and migration](docs/PROJECT_ORGANIZATION.md). Existing
 catalogs and source filenames are preserved; no production migration runs here.
 
+**Project Home (0.7.0)** connects those same records to four labeled destinations,
+Quick Start, current goals, meeting agendas, reporting deadlines and the active
+procedure revision. Batch intake, shared personal workspaces, reviewed biweekly
+submissions, recoverable meeting drafts and template summaries are described in
+[the revised workflow guide](docs/TEAM_WORKFLOW_V2.md), including fixture evidence,
+setup, migration safeguards and remaining live-team acceptance requirements.
+
 ## Local team profiles and Windows distribution
 
 Select Matthew Kime (Admin), Andrew Michelson, Monterrius Ridley or Ryan Rodriguez.

@@ -207,6 +207,21 @@
       "breaking_changes": [],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.7.0",
+      "date": "2026-10-10",
+      "work_order": "CAP-ORG-2026-10-10 REV 2.0",
+      "summary": "Authoritative project Home, shared team workspaces, batch intake and configurable biweekly reporting",
+      "major_features": [
+        "Four fully labeled project destinations with canonical goals, meeting agenda, schedule and locked procedure revision",
+        "Recoverable batch uploads, shared workspaces and reviewed biweekly submissions with immutable acceptance history",
+        "Local draft recovery, recording consent, template meeting summaries and reversible archive filters"
+      ],
+      "major_fixes": [],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }

@@ -76,6 +76,16 @@
       "summary": "Add four-category project records, immutable member proposals, Admin snapshots, traceable files and structured meetings in isolated Beta.",
       "status": "implemented",
       "channel": "beta"
+    },
+    {
+      "work_order_id": "cap-org-2026-10-10-rev-2-0",
+      "title": "CAP-ORG-2026-10-10 REV 2.0",
+      "version": "0.7.0",
+      "started_at": "2026-10-10",
+      "completed_at": null,
+      "summary": "Authoritative project Home, shared team workspaces, batch intake and configurable biweekly reporting",
+      "status": "implemented",
+      "channel": "beta"
     }
   ]
 }

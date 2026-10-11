@@ -118,9 +118,14 @@ class ActivityPanel(QWidget):
         self.table.setEditTriggers(QTableWidget.NoEditTriggers); layout.addWidget(self.table)
         self.table.cellDoubleClicked.connect(self.inspect)
         if accounts.admin_unlocked:
-            controls = QHBoxLayout(); layout.addLayout(controls)
-            for title, action in [('Add Member', self.add), ('Rename', self.rename), ('Deactivate', self.deactivate), ('Reactivate', self.reactivate), ('Reset Member PIN', self.reset_pin), ('Preserved hosted history', self.legacy)]:
+            from app.ui.flow_layout import FlowLayout
+            controls = FlowLayout(); layout.addLayout(controls)
+            for title, action in [('Add Member', self.add), ('Rename', self.rename), ('Deactivate', self.deactivate), ('Reactivate', self.reactivate), ('Set Member PIN', self.set_pin), ('Reset Member PIN', self.reset_pin), ('Preserved hosted history', self.legacy)]:
                 button = QPushButton(title); button.clicked.connect(lambda checked=False, fn=action: self.guard(fn)); controls.addWidget(button)
+            def workspaces():
+                from app.services.team_workflow import ensure_workspaces
+                ensure_workspaces(accounts.store.organization_service)
+            control = QPushButton('Initialize Shared Workspaces'); control.clicked.connect(lambda: self.guard(workspaces)); controls.addWidget(control)
         self.guard(lambda: None)
 
     def guard(self, fn):
@@ -159,6 +164,14 @@ class ActivityPanel(QWidget):
 
     def reactivate(self):
         self.accounts.manage_user(self.chosen(), active=True)
+
+    def set_pin(self):
+        identity = self.chosen()
+        value, ok = QInputDialog.getText(self, 'Set Member PIN', 'New four to six digits:', QLineEdit.Password)
+        if not ok: return
+        confirm, ok = QInputDialog.getText(self, 'Confirm Member PIN', 'Enter the PIN again:', QLineEdit.Password)
+        if ok and value == confirm: self.accounts.manage_user(identity, new_pin=value)
+        elif ok: raise ValueError('PINs did not match; existing PIN was preserved.')
 
     def legacy(self):
         self.accounts.require_admin()
@@ -220,6 +233,7 @@ def attach_account_ui(window, accounts, sign_out):
     window.organization_panel = OrganizationPanel(window)
     window.tabs.addTab(window.organization_panel, 'Project Organization')
     panel = ActivityPanel(accounts, window)
+    window.local_activity_panel = panel
     window.tabs.addTab(panel, 'Admin · User Activity' if accounts.admin_unlocked else 'My Activity')
     if accounts.admin_unlocked:
         window.admin_workspace = panel
@@ -252,6 +266,15 @@ def attach_account_ui(window, accounts, sign_out):
     menu.addAction('Change my PIN', change_pin)
     menu.addAction('Check for Updates', window.check_updates)
     menu.addAction('Switch User / Sign Out', sign_out)
+    from app.ui.home import HomePanel
+    window.home_panel = HomePanel(window)
+    # Preserve existing tab indices used by legacy Settings/Project routes.
+    window.tabs.addTab(window.home_panel, 'Home')
+    window.tabs.setTabVisible(list(window.pages).index('Dashboard'), False)
+    window.tabs.setCurrentWidget(window.home_panel)
+    home_button = QPushButton('Home', window)
+    home_button.clicked.connect(lambda: (window.home_panel.reload(), window.tabs.setCurrentWidget(window.home_panel)))
+    window.centralWidget().layout().itemAt(0).layout().addWidget(home_button)
     window.account_timer = QTimer(window)
     def refresh():
         try:

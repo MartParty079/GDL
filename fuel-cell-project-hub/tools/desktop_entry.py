@@ -154,12 +154,16 @@ def self_check(report):
         assert account_window.organization_panel.category.count() == len(CATEGORIES) == 4
         assert len(account_window.organization_panel.service.rows(kind='role')) == 5
         assert account_window.organization_panel.service.rows(kind='sample')[0]['id'] == 'S0001'
+        assert account_window.tabs.currentWidget() is account_window.home_panel
+        assert len(account_window.home_panel.category_buttons) == 4
+        assert len(account_window.organization_panel.service.state['workspace_users']) == 4
         account_window.session_presence.stop()
         accounts.sign_out()
         accounts.close()
         account_window.close(); account_window.deleteLater()
         login.close(); login.deleteLater()
-        result.update(login_ui_available=True, external_auth_required=False, local_identity_available=True,
+        result.update(home_four_categories=True, shared_workspaces_available=True,
+                      login_ui_available=True, external_auth_required=False, local_identity_available=True,
                       channel=CHANNEL,application_name=APP_NAME,profile_name=PROFILE_NAME,
                       organization_four_categories=True,organization_snapshot_member_reader=True)
         deadline=time.monotonic()+30

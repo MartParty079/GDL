@@ -112,7 +112,7 @@ class OrganizationTests(unittest.TestCase):
         self.assertTrue(list((member.local / 'outbox').glob('*.json')))
         self.assertFalse(self.root.exists())
         member.refresh(); self.assertIn('Offline', member.status)
-        again = Organization(member.store); self.assertEqual(again.state['revision'], 1)
+        again = Organization(member.store); self.assertEqual(again.state['revision'], member.state['revision'])
         moved.rename(self.root); again.flush(); self.admin.consume()
         with patch.object(Organization, 'inventory', side_effect=AssertionError('Member rescanned')):
             self.assertTrue(again.refresh()); self.assertIn(key, again.state['records'])

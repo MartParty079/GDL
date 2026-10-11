@@ -393,6 +393,7 @@ class MeetingsPanel(QWidget):
         self.status.setText('Synchronizing meetings…')
         def work():return self.service.sync(),self.service.roster()
         def done(result):
+            if not self.service.accounts.profile:return
             status,roster=result;self.roster=roster or self.roster;self.status.setText(status)
             selected=self.attendee_filter.currentData();self.attendee_filter.blockSignals(True);self.attendee_filter.clear();self.attendee_filter.addItem('All attendees',None)
             for p in self.roster:self.attendee_filter.addItem(p.get('display_name') or p['id'],p['id'])
@@ -442,6 +443,7 @@ class WeeklyPanel(QWidget):
     def refresh_roster(self):
         if self.tasks.busy():return
         def done(roster):
+            if not self.accounts.profile:return
             self.person.clear()
             if self.accounts.profile['role']=='admin':self.person.addItem('All active team members',None)
             for p in roster:self.person.addItem(p.get('display_name') or p.get('email') or p['id'],p)

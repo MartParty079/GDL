@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 — 2026-10-10
+
+- Authoritative project Home, shared team workspaces, batch intake and configurable biweekly reporting
+- Four fully labeled project destinations with canonical goals, meeting agenda, schedule and locked procedure revision
+- Recoverable batch uploads, shared workspaces and reviewed biweekly submissions with immutable acceptance history
+- Local draft recovery, recording consent, template meeting summaries and reversible archive filters
+
 ## 0.6.0 — 2026-10-10
 
 - Add four-category project records, immutable member proposals, Admin snapshots, traceable files and structured meetings in isolated Beta.

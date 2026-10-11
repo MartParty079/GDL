@@ -483,6 +483,10 @@ class HubWindow(QMainWindow):
         if not hasattr(self, 'research_workspace'):
             self.research_workspace = ResearchHub(self.storage_settings, self)
         tabs.addTab(self.research_workspace if self.storage_settings.catalog else self.files_panel, "Files & Data")
+        if not self.storage_settings.catalog:
+            self.research_workspace.hide()
+        else:
+            self.files_panel.hide()
         analysis_scroll = QScrollArea()
         analysis_scroll.setWidgetResizable(True)
         analysis_scroll.setFrameShape(QFrame.NoFrame)

@@ -64,6 +64,7 @@ class LocalAccounts:
         self.offline = False
         self.warning = ''
         self.admin_unlocked = False
+        self.authenticated_pin_digest = None
         self.launch_recorded = False
         self.base = store.local_dir / 'identity'
         self.base.mkdir(parents=True, exist_ok=True)
@@ -74,7 +75,7 @@ class LocalAccounts:
     def storage_root(self):
         """Edition-separated subfolder under the configured project, never a DB."""
         locations = self.store.local.get('project_locations', {})
-        root = locations.get('shared_storage') if locations.get('enabled') else None
+        root = self.store.local.get('organization_root') or (locations.get('shared_storage') if locations.get('enabled') else None)
         root = Path(root) if root else self.store.local_dir / 'research-sandbox' / 'shared'
         if self.store.sandbox_required and not root.resolve().is_relative_to(self.store.local_dir.resolve()):
             raise ValueError('Development and Beta identity storage must stay in the isolated sandbox.')
@@ -228,6 +229,7 @@ class LocalAccounts:
         write_json(self.base / 'attempts.json', attempts)
         self.profile = {k: v for k, v in profile.items() if k != 'pin'}
         self.admin_unlocked = profile['role'] == 'admin' and bool(profile['pin'])
+        self.authenticated_pin_digest = profile['pin']['digest'] if profile['pin'] else None
         self.session = {'id': str(uuid.uuid4())}
         self.store.local['selected_user'] = identity if remember else ''
         self.store.local['automatic_user'] = identity if automatic and remember and not profile['pin'] and profile['role'] == 'member' else ''
@@ -258,6 +260,7 @@ class LocalAccounts:
         self.flush()
         self.profile = self.session = None
         self.admin_unlocked = False
+        self.authenticated_pin_digest = None
         self.store.local['automatic_user'] = ''
         self.store.save_local()
 
@@ -270,9 +273,11 @@ class LocalAccounts:
             raise ValueError('Current PIN was not accepted.')
         with self.edit(admin=False) as value:
             next(p for p in value['users'] if p['id'] == person['id'])['pin'] = password_hash(new) if new else None
+        configured = self.find(person['id']).get('pin')
+        self.authenticated_pin_digest = configured['digest'] if configured else None
         self.event('PIN_CHANGED')
 
-    def manage_user(self, identity=None, name=None, active=None, reset_pin=False):
+    def manage_user(self, identity=None, name=None, active=None, reset_pin=False, new_pin=None):
         with self.edit() as value:
             if identity is None:
                 person = dict(id=str(uuid.uuid4()), display_name='', role='member', active=True, pin=None)
@@ -289,6 +294,10 @@ class LocalAccounts:
                 person['active'] = bool(active)
             if reset_pin:
                 person['pin'] = None
+            if new_pin is not None:
+                if person['role'] == 'admin': raise ValueError('Use Admin PIN change or recovery.')
+                validate_pin(new_pin, required=True)
+                person['pin'] = password_hash(new_pin)
         self.event('PROFILE_CHANGED', 'user', person['id'])
 
     def event(self, kind, entity_type='', entity_id='', entity_name='', details=None, status='completed', owner=None):
