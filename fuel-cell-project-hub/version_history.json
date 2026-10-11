@@ -222,6 +222,20 @@
       "breaking_changes": [],
       "git_commit": null,
       "git_release_tag": null
+    },
+    {
+      "version": "0.8.0",
+      "date": "2026-10-11",
+      "work_order": "Capstone UI Design Skills \u2014 Structured Sidebar",
+      "summary": "Promote the selected native sidebar layout and cohesive accessible workflow surfaces",
+      "major_features": [
+        "Persistent four-category navigation and compact canonical Home",
+        "Shared appearance, typography and table browsing controls"
+      ],
+      "major_fixes": [],
+      "breaking_changes": [],
+      "git_commit": null,
+      "git_release_tag": null
     }
   ]
 }

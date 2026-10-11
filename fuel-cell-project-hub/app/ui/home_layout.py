@@ -1,31 +1,11 @@
-"""Native prototype components; reuse all existing Home workflow handlers."""
+"""Owner-selected Structured Sidebar composition using existing Home handlers."""
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QScrollArea, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QLabel, QFrame, QTextBrowser, QComboBox, QLineEdit,
     QTabWidget, QPushButton, QMessageBox, QSizePolicy)
-from app.ui.home import HomePanel, button
+from app.ui.components import button
 from app.ui.flow_layout import FlowLayout
 from app.services.organization import CATEGORIES
-
-TOKENS = dict(spacing=(4, 8, 12, 16, 24, 32), font=(12, 13, 14, 18, 24),
-              radius=(6, 10), background='#F5F6F8', surface='#FFFFFF',
-              text='#17212F', muted='#526174', border='#D5DCE5',
-              accent='#0067C0', motion_ms=0)
-
-# Prototype-local tokens. No changes to the app's stylesheet or appearance settings.
-STYLE = '''
-QWidget { font-family: "Segoe UI"; font-size: 13px; color: #17212F; }
-QPushButton { padding: 7px 12px; min-height: 18px; border-radius: 6px; }
-QPushButton:focus, QLineEdit:focus, QComboBox:focus { border: 2px solid #0067C0; }
-QPushButton:pressed { background: #D8EAFA; }
-QPushButton[primary="true"] { background: #0067C0; color: white; }
-QFrame#card { background: white; border: 1px solid #D5DCE5; border-radius: 10px; }
-QLabel[proto="heading"] { font-size: 24px; font-weight: 600; }
-QLabel[proto="section"] { font-size: 14px; font-weight: 600; }
-QLabel[proto="muted"] { font-size: 12px; color: #526174; }
-QPushButton#primary-category { padding: 9px 14px; font-weight: 600; }
-QTextBrowser { background: white; border: none; selection-background-color: #D8EAFA; }
-'''
 
 CARD_NAMES = ('Current Goal', 'Progress and Near-Term Plan', 'Next Meeting & Agenda',
               'Schedule & Biweekly Due', 'Active Procedure & Parameters', 'Project Repository')
@@ -36,22 +16,15 @@ QUICK = (('New Experiment', 'experiment'), ('Register Sample', 'sample'),
 
 
 def heading(text, kind='section'):
-    value = QLabel(text); value.setProperty('proto', kind); value.setWordWrap(True)
+    value = QLabel(text); value.setProperty('kind', {'heading': 'heading', 'section': 'section', 'muted': 'muted'}[kind]); value.setWordWrap(True)
     return value
 
 
-def wrapper(layout):
-    widget = QWidget(); widget.setLayout(layout); return widget
-
-
-class PrototypeHome(HomePanel):
+class HomeLayoutMixin:
     """Only composition differs. Methods and authoritative records are unchanged."""
-    def __init__(self, window):
-        QScrollArea.__init__(self, window)
-        self.window, self.panel = window, window.organization_panel
+    def build_home(self):
         self.setWidgetResizable(True); self.setFrameShape(QFrame.NoFrame)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setStyleSheet(STYLE)
         page = QWidget(); self.body = QVBoxLayout(page)
         self.body.setContentsMargins(16, 12, 16, 16); self.body.setSpacing(12)
         self.setWidget(page)
@@ -63,9 +36,9 @@ class PrototypeHome(HomePanel):
             layout = QVBoxLayout(frame); layout.setContentsMargins(12, 10, 12, 10); layout.setSpacing(5)
             layout.setAlignment(Qt.AlignTop)
             layout.addWidget(heading(name))
-            view = QTextBrowser(); view.setOpenLinks(False); view.setFrameShape(QFrame.NoFrame)
-            view.document().setDefaultStyleSheet('a { color: #0067C0; text-decoration: none; }')
-            view.setMinimumWidth(0); view.setFixedHeight(94)
+            from app.ui.workspace_components import ContextBrowser
+            view = ContextBrowser(); view.setOpenLinks(False); view.setFrameShape(QFrame.NoFrame)
+            view.setMinimumWidth(0)
             view.anchorClicked.connect(lambda url: self.open_record(url.toString()))
             layout.addWidget(view); self.cards[name] = frame, view
         self.category_buttons = []
@@ -75,26 +48,21 @@ class PrototypeHome(HomePanel):
             control.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             self.category_buttons.append(control)
         self.build_details()
+        self.header()
+        self.body.addWidget(self.notifications)
+        self.body.addWidget(heading('Quick Start'))
+        self.body.addLayout(self.quick())
+        self.body.addWidget(heading('Current priority & upcoming work'))
+        from app.ui.workspace_components import ContextGrid
+        self.body.addWidget(ContextGrid([self.cards[name][0] for name in (CARD_NAMES[0], CARD_NAMES[4], CARD_NAMES[3])], 3))
+        self.body.addWidget(ContextGrid([self.cards[name][0] for name in (CARD_NAMES[2], CARD_NAMES[1])], 2))
+        self.body.addWidget(self.cards[CARD_NAMES[5]][0])
+        self.finish()
 
     def header(self):
         row = QHBoxLayout(); row.addWidget(self.title); row.addStretch()
-        row.addWidget(heading('Isolated preview · no production writes', 'muted'))
+        row.addWidget(heading('Canonical project records', 'muted'))
         self.body.addLayout(row); self.body.addWidget(self.stage)
-
-    def utilities(self, vertical=False):
-        layout = QVBoxLayout() if vertical else FlowLayout(spacing=8)
-        for text, handler in (('My Workspace', self.workspace), ('Settings', self.settings),
-                              ('Activity', self.activity), ('Account / PIN', self.account),
-                              ('Refresh Index', self.sync)):
-            layout.addWidget(button(text, handler))
-        if self.service.accounts.admin_unlocked:
-            layout.addWidget(button('Administration', self.administration))
-        return layout
-
-    def categories(self, vertical=False):
-        layout = QVBoxLayout() if vertical else FlowLayout(spacing=8)
-        for control in self.category_buttons: layout.addWidget(control)
-        return layout
 
     def quick(self, compact=False):
         layout = FlowLayout(spacing=8)
@@ -112,14 +80,8 @@ class PrototypeHome(HomePanel):
         layout.addWidget(button('Upload Files', self.panel.upload))
         return layout
 
-    def grid(self, names, columns=3):
-        grid = QGridLayout(); grid.setSpacing(12)
-        for i, name in enumerate(names): grid.addWidget(self.cards[name][0], i // columns, i % columns)
-        for i in range(columns): grid.setColumnStretch(i, 1)
-        return grid
-
     def build_details(self):
-        """Complete less-frequent Home tools in tabs, not removed from variants."""
+        """Keep less-frequent Home tools together without obscuring the primary actions."""
         self.detail_tabs = QTabWidget(); self.detail_tabs.setAccessibleName('Additional Home tools')
         activity = QWidget(); layout = QVBoxLayout(activity); layout.setContentsMargins(8, 4, 8, 4)
         filters = FlowLayout(spacing=8)
@@ -142,7 +104,7 @@ class PrototypeHome(HomePanel):
         row = QHBoxLayout(); row.addWidget(self.recent, 1)
         row.addWidget(button('Open Record', lambda: self.open_record(self.recent.currentData()))); layout.addLayout(row)
         self.tools = QComboBox(); self.tools.setAccessibleName('Configured tool or resource')
-        row = QHBoxLayout(); row.addWidget(self.tools, 1); row.addWidget(button('Check Selected Launcher', self.open_tool)); layout.addLayout(row)
+        row = QHBoxLayout(); row.addWidget(self.tools, 1); row.addWidget(button('Open Selected', self.open_tool)); layout.addLayout(row)
         row = FlowLayout(spacing=8); row.addWidget(button('Configure Resource', self.resource))
         row.addWidget(button('Software Paths & Status', lambda: self.window.show_page('Software')))
         row.addWidget(button('New Goal', lambda: self.create('goal'))); row.addWidget(button('New Task', lambda: self.create('task')))
@@ -151,19 +113,6 @@ class PrototypeHome(HomePanel):
         layout.addLayout(row); self.detail_tabs.addTab(resources, 'Recent Work & Tools')
         self.detail_tabs.setMinimumHeight(185)
 
-    def open_tool(self):
-        # Exploration validates availability without starting scientific/external apps.
-        selected = self.tools.currentData()
-        if not selected: return
-        caption = self.tools.currentText()
-        QMessageBox.information(self, 'Prototype launcher check', caption +
-            '\nConfigure paths through Software Paths & Status. External launches are disabled in this isolated design picker.')
-
     def finish(self):
         self.body.addWidget(self.detail_tabs); self.body.addStretch(); self.reload()
-        self.stage.setText(self.stage.text() + ' · Representative fixture data')
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        # Native minimum widths are bounded; long context stays selectable and scrollable.
-        for _, view in self.cards.values(): view.setMinimumWidth(0)
+        self.stage.setWordWrap(True)

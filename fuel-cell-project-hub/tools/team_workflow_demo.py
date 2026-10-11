@@ -58,8 +58,12 @@ def demo(output):
     def capture(widget, name):
         app.processEvents(); path = output / (name + '.png'); widget.grab().save(str(path)); screenshots.append(path.name)
     capture(window, 'home')
+    window.home_panel.open_record(raw_key); capture(window, 'image-analysis')
+    window.workspace_rail.go_home()
     window.resize(1024, 768); app.processEvents(); capture(window, 'home-small'); window.resize(1440, 1000)
     window.home_panel.verticalScrollBar().setValue(window.home_panel.verticalScrollBar().maximum()); capture(window, 'quick-start')
+    window.home_panel.navigate('Research'); capture(window, 'research')
+    window.home_panel.navigate('Design & Prototyping'); capture(window, 'design')
     window.home_panel.navigate('Meetings & Goals'); window.organization_panel.kind.setCurrentIndex(window.organization_panel.kind.findData('deliverable')); capture(window, 'deliverables')
     editor = RecordEditor(organization, 'meeting', organization.state['records'][meeting], window); editor.show(); capture(editor, 'meeting'); editor.close(); editor.deleteLater()
     intake = IntakeDialog(window.organization_panel, organization)

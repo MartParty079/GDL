@@ -1,3 +1,10 @@
+Owner selected **Structured Sidebar � persistent category rail and focused work area** on 2026-10-11.
+The selected composition is integrated on `codex/ui-structured-sidebar` (candidate 0.8.0).
+Disposable picker code has been removed following the prototype skill; its tested source
+remains recoverable at commit `813239d2c8c14af48cd217f09b856963a25390d1`.
+The instructions and phase statuses below describe the original exploration, not current
+shipping claims. See UI_DESIGN_IMPLEMENTATION.md for current hardening findings.
+
 # Home design exploration — owner selection gate
 
 Status: phases 0–1 only, development branch `codex/ui-design-prototypes`, based

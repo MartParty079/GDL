@@ -86,6 +86,16 @@
       "summary": "Authoritative project Home, shared team workspaces, batch intake and configurable biweekly reporting",
       "status": "implemented",
       "channel": "beta"
+    },
+    {
+      "work_order_id": "capstone-ui-design-skills-structured-sidebar",
+      "title": "Capstone UI Design Skills \u2014 Structured Sidebar",
+      "version": "0.8.0",
+      "started_at": "2026-10-11",
+      "completed_at": null,
+      "summary": "Promote the selected native sidebar layout and cohesive accessible workflow surfaces",
+      "status": "implemented",
+      "channel": "beta"
     }
   ]
 }

@@ -37,69 +37,14 @@ def button(text, action):
     control = QPushButton(text.replace('&', '&&')); control.clicked.connect(action); return control
 
 
-class HomePanel(QScrollArea):
+from app.ui.home_layout import HomeLayoutMixin
+
+
+class HomePanel(HomeLayoutMixin, QScrollArea):
     def __init__(self, window):
         super().__init__(window)
         self.window = window; self.panel = window.organization_panel
-        self.setWidgetResizable(True); self.setFrameShape(QFrame.NoFrame)
-        page = QWidget(); self.body = QVBoxLayout(page); self.body.setSpacing(16); self.setWidget(page)
-        self.title = QLabel('Project Home'); self.title.setStyleSheet('font-size:28px;font-weight:600'); self.body.addWidget(self.title)
-        self.stage = QLabel(CHANNEL.title() + ' · ' + DISPLAY_VERSION + ' · Local team identity'); self.body.addWidget(self.stage)
-        self.notifications = QLabel(); self.notifications.setWordWrap(True); self.body.addWidget(self.notifications)
-        utility = FlowLayout(); self.body.addLayout(utility)
-        for text, action in (('Settings', self.settings), ('My Workspace', self.workspace), ('Notifications / Activity', self.activity),
-                             ('Account / PIN', self.account), ('Refresh Index', self.sync)):
-            utility.addWidget(button(text, action))
-        if self.service.accounts.admin_unlocked: utility.addWidget(button('Administration', self.administration))
-        navigation = FlowLayout(); self.body.addLayout(navigation)
-        self.category_buttons = []
-        for category in CATEGORIES:
-            control = button(category, lambda checked=False, c=category: self.navigate(c))
-            control.setObjectName('primary-category'); control.setMinimumSize(230, 70)
-            control.setStyleSheet('QPushButton { font-size:17px;font-weight:600;padding:18px; }')
-            self.category_buttons.append(control); navigation.addWidget(control)
-        self.cards = {}
-        for name in ('Current Goal', 'Progress and Near-Term Plan', 'Next Meeting & Agenda', 'Schedule & Biweekly Due', 'Active Procedure & Parameters', 'Project Repository'):
-            card = QFrame(); card.setObjectName('card'); layout = QVBoxLayout(card)
-            label = QLabel(name); label.setStyleSheet('font-size:17px;font-weight:600'); layout.addWidget(label)
-            view = QTextBrowser(); view.setOpenLinks(False); view.anchorClicked.connect(lambda url: self.open_record(url.toString()))
-            view.setFixedHeight(105); view.setFrameShape(QFrame.NoFrame)
-            layout.addWidget(view); self.cards[name] = (card, view)
-        pulse = ResponsiveCards([c[0] for c in self.cards.values()])
-        actions_title = QLabel('Quick Start'); actions_title.setStyleSheet('font-size:19px;font-weight:600'); self.body.addWidget(actions_title)
-        quick = FlowLayout(); self.body.addLayout(quick)
-        for text, kind in (('New Experiment', 'experiment'), ('Register Sample', 'sample'), ('New / Revise Procedure', 'procedure'),
-                           ('Add Research Reference', 'research'), ('New Design', 'design'), ('New Meeting', 'meeting'),
-                           ('Submit Biweekly Deliverable', 'deliverable')):
-            quick.addWidget(button(text, lambda checked=False, k=kind: self.create(k)))
-        quick.addWidget(button('Upload Files', self.panel.upload))
-        quick.addWidget(button('New Goal', lambda: self.create('goal')))
-        quick.addWidget(button('New Task', lambda: self.create('task')))
-        quick.addWidget(button('Generate Draft Meeting Summary', self.summary))
-        quick.addWidget(button('Two-Week Team Digest', self.digest))
-        if self.service.accounts.admin_unlocked: quick.addWidget(button('Configure Two-Week Periods', self.periods))
-        self.body.addWidget(pulse)
-        self.recent = QComboBox(); self.recent.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        recent_row = QHBoxLayout(); recent_row.addWidget(QLabel('Quick Open')); recent_row.addWidget(self.recent, 1)
-        recent_row.addWidget(button('Open Record', lambda: self.open_record(self.recent.currentData()))); self.body.addLayout(recent_row)
-        activity_heading = QLabel('Recent Activity'); activity_heading.setStyleSheet('font-size:19px;font-weight:600'); self.body.addWidget(activity_heading)
-        filters = FlowLayout(); self.body.addLayout(filters)
-        self.person = QComboBox(); self.person.addItem('Every contributor', '')
-        for p in self.service.accounts.users(): self.person.addItem(p['display_name'], p['id'])
-        self.area = QComboBox(); self.area.addItem('Every work area', ''); self.area.addItems(CATEGORIES)
-        self.action = QComboBox(); self.action.addItems(('Every action', 'Upload', 'Update', 'Request'))
-        self.file_type = QLineEdit(); self.file_type.setPlaceholderText('File extension, e.g. .pdf')
-        self.after = QLineEdit(); self.after.setPlaceholderText('Since YYYY-MM-DD')
-        for control in (self.person, self.area, self.action, self.file_type, self.after): filters.addWidget(control)
-        filters.addWidget(button('Apply Filters', self.activity_rows)); filters.addWidget(button('Clear Filters', self.clear_filters))
-        self.events = QTextBrowser(); self.events.setMaximumHeight(185); self.events.setOpenLinks(False)
-        self.events.anchorClicked.connect(lambda url: self.open_record(url.toString())); self.body.addWidget(self.events)
-        tools = QLabel('Tools & Resources'); tools.setStyleSheet('font-size:19px;font-weight:600'); self.body.addWidget(tools)
-        toolrow = FlowLayout(); self.body.addLayout(toolrow)
-        self.tools = QComboBox(); self.tools.setMinimumWidth(320); toolrow.addWidget(self.tools)
-        toolrow.addWidget(button('Open Selected', self.open_tool)); toolrow.addWidget(button('Configure Resource', self.resource))
-        toolrow.addWidget(button('Software Paths & Status', lambda: window.show_page('Software')))
-        self.body.addStretch(); self.reload()
+        self.build_home()
 
     @property
     def service(self): return self.panel.service
@@ -115,7 +60,7 @@ class HomePanel(QScrollArea):
         goals.sort(key=lambda r: r['updated_at'], reverse=True)
         goal = goals[0] if goals else None
         self.cards['Current Goal'][1].setHtml(self.link(goal) + '<br>' + escape(goal['fields'].get('output', '')) + '<br>Owner: '
-            + escape(people.get(goal['fields'].get('owner_id'), 'Unassigned')) + ' · due ' + escape(goal['fields']['due_date'])
+            + escape(people.get(goal['fields'].get('owner_id'), 'Unassigned')) + ' · due ' + escape(goal['fields'].get('due_date') or 'Not scheduled')
             + '<br>Next: ' + escape(goal['fields'].get('next_step', '')) if goal else 'No active goal set. Create a goal and mark it active.')
         tasks = [r for r in s.rows(kind='task') if r['fields'].get('status') != 'done']
         tasks.sort(key=lambda r: r['fields'].get('due_date', '9999'))
@@ -129,14 +74,14 @@ class HomePanel(QScrollArea):
         meeting_text = self.link(meeting) + '<br>' + escape(meeting['created_at'][:10] + ' ' + meeting['fields'].get('meeting_time', '')) + '<br>' + escape(meeting['fields'].get('agenda', '')[:260]) if meeting else 'No upcoming meeting scheduled.'
         if approved: meeting_text += '<br>Latest approved summary: ' + self.link(approved[-1])
         self.cards['Next Meeting & Agenda'][1].setHtml(meeting_text)
-        periods = sorted(s.rows(kind='period'), key=lambda r: r['fields']['start_date'])
+        periods = sorted((r for r in s.rows(kind='period') if all(r['fields'].get(k) for k in ('start_date', 'end_date', 'due_at'))), key=lambda r: r['fields']['start_date'])
         current = next((p for p in periods if p['fields']['start_date'] <= today <= p['fields']['end_date']), None)
         if not current: current = next((p for p in periods if p['fields']['end_date'] >= today), None)
         if not current and periods: current = periods[-1]
         notifications = []
         if self.window.store.local.get('task_reminders', True):
             mine = [t for t in tasks if t['fields'].get('owner_id') == s.actor['user_id']]
-            if mine: notifications.append(str(len(mine)) + ' assigned open action(s)')
+            if mine: notifications.append(str(len(mine)) + (' assigned open action' if len(mine) == 1 else ' assigned open actions'))
         if self.window.store.local.get('meeting_reminders', True) and meeting:
             notifications.append('Next meeting ' + meeting['created_at'][:10])
         if current and self.window.store.local.get('deliverable_reminders', True):
@@ -145,14 +90,14 @@ class HomePanel(QScrollArea):
         schedule = [self.link(r) + ' · ' + escape(r['created_at'][:10]) for r in upcoming[:2]]
         if current:
             schedule += [self.link(current) + '<br>Due ' + escape(current['fields']['due_at']) + '<br>' + escape(period_status(s, current, s.actor['user_id']))]
-        schedule += [self.link(r) + ' · due ' + escape(r['fields']['due_date']) for r in s.rows(kind='goal') if r['fields'].get('status') != 'Done'][:2]
+        schedule += [self.link(r) + ' · due ' + escape(r['fields'].get('due_date') or 'Not scheduled') for r in s.rows(kind='goal') if r['fields'].get('status') != 'Done'][:2]
         self.cards['Schedule & Biweekly Due'][1].setHtml('<br>'.join(schedule) or 'Admin has not configured reporting deadlines. No submission is overdue without a configured period.')
         active = [r for r in s.rows(kind='experiment') if r['fields'].get('active_experiment') == 'Yes']
         experiment = max(active, key=lambda r: r['updated_at']) if active else None
         procedure = s.state['records'].get(experiment['fields'].get('procedure_uuid')) if experiment else None
         self.cards['Active Procedure & Parameters'][1].setHtml((self.link(procedure).replace(procedure['uuid'] + '"', procedure['uuid'] + '@' + str(experiment['fields']['procedure_revision']) + '"') + ' · locked revision ' + str(experiment['fields']['procedure_revision']) + '<br>Experiment: ' + self.link(experiment)
             + '<br>' + escape(experiment['fields'].get('apparatus_settings', '')) + '<br>' + escape(experiment['fields'].get('units', '')))
-            if procedure else 'Choose an active experiment with an exact published procedure revision. No measurements inferred.')
+            if procedure and experiment['fields'].get('procedure_revision') else 'Choose an active experiment with an exact published procedure revision. No measurements inferred.')
         self.cards['Project Repository'][1].setPlainText(str(s.root) + '\n' + s.status + '\nBeta/Development storage is an isolated sandbox.')
         root_button = self.cards['Project Repository'][0].findChild(QPushButton)
         if not root_button: self.cards['Project Repository'][0].layout().addWidget(button('Open Folder', lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.service.root)))))
@@ -170,6 +115,7 @@ class HomePanel(QScrollArea):
             available = resource['target'].startswith(('https://', 'http://')) or Path(resource['target']).is_file()
             self.tools.addItem(('★ ' if resource.get('favorite') else '') + resource['name'] + ' · ' + resource['category'] + (' · Configured' if available else ' · Missing'), ('resource', i))
         self.activity_rows()
+        if hasattr(self.window, 'workspace_header'): self.window.workspace_header.refresh_health()
 
     def navigate(self, category):
         self.panel.category.setCurrentText(category); self.window.tabs.setCurrentWidget(self.panel)
@@ -188,8 +134,7 @@ class HomePanel(QScrollArea):
         if not record: return
         self.navigate(record['category']); self.panel.subsection.setCurrentIndex(0)
         self.panel.kind.setCurrentIndex(0); self.panel.search.setText(record['id']); self.panel.reload()
-        for i, row in enumerate(self.panel.rows):
-            if row['uuid'] == key: self.panel.table.selectRow(i); break
+        self.panel.select_record(key)
         recent = self.window.store.local.setdefault('organization_recent', [])
         self.window.store.local['organization_recent'] = ([key] + [k for k in recent if k != key])[:12]; self.window.store.save_local()
 
@@ -313,8 +258,12 @@ class HomePanel(QScrollArea):
         control = self.window.findChild(QPushButton, 'current-user')
         if control: control.showMenu()
     def settings(self):
-        dialog = QDialog(self); dialog.setWindowTitle('My Settings'); dialog.resize(730, 450); layout = QVBoxLayout(dialog)
+        dialog = QDialog(self); dialog.setWindowTitle('My Settings'); dialog.resize(730, 650); outer = QVBoxLayout(dialog)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True); outer.addWidget(scroll)
+        page = QWidget(); scroll.setWidget(page); layout = QVBoxLayout(page)
         layout.addWidget(QLabel('Per-user configuration · production and Beta remain separate'))
+        from app.ui.appearance import appearance_controls
+        layout.addWidget(appearance_controls(self.window, dialog))
         root = QLineEdit(str(self.service.root)); layout.addWidget(QLabel('Locally synced project root (Beta: profile sandbox only)')); layout.addWidget(root)
         def relink():
             from app.services.organization import Organization

@@ -243,8 +243,10 @@ def attach_account_ui(window, accounts, sign_out):
         window.gdl_settings.setEnabled(False)
         window.research_panel.setEnabled(False)
         window.storage_panel.setEnabled(False)
-    button = QPushButton(accounts.profile['display_name'] + ' · ' + accounts.profile['role'].upper(), window)
+    from app.ui.workspace_components import AccountButton
+    button = AccountButton(accounts.profile['display_name'] + ' · ' + accounts.profile['role'].upper(), window)
     button.setObjectName('current-user')
+    button.setText(button.text())
     window.centralWidget().layout().itemAt(0).layout().addWidget(button)
     menu = QMenu(button); button.setMenu(menu)
 
@@ -287,3 +289,6 @@ def attach_account_ui(window, accounts, sign_out):
             window.banner.setText(str(exc)); sign_out()
     window.account_timer.timeout.connect(refresh); window.account_timer.start(60_000)
     window.banner.setText(CHANNEL.upper() + ' · Local team profiles · ' + (accounts.warning or 'OneDrive controls file access'))
+    from app.ui.navigation import install_workspace_navigation
+    install_workspace_navigation(window)
+    window.apply_theme()

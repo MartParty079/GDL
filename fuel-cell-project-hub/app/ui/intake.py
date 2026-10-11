@@ -20,25 +20,29 @@ class IntakeDialog(QDialog):
         self.setWindowTitle('Upload Files · Preview before applying'); self.resize(1080, 690)
         self.setAcceptDrops(True)
         layout = QVBoxLayout(self)
-        heading = QLabel('Upload Files'); heading.setStyleSheet('font-size:25px;font-weight:600'); layout.addWidget(heading)
+        heading = QLabel('Upload Files'); heading.setProperty('kind', 'heading'); layout.addWidget(heading)
         hint = QLabel('Drop files or folders here. Sources stay unchanged. Preview names are provisional; Admin confirms permanent IDs and final filenames. Select a row to adjust links, subtype or description.')
         hint.setWordWrap(True); layout.addWidget(hint)
-        row = QHBoxLayout(); layout.addLayout(row)
+        from app.ui.flow_layout import FlowLayout
+        row = FlowLayout(); layout.addLayout(row)
         self.destination = QComboBox()
         for name in CATEGORIES: self.destination.addItem(name, name)
         self.destination.addItem('Personal Workspace (shared storage)', 'workspace')
         if workspace: self.destination.setCurrentIndex(4)
-        row.addWidget(QLabel('Destination for added files')); row.addWidget(self.destination, 1)
+        row.addWidget(QLabel('Destination for added files')); row.addWidget(self.destination)
         for text, action in (('Choose Files', self.choose), ('Choose Folder', self.folder), ('Edit Selected Context', self.edit)):
             button = QPushButton(text); button.clicked.connect(action); row.addWidget(button)
         self.table = QTableWidget(0, 5); self.table.setHorizontalHeaderLabels(('Original filename', 'Proposed filename', 'Destination / links', 'Creator / uploader', 'Status / feedback'))
+        from app.ui.workspace_components import prepare_table
+        prepare_table(self.table, 'Upload queue; select to inspect complete proposed filename and destination')
+        self.destination.setAccessibleName('Destination for added files')
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows); self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch); layout.addWidget(self.table, 1)
         from PySide6.QtWidgets import QTextBrowser
         self.preview_text = QTextBrowser(); self.preview_text.setMaximumHeight(115); layout.addWidget(self.preview_text)
         self.table.itemSelectionChanged.connect(self.full_preview)
         self.status = QLabel(); self.status.setWordWrap(True); layout.addWidget(self.status)
-        actions = QHBoxLayout(); layout.addLayout(actions)
+        actions = FlowLayout(); layout.addLayout(actions)
         self.apply_button = QPushButton('Apply / Retry Remaining'); self.apply_button.clicked.connect(self.apply); actions.addWidget(self.apply_button)
         self.cancel_button = QPushButton('Cancel Remaining'); self.cancel_button.clicked.connect(self.cancel); actions.addWidget(self.cancel_button)
         for text, action in (('Open Selected File', self.open_file), ('Open Destination Folder', self.open_folder), ('View Linked Record', self.link), ('Close', self.reject)):

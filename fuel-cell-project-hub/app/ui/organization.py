@@ -200,21 +200,28 @@ class OrganizationPanel(QWidget):
         self.service = Organization(window.store)
         self.cancel = threading.Event()
         self.working = False
-        layout = QVBoxLayout(self)
-        heading = QLabel('Project organization'); heading.setStyleSheet('font-size:24px;font-weight:600'); layout.addWidget(heading)
+        outer = QVBoxLayout(self); outer.setContentsMargins(0, 0, 0, 0)
+        vertical = QSplitter(Qt.Vertical); outer.addWidget(vertical)
+        self.controls_scroll = QScrollArea(); self.controls_scroll.setWidgetResizable(True)
+        self.controls_scroll.setAccessibleName('Project filters and actions; scroll for additional controls')
+        self.controls_scroll.setMinimumHeight(100)
+        controls = QWidget(); layout = QVBoxLayout(controls)
+        layout.setSizeConstraint(QLayout.SetMinimumSize)
+        self.controls_scroll.setWidget(controls); vertical.addWidget(self.controls_scroll)
+        heading = QLabel('Project organization'); heading.setProperty('kind', 'heading'); layout.addWidget(heading)
         subtitle = QLabel('Four research categories · permanent identities · traceable revisions · Admin-published shared index')
         subtitle.setWordWrap(True); layout.addWidget(subtitle)
         self.status = QLabel(); self.status.setWordWrap(True); layout.addWidget(self.status)
         self.path = QLabel('Configured root: ' + str(self.service.root)); self.path.setWordWrap(True); layout.addWidget(self.path)
-        nav = QHBoxLayout(); layout.addLayout(nav)
+        nav = FlowLayout(); layout.addLayout(nav)
         self.category = QComboBox(); self.category.addItems(CATEGORIES); nav.addWidget(self.category)
-        self.subsection = QComboBox(); self.subsection.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.subsection.setMinimumContentsLength(30); nav.addWidget(self.subsection)
+        self.subsection = QComboBox(); self.subsection.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.subsection.setMinimumContentsLength(18); nav.addWidget(self.subsection)
         self.kind = QComboBox(); nav.addWidget(self.kind)
-        filter_row = QHBoxLayout(); layout.addLayout(filter_row)
+        filter_row = FlowLayout(); layout.addLayout(filter_row)
         self.archive_filter = QComboBox(); self.archive_filter.addItems(('Current Records', 'Archived Records', 'All Records')); filter_row.addWidget(self.archive_filter)
         self.workspace_filter = QComboBox(); self.workspace_filter.addItems(('Project & Workspace', 'Canonical Project Only', 'Workspace Only')); filter_row.addWidget(self.workspace_filter)
-        self.search = QLineEdit(); self.search.setPlaceholderText('Search IDs, aliases, names, contributors or provenance'); filter_row.addWidget(self.search, 1)
+        self.search = QLineEdit(); self.search.setPlaceholderText('Search IDs, aliases, names, contributors or provenance'); filter_row.addWidget(self.search)
         clear = QPushButton('Clear Filters'); clear.clicked.connect(lambda: (self.search.clear(), self.subsection.setCurrentIndex(0), self.archive_filter.setCurrentIndex(0), self.workspace_filter.setCurrentIndex(0), self.kind.setCurrentIndex(0))); filter_row.addWidget(clear)
         self.actions = FlowLayout(); layout.addLayout(self.actions)
         for title, action in (('New record', self.new), ('Upload file', self.upload), ('Edit metadata', self.edit),
@@ -228,8 +235,11 @@ class OrganizationPanel(QWidget):
             control = QPushButton(title); control.clicked.connect(action); control.setVisible(self.service.accounts.admin_unlocked); admin.addWidget(control)
         self.cancel_button = QPushButton('Stop inventory safely'); self.cancel_button.clicked.connect(self.cancel.set)
         self.cancel_button.setVisible(False); admin.addWidget(self.cancel_button)
-        split = QSplitter(); layout.addWidget(split, 1)
+        split = QSplitter(); split.setMinimumHeight(180); vertical.addWidget(split)
+        vertical.setStretchFactor(0, 0); vertical.setStretchFactor(1, 1); vertical.setSizes([240, 600])
         self.table = QTableWidget(0, 5); self.table.setHorizontalHeaderLabels(('ID / type', 'Description', 'Revision / state', 'Creator', 'Owner / status'))
+        from app.ui.workspace_components import prepare_table
+        prepare_table(self.table, 'Project records; select to inspect full metadata')
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows); self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch); split.addWidget(self.table)
         self.table.setColumnWidth(0, 145); self.table.setColumnWidth(2, 120); self.table.setColumnWidth(3, 145); self.table.setColumnWidth(4, 180)
@@ -246,7 +256,12 @@ class OrganizationPanel(QWidget):
         self.archive_filter.currentIndexChanged.connect(self.reload); self.workspace_filter.currentIndexChanged.connect(self.reload)
         notice = QLabel(LIMIT + ' Literature comparisons require a recorded reviewer rationale. Automatic transcription is not available; attach a verified transcript manually.')
         notice.setWordWrap(True); layout.addWidget(notice)
+        for control, name in ((self.category, 'Project category'), (self.subsection, 'Project subsection'), (self.kind, 'Record type'), (self.search, 'Search project records')):
+            control.setAccessibleName(name)
+        self.details.setAccessibleName('Selected record details and history')
         self.change_category()
+        self.table.setSortingEnabled(True)
+        layout.addStretch()
 
     def run(self, action, done=None):
         if self.working: return
@@ -288,6 +303,12 @@ class OrganizationPanel(QWidget):
         self.reload()
 
     def reload(self, *_):
+        current = self.selected()
+        selected_key = current['uuid'] if current else None
+        scroll = self.table.verticalScrollBar().value()
+        sorting = self.table.isSortingEnabled()
+        self.table.setSortingEnabled(False)
+        self.table.blockSignals(True)
         self.rows = self.service.rows(self.category.currentText(), self.kind.currentData(), self.search.text())
         if self.archive_filter.currentIndex() < 2:
             archived = self.archive_filter.currentIndex() == 1
@@ -310,14 +331,29 @@ class OrganizationPanel(QWidget):
                 fields['status'] = fields['file_state']
             values = (row['id'] + ' · ' + row['kind'], row['title'], str(row['revision']) + ' · ' + fields.get('file_state', fields.get('stage', 'record')),
                       row['created_by_display_name'], people.get(fields.get('owner_id'), 'Unassigned') + ' · ' + fields.get('status', ''))
-            for column, value in enumerate(values): self.table.setItem(number, column, QTableWidgetItem(value))
+            for column, value in enumerate(values):
+                item = QTableWidgetItem(value); item.setData(Qt.UserRole, row['uuid']); item.setToolTip(value)
+                self.table.setItem(number, column, item)
+        self.table.setSortingEnabled(sorting)
+        self.table.blockSignals(False)
         self.status.setText(self.service.status)
         self.image.hide()
         self.details.setPlainText('Select a record to inspect metadata, immutable UUIDs and revision history.\n\nFall 2026 priorities: literature/standards, legacy catalog, baseline microscopy, equipment refurbishment, methods and fixture design. Spring 2027 testing remains future work.')
 
+        if selected_key: self.select_record(selected_key)
+        self.table.verticalScrollBar().setValue(scroll)
+
+    def select_record(self, key):
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item and item.data(Qt.UserRole) == key:
+                self.table.selectRow(row); self.detail(); return True
+        return False
+
     def selected(self):
-        index = self.table.currentRow()
-        return self.rows[index] if 0 <= index < len(self.rows) else None
+        item = self.table.item(self.table.currentRow(), 0)
+        key = item.data(Qt.UserRole) if item else None
+        return next((r for r in getattr(self, 'rows', ()) if r['uuid'] == key), None)
 
     def detail(self):
         row = self.selected()

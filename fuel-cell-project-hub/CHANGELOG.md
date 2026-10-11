@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 — 2026-10-11
+
+- Promote the selected native sidebar layout and cohesive accessible workflow surfaces
+- Persistent four-category navigation and compact canonical Home
+- Shared appearance, typography and table browsing controls
+
 ## 0.7.0 — 2026-10-10
 
 - Authoritative project Home, shared team workspaces, batch intake and configurable biweekly reporting
